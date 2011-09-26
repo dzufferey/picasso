@@ -1,0 +1,76 @@
+package picasso.frontend.compilerPlugin.backend
+
+import scala.tools.nsc.Global
+import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger}
+import picasso.frontend.compilerPlugin._
+import picasso.ast._
+
+//maybe there is a better place than the backend for this ...
+trait References {
+  self: AnalysisUniverse =>
+
+  import global._
+  import global.definitions._
+
+  /** references to other actors either collection or single references*/
+  sealed abstract class AbsReference(code: ValDef) extends Value(code) {
+
+    def formula: Expression = ID(symbol.name.toString)
+
+  }
+
+  /** what will be a binding point for the names corresponding to a single actors */
+  class SingleReference(ref: ValDef) extends AbsReference(ref) {
+    assert(SingleReference.is(ref))
+
+    //...
+  }
+
+  object SingleReference {
+    def is(ref: Tree): Boolean = ref match {
+      case vd@ValDef(_,_,_,_) => checkForSubtype(vd.symbol, outputChannelClass)
+      case _ => false
+    }
+
+    //sender, receiver are member of actors, they need to be added.
+  }
+  
+  class BagReference(ref: ValDef) extends AbsReference(ref) {
+    assert(BagReference.is(ref))
+
+    //only things which we are sure are immutable are considered as such
+    lazy val isMutableCollection = {
+      !(ofClass.typeSymbol hasTransOwner collectionImmutable)
+    }
+
+    //...
+  }
+
+  object BagReference {
+    def is(ref: Tree): Boolean = ref match {
+      case vd@ValDef(_,_,_,_) =>
+        //subtype of Traversable[+OutputChannel]
+        val clazz = vd.symbol.tpe.typeConstructor
+        val params = vd.symbol.tpe.typeArgs //or is it tparams ?
+        clazz <:< TraversableClass.tpe && params.length == 1 && params(0) <:< outputChannelClass.tpe
+      case _ => false
+    }
+  }
+
+  object Reference {
+
+    def is(ref: Tree): Boolean = {
+      val sref = SingleReference is ref
+      val bref = BagReference is ref
+      sref || bref
+    }
+
+    def apply(ref: Tree): AbsReference = ref match {
+      case vd@ValDef(_,_,_,_) if (SingleReference is vd) => new SingleReference(vd)
+      case vd@ValDef(_,_,_,_) if (BagReference is vd) => new BagReference(vd)
+      case _ => Logger.logAndThrow("Plugin", LogError, "Cannot create an AbsReference out of " + ref)
+    }
+
+  }
+
+}

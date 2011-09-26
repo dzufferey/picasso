@@ -1,0 +1,52 @@
+package picasso.frontend.compilerPlugin.utils
+
+import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger}
+import picasso.math.hol.{Variable => HVariable, _}
+import purescala.Trees._
+import purescala.TypeTrees._
+import purescala.Common._
+import purescala.Definitions._
+
+
+/** Doing some usefull conversion to PureScala
+ *  First part: picasso.math.hol.{Ast,Types} to purescala.{Trees,TypeTrees}
+ */
+object PureScalaUtils {
+
+  //keeping a map is not the most elegant but since there is no way of accessing the id field ...
+  //since the HVariable are created from symbols part of their name is already an id.
+  val varToIdMap = new scala.collection.mutable.HashMap[String, Identifier]
+  def convertVariable(v: HVariable): Identifier = {
+    val id = varToIdMap.getOrElse(v.name, FreshIdentifier(v.name, false))
+    varToIdMap += (v.name -> id)
+    id
+  }
+
+  //TODO
+
+  def convertType(t: Type): TypeTree = t match {
+    case Bool => BooleanType
+    case Int => Int32Type
+    case String => ListType(Int32Type)
+    case Wildcard => AnyType
+    case Function(args, returns) => FunctionType(args map convertType, convertType(returns))
+    case FiniteValues(values) => Untyped //TODO this translation is bad
+    case UnInterpreted(id) => AnyType //TODO this translation is bad
+    case cl @ ClassType( name, tparams) =>
+      if (cl.isCollection) {
+        //We assumes set as collection type
+        assert(tparams.length == 1)
+        //TODO PureScala has many kind of collections.
+        SetType(convertType(tparams.head))
+      } else {
+        //PureScala has only case classes and abstract classes, we have any kind of class
+        sys.error("TODO")
+      }
+  }
+
+  //TODO first extends a little bit the kind of thing we can do with Formula
+  def convertFormula(f: Formula): Expr = {
+    sys.error("TODO")
+  }
+
+}

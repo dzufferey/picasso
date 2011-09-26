@@ -1,0 +1,37 @@
+init
+  (e, env) -> (s, server) [S]
+
+transition "new client" 
+pre
+  (e, env) -> (s, server) [S]
+post
+  (e, env) -> (s, server) [S]
+  (c, client) -> (s, server) [S]
+==>
+  e -> e
+  s -> s
+<==
+
+transition "request" 
+pre
+  (c, client) -> (s, server) [S]
+post
+  (c, client) -> (s, server) [S]
+  (m, msg) ->  (s, server) [S]
+  (m, msg) ->  (c, client) [C]
+==>
+  s -> s
+  c -> c
+<==
+
+transition "reply" 
+pre
+  (m, msg) -> (s, server) [S]
+  (m, msg) -> (c, _) [C]
+post
+  (r, reply) -> (c, _) [C]
+  node (s, server)
+==>
+  s -> s
+<==
+  c -> c

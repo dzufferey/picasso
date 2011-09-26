@@ -1,0 +1,231 @@
+/*
+ * Adpated to Picasso from Petruchio by DZ
+ * Project:  Petruchio
+ * Filename: phones.pi
+ * Created:  22.02.2007
+ * Author:   Tim Strazny
+ * Remarks:  This example is taken from Robin Milner: Communicating and Mobile
+ *           Systems: the Pi-Calculus, 1999, Cambridge University Press,
+ *           pages 80 and following
+ */
+
+init
+  (c, CAR) -> (talk_1, name) [1]
+  (c, CAR) -> (switch_1, name) [2]
+  (t, TRANS_1) -> (talk_1, name) [1]
+  (t, TRANS_1) -> (switch_1, name) [2]
+  (t, TRANS_1) -> (gain_1, name) [3]
+  (t, TRANS_1) -> (lose_1, name) [4]
+  (i, IDTRANS_2) -> (gain_2, name) [1]
+  (i, IDTRANS_2) -> (lose_2, name) [2]
+  (co, CONTROL_1) -> (talk_1, name) [1]
+  (co, CONTROL_1) -> (switch_1, name) [2]
+  (co, CONTROL_1) -> (gain_1, name) [3]
+  (co, CONTROL_1) -> (lose_1, name) [4]
+  (co, CONTROL_1) -> (talk_2, name) [5]
+  (co, CONTROL_1) -> (switch_2, name) [6]
+  (co, CONTROL_1) -> (gain_2, name) [7]
+  (co, CONTROL_1) -> (lose_2, name) [8]
+
+transition "TRANS_1(talk, switch, gain, lose) := talk().TRANS_1(talk, switch, gain, lose)" 
+pre
+  (t, TRANS_1) -> (talk, name) [1]
+  (t, TRANS_1) -> (switch, name) [2]
+  (t, TRANS_1) -> (gain, name) [3]
+  (t, TRANS_1) -> (lose, name) [4]
+  (m, msg) -> (talk, name) [0]
+post
+  (t, TRANS_1) -> (talk, name) [1]
+  (t, TRANS_1) -> (switch, name) [2]
+  (t, TRANS_1) -> (gain, name) [3]
+  (t, TRANS_1) -> (lose, name) [4]
+==>
+  t -> t
+  talk -> talk
+  switch -> switch
+  gain -> gain
+  lose -> lose
+<==
+
+transition "TRANS_1(talk, switch, gain, lose) := lose(t, s).switch<t, s>.IDTRANS_1(gain, lose)" 
+pre
+  (tr, TRANS_1) -> (talk, name) [1]
+  (tr, TRANS_1) -> (switch, name) [2]
+  (tr, TRANS_1) -> (gain, name) [3]
+  (tr, TRANS_1) -> (lose, name) [4]
+  (m, msg) -> (lose, name) [0]
+  (m, msg) -> (t, name) [1]
+  (m, msg) -> (s, name) [2]
+post
+  (tr, IDTRANS_1) -> (gain, name) [1]
+  (tr, IDTRANS_1) -> (lose, name) [2]
+  (m, msg) -> (switch, name) [0]
+  (m, msg) -> (t, name) [1]
+  (m, msg) -> (s, name) [2]
+  node (talk, name)
+  node (switch, name)
+==>
+  tr -> tr
+  t -> t
+  s -> s
+  talk -> talk
+  switch -> switch
+  gain -> gain
+  lose -> lose
+<==
+
+//TODO translate
+transition "TRANS_2(talk, switch, gain, lose) := talk().TRANS_2(talk, switch, gain, lose)" 
+pre
+  (t, TRANS_2) -> (talk, name) [1]
+  (t, TRANS_2) -> (switch, name) [2]
+  (t, TRANS_2) -> (gain, name) [3]
+  (t, TRANS_2) -> (lose, name) [4]
+  (m, msg) -> (talk, name) [0]
+post
+  (t, TRANS_2) -> (talk, name) [1]
+  (t, TRANS_2) -> (switch, name) [2]
+  (t, TRANS_2) -> (gain, name) [3]
+  (t, TRANS_2) -> (lose, name) [4]
+==>
+  t -> t
+  talk -> talk
+  switch -> switch
+  gain -> gain
+  lose -> lose
+<==
+
+transition "TRANS_2(talk, switch, gain, lose) := lose(t, s).switch<t, s>.IDTRANS_2(gain, lose)" 
+pre
+  (tr, TRANS_2) -> (talk, name) [1]
+  (tr, TRANS_2) -> (switch, name) [2]
+  (tr, TRANS_2) -> (gain, name) [3]
+  (tr, TRANS_2) -> (lose, name) [4]
+  (m, msg) -> (lose, name) [0]
+  (m, msg) -> (t, name) [1]
+  (m, msg) -> (s, name) [2]
+post
+  (tr, IDTRANS_2) -> (gain, name) [1]
+  (tr, IDTRANS_2) -> (lose, name) [2]
+  (m, msg) -> (switch, name) [0]
+  (m, msg) -> (t, name) [1]
+  (m, msg) -> (s, name) [2]
+  node (talk, name)
+  node (switch, name)
+==>
+  tr -> tr
+  t -> t
+  s -> s
+  talk -> talk
+  switch -> switch
+  gain -> gain
+  lose -> lose
+<==
+
+transition "CONTROL_1(talk_1, switch_1, gain_1, lose_1, talk_2, switch_2, gain_2, lose_2) := lose_1<talk_2, switch_2>.gain_2<talk_2, switch_2>.CONTROL_2(talk_1, switch_1, gain_1, lose_1, talk_2, switch_2, gain_2, lose_2)"
+pre
+  (co, CONTROL_1) -> (talk_1, name) [1]
+  (co, CONTROL_1) -> (switch_1, name) [2]
+  (co, CONTROL_1) -> (gain_1, name) [3]
+  (co, CONTROL_1) -> (lose_1, name) [4]
+  (co, CONTROL_1) -> (talk_2, name) [5]
+  (co, CONTROL_1) -> (switch_2, name) [6]
+  (co, CONTROL_1) -> (gain_2, name) [7]
+  (co, CONTROL_1) -> (lose_2, name) [8]
+post
+  (co, CONTROL_2) -> (talk_1, name) [1]
+  (co, CONTROL_2) -> (switch_1, name) [2]
+  (co, CONTROL_2) -> (gain_1, name) [3]
+  (co, CONTROL_2) -> (lose_1, name) [4]
+  (co, CONTROL_2) -> (talk_2, name) [5]
+  (co, CONTROL_2) -> (switch_2, name) [6]
+  (co, CONTROL_2) -> (gain_2, name) [7]
+  (co, CONTROL_2) -> (lose_2, name) [8]
+  (m1, msg) -> (lose_1, name) [0]
+  (m1, msg) -> (talk_2, name) [1]
+  (m1, msg) -> (switch_2, name) [2]
+  (m2, msg) -> (gain_2, name) [0]
+  (m2, msg) -> (talk_2, name) [1]
+  (m2, msg) -> (switch_2, name) [2]
+==>
+  co -> co
+  talk_1 -> talk_1
+  switch_1 -> switch_1
+  gain_1 -> gain_1
+  lose_1 -> lose_1
+  talk_2 -> talk_2
+  switch_2 -> switch_2
+  gain_2 -> gain_2
+  lose_2 -> lose_2
+<==
+
+transition "CONTROL_2(talk_1, switch_1, gain_1, lose_1, talk_2, switch_2, gain_2, lose_2) := lose_2<talk_1, switch_1>.gain_1<talk_1, switch_1>.CONTROL_1(talk_1, switch_1, gain_1, lose_1, talk_2, switch_2, gain_2, lose_2)"
+pre
+  (co, CONTROL_2) -> (talk_1, name) [1]
+  (co, CONTROL_2) -> (switch_1, name) [2]
+  (co, CONTROL_2) -> (gain_1, name) [3]
+  (co, CONTROL_2) -> (lose_1, name) [4]
+  (co, CONTROL_2) -> (talk_2, name) [5]
+  (co, CONTROL_2) -> (switch_2, name) [6]
+  (co, CONTROL_2) -> (gain_2, name) [7]
+  (co, CONTROL_2) -> (lose_2, name) [8]
+post
+  (co, CONTROL_1) -> (talk_1, name) [1]
+  (co, CONTROL_1) -> (switch_1, name) [2]
+  (co, CONTROL_1) -> (gain_1, name) [3]
+  (co, CONTROL_1) -> (lose_1, name) [4]
+  (co, CONTROL_1) -> (talk_2, name) [5]
+  (co, CONTROL_1) -> (switch_2, name) [6]
+  (co, CONTROL_1) -> (gain_2, name) [7]
+  (co, CONTROL_1) -> (lose_2, name) [8]
+  (m1, msg) -> (lose_2, name) [0]
+  (m1, msg) -> (talk_1, name) [1]
+  (m1, msg) -> (switch_1, name) [2]
+  (m2, msg) -> (gain_1, name) [0]
+  (m2, msg) -> (talk_1, name) [1]
+  (m2, msg) -> (switch_1, name) [2]
+==>
+  co -> co
+  talk_1 -> talk_1
+  switch_1 -> switch_1
+  gain_1 -> gain_1
+  lose_1 -> lose_1
+  talk_2 -> talk_2
+  switch_2 -> switch_2
+  gain_2 -> gain_2
+  lose_2 -> lose_2
+<==
+
+transition "CAR(talk, switch) := talk<>.CAR(talk, switch)" 
+pre
+  (c, CAR) -> (talk, name) [1]
+  (c, CAR) -> (switch, name) [2]
+post
+  (c, CAR) -> (talk, name) [1]
+  (c, CAR) -> (switch, name) [2]
+  (m, msg) -> (talk, name) [0]
+==>
+  c -> c
+  talk -> talk
+  switch -> switch
+<==
+
+transition "CAR(talk, switch) := switch(t, s).CAR(t, s)" 
+pre
+  (c, CAR) -> (talk, name) [1]
+  (c, CAR) -> (switch, name) [2]
+  (m, msg) -> (switch, name) [0]
+  (m, msg) -> (t, name) [1]
+  (m, msg) -> (s, name) [2]
+post
+  (c, CAR) -> (t, name) [1]
+  (c, CAR) -> (s, name) [2]
+  node (talk, name)
+  node (switch, name)
+==>
+  c -> c
+  talk -> talk
+  switch -> switch
+  t -> t
+  s -> s
+<==

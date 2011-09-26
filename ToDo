@@ -1,0 +1,59 @@
+Programs, Configuration, Transitions, Path, ...
+===============================================
+What about the datastructures ?
+
+Path:
+    Needed for algorithm and acceleration/widening
+    for the moment, path are an internal class defined in WADL.
+    It might be better to turn it into an interface (+ existentially bound type), to add method such as 'isIncreasing'
+
+Graph:
+    - default Set & Map should not scale properly, replace them.
+      Not trivial is since equivalent element are not structurally equal (no hash or structural ordering possible)
+
+Algorithm
+=========
+
+-partial order reduction: a path for acceleration make sense iff there are dependencies between transition (+ arbitrary order for incomparable trs)
+-finite sequence of path to accelerate (might happen with partial order reduction) (i.e. acceleration.hasNext == false)
+
+Frontend
+========
+
+-more tests
+-assert and error states (exceptions)
+- ...
+
+
+(bi)simulation of processes
+===========================
+The ordering on configuration is a simulation relation, but maybe there are some better way/coarsest simulation ...
+
+Bisimulation of processes could also prove to be useful to 'split' processes and transform non depth-bounded system into depth-bounded ones.
+For that operation, we might simply have some kind of heuristic, that given a process, try to decompose it into as many small independent processes as possible.
+The most adapted kind of bisimulation is weak barbed bisimulation, since it does not need any additional observability condition.
+
+Potential applications and examples
+===================================
+
+for real code
+-------------
+http://twitter.com/
+http://liftweb.net/
+http://akka.io/
+
+for pi-calculus
+---------------
+http://petruchio.informatik.uni-oldenburg.de/
+
+from distributed algorithm
+--------------------------
+From discussion with Lamport:
+-take a look at paxos with reconfiguration (vertical horizontal)
+-to be usefull, it has to deal with sequence number (in message) -> only the ordering matter i.e. not a real test for 0.
+From discussion with Wattenhofer:
+-locally checkable algorithm
+From discussion with Rodrigo Rodrigez:
+-Yahoo ZooKeeper (finite number of server sync using Paxos, with an infinite number of clients around that makes requests)
+From discussion with Maurice Herlihy:
+-algorithm about finding (mobile) data in a tree-like structure (spannig tree where processes points to root + root has a path to data)

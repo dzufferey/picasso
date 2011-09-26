@@ -1,0 +1,180 @@
+package picasso.frontend.compilerPlugin
+
+import scala.tools.nsc._
+import scala.tools.nsc.util.BatchSourceFile
+import scala.tools.nsc.io.VirtualFile
+import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger}
+import picasso.utils.Namer
+import picasso.math.hol._
+
+/** A class that wrap funcheck and expose an interface to makes queries.
+ */
+trait FunCheckWrapper {
+  self: AnalysisUniverse =>
+
+  import funcheck._
+  import purescala.Definitions.{ValDef => FValDef, _}
+  import purescala.Trees._
+  import purescala.TypeTrees._
+  import purescala.{Reporter,Analysis,Z3Solver}
+  import purescala.Trees.Expr
+  import global._
+
+  object FunCheckReporter extends Reporter {
+    def error(msg: Any) = Logger("FunCheck", LogError, msg.toString)
+    def warning(msg: Any) = Logger("FunCheck", LogWarning, msg.toString)
+    def info(msg: Any) = Logger("FunCheck", LogInfo, msg.toString)
+    def fatalError(msg: Any) = {  Logger("FunCheck", LogCritical, msg.toString); sys.exit(-1) }
+  }
+
+
+  private def defaultAction(program: Program) : Unit = {
+    val analysis = new Analysis(program, FunCheckReporter)
+    analysis.analyse
+  }
+
+  //val solver = new Z3Solver(FunCheckReporter)
+
+  val funcheckPlugin = new FunCheckPlugin(global, Some(defaultAction))
+  //funcheckPlugin.silentlyTolerateNonPureBodies = true
+
+  //actually the whole plugin stuff might not be needed
+  //just the Scala to PureScala
+
+  //in PureScala:
+  // an object is a seq of definition + a seq of invariants (Expr)
+  // a definition are program, objects, valdef, fundef
+  // a VarDecl is an id and type
+  // a ValDef is a VarDecl + init value
+  // a FunDef is an id, type, args (list of VarDecl) + optional: body, precondition, and postcondition (all 3 are Expr)
+
+
+  private def createDummyFile(name: String, content: String = "") = {
+    val virtual = new VirtualFile(name + ".scala")
+    val fill = virtual.output
+    fill.write(content.getBytes, 0, content.getBytes.size)
+    fill.close
+    new BatchSourceFile(virtual)
+  }
+
+  private def createDummyCompilationUnit(name: String, content: Tree) = {
+    val pkgSym = definitions.EmptyPackageClass //no package
+    val packed = new PackageDef(Ident(pkgSym), List(content))
+    val file = createDummyFile(name, packed.toString)
+    val cu = new CompilationUnit(file)
+    cu.body = content
+    cu
+  }
+
+  //object Dummy {
+  //  def dummy(freeVariables) : Result = {
+  //    require(precond)
+  //    BODY
+  //  } ensuring(postCond)
+  //}
+  //not possible to use asser, 
+
+  //need to use real position not NoPosition
+
+  private def packageDummy(lst: List[Tree]) = PackageDef( Ident(definitions.EmptyPackageClass), lst)
+
+  private def createDummyObject(obj: Symbol, body: List[Tree]) = {
+    //the ctor is broken, ....
+    val dummyPos = body.head.pos
+    val mods = NoMods
+    val vparamss = Nil
+    val argss = Nil
+    val decls = new Scope //TODO scope
+    val objType = ClassInfoType(List(definitions.ObjectClass.tpe, definitions.ScalaObjectClass.tpe), decls, obj)
+    obj setInfo objType
+    val cd = ClassDef(obj, mods, vparamss, argss, body, dummyPos)
+    val ctorType = MethodType(Nil, objType)
+    val ctorSym = obj.newConstructor(dummyPos) setInfo ctorType
+    //TODO find the ctor in cd and set the type and symbol ...
+    cd.impl.body.foreach {
+      case dd @ DefDef(mods, name, tparams, vparamss, tpt, rhs) if name == nme.CONSTRUCTOR =>
+        dd setSymbol ctorSym
+        tpt setType ctorType
+        //TODO set owner + type of super call in rhs
+      case _ => ()
+    }
+    cd
+  }
+
+  private def createDummyMethod(owner: Symbol, freeVariables: Seq[Symbol], preCond: Tree, code: Iterable[Tree], postCond: Tree) = {
+    //since FunCheck does not support unit types, need to return a dummy 0.
+    val dummyPos = code.head.pos
+    val boolType = definitions.BooleanClass.typeConstructor
+    val methodSym = owner.newMethod(dummyPos, newTermName("path"))
+    val methodType = MethodType(freeVariables.toList, boolType)
+    methodSym setInfo methodType
+    val idSym = methodSym.newValueParameter(dummyPos, newTermName("id"))
+    idSym setInfo boolType
+    val idFct = makeAnonFun(List(idSym), Ident(idSym) setType idSym.info)
+    DefDef(methodSym, NoMods, ExEnsuring(idFct, ExRequire(preCond, Block(code.toList, postCond))))
+  }
+
+  //TODO prepare code for funcheck: remove unsupported stuffs ...
+
+  //we can use toPureScala and toPureScalaType
+  //unfortunately, both methods require a compilation unit ...
+  
+  def isHoarTripleValid(preCond: Tree, code: Iterable[Tree], postCond: Tree): Option[Boolean] = {
+    //check that there is no getter/setter left
+    def test(t: Tree) = t.hasSymbol && (t.symbol.isGetter || t.symbol.isSetter)
+    assert(!treeContains(preCond, test))
+    assert(! code.exists(treeContains(_, test)))
+    assert(!treeContains(postCond, test))
+    
+    //symbol for the query
+    val dummy = definitions.EmptyPackageClass.newModuleClass(newTypeName(Namer("FunCheckQuery")))
+    dummy.flags = dummy.flags | scala.reflect.generic.Flags.MODULE
+
+    //get the free variables to put them as arguments
+    //a free variable is a value that does not appears as a ValDef
+    val codeSymbol = (code :\ symbolsIn(postCond))((t, acc) => {
+      t match {
+        case Assign(lhs, rhs) => acc - lhs.symbol ++ symbolsIn(rhs)
+        case vd @ ValDef(_,_,_, rhs) => acc - vd.symbol ++ symbolsIn(rhs)
+        case t => acc ++ symbolsIn(t)
+      }
+    })
+    val allSymbols = (symbolsIn(preCond) ++ codeSymbol).filter(s => s.isValue && !s.isMethod)
+    val freeVariables = allSymbols.toList
+    //Console.println("XXX allSymbols:     " + allSymbols.mkString("",", ",""))
+    //Console.println("XXX definedSymbols: " + definedSymbols.mkString("",", ",""))
+    //Console.println("XXX freeVariables:  " + freeVariables.mkString("",", ",""))
+    val freeVariablesArgs = freeVariables map (s => dummy.newValue(s.pos, Namer(s.name.toString, true)) setInfo s.info)
+    val initMap = (freeVariables zip freeVariablesArgs).toMap
+    // convert the code to SSA (and replace in the postcond)
+    val ssaPreCond = SSA.subst(initMap, preCond)
+    val (substitutions, ssaCode) = SSA(code, initMap)
+    val ssaPostCond = SSA.subst(substitutions, postCond)
+    //Console.println("Subst: " + substitutions)
+    //Console.println("pre:   " + preCond); Console.println("pre2:  " + ssaPreCond)
+    //Console.println("Code:  " + code);    Console.println("Code2: " + ssaCode);
+    //Console.println("post:  " + postCond);Console.println("post2: " + ssaPostCond)
+    //create method 
+    //assert(dummy.isModuleClass, dummy)
+    val method = createDummyMethod(dummy, freeVariablesArgs, ssaPreCond, ssaCode, ssaPostCond)
+    //put into an object
+    val obj = createDummyObject(dummy, List(method))
+    val pkg = packageDummy(List(obj))
+    val unit = createDummyCompilationUnit("dummy", pkg)
+    Logger("Plugin", LogDebug, "sending to FunCheck\n" + obj)
+    //FunCheck
+    try {
+      val analysisCmpt = new AnalysisComponent(global, funcheckPlugin)
+      val program = analysisCmpt.extractCode(unit.asInstanceOf[analysisCmpt.global.CompilationUnit])
+      Logger("Plugin", LogDebug, "FunCheck extracted\n" + program)
+      val analysis = new purescala.Analysis(program)
+      analysis.analyse
+      //TODO How to get back the result ??
+      None
+    } catch { case err =>
+      Logger("FunCheckWrapper", LogError, err.toString + "\n" + err.getStackTrace.take(5).mkString("","\n",""))
+      None
+    }
+  }
+  
+}

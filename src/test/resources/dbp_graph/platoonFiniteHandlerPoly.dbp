@@ -1,0 +1,149 @@
+/*
+ * Adpated to Picasso from Petruchio by DZ
+ * this is the 'compact' version where more than one message exchange can happens in one step
+ * original info below:
+ * Project:  Petruchio
+ * Filename: platoonFiniteHandlerPoly.pi
+ * Created:  23.12.2007
+ * Author:   Roland Meyer
+ * Remarks:  This example is taken from: 
+ *           A Theory of Structural Stationarity in the Pi-Calculus,
+ *           Roland Meyer, 2007. Under revision. 
+ *           Department of Computing Science, 
+ *           University of Oldenburg,
+ *           Oldenburg, Germany.
+ *           Polyadic Version.
+ */
+             
+init
+  (c, create) -> (n, name) [1]
+  (m, merge) -> (n, name) [1]
+
+transition "CREATE(CFA)"
+pre
+  (c, create) -> (cfa, name) [1]
+post
+  (c, create) -> (cfa, name) [1]
+  (f, fa) -> (cfa, name) [1]
+  (f, fa) -> (id, name) [2]
+  (f, fa) -> (ca, name) [3]
+  (f, fa) -> (rq, name) [4]
+==>
+  c -> c
+  cfa -> cfa
+<==
+
+transition "Merge(CFA)"
+pre
+  (m, merge) -> (cfa, name) [1]
+  (msg1, out) -> (cfa, name) [0]
+  (msg1, out) -> (cax, name) [1]
+  (msg1, out) -> (rqx, name) [2]
+  (msg2, out) -> (cfa, name) [0]
+  (msg2, out) -> (cay, name) [1]
+  (msg2, out) -> (rqy, name) [2]
+post
+  (m, merge) -> (cfa, name) [1]
+  (msg3, out) -> (cax, name) [0]
+  (msg3, out) -> (rqy, name) [1]
+  node (cay, name)
+  node (rqx, name)
+==>
+  m -> m
+  cfa -> cfa
+  cax -> cax
+  rqx -> rqx
+  cay -> cay
+  rqy -> rqy
+<==
+
+transition "FA(CFA, id, ca, rq) 1. CFA<ca, rq>"
+pre
+  (f, fa) -> (cfa, name) [1]
+  (f, fa) -> (id, name) [2]
+  (f, fa) -> (ca, name) [3]
+  (f, fa) -> (rq, name) [4]
+post
+  (f, fa) -> (cfa, name) [1]
+  (f, fa) -> (id, name) [2]
+  (f, fa) -> (ca, name) [3]
+  (f, fa) -> (rq, name) [4]
+  (msg1, out) -> (cfa, name) [0]
+  (msg1, out) -> (ca, name) [1]
+  (msg1, out) -> (rq, name) [2]
+==>
+  f -> f
+  cfa -> cfa
+  id -> id
+  ca -> ca
+  rq -> rq
+<==
+
+transition "FA(CFA, id, ca, rq) 2a. ca(rqnl).REQ(id, rqnl)"
+pre
+  (f, fa) -> (cfa, name) [1]
+  (f, fa) -> (id, name) [2]
+  (f, fa) -> (ca, name) [3]
+  (f, fa) -> (rq, name) [4]
+  (msg1, out) -> (ca, name) [0]
+  (msg1, out) -> (rqnl, name) [1]
+post
+  node (cfa, name)
+  (r, req) -> (id, name) [1]
+  (r, req) -> (rqnl, name) [2]
+==>
+  cfa -> cfa
+  id -> id
+  rqnl -> rqnl
+<==
+
+transition "FA(CFA, id, ca, rq) 2b. rq(nf).nf<id>.LD(id, nf)"
+pre
+  (f, fa) -> (cfa, name) [1]
+  (f, fa) -> (id, name) [2]
+  (f, fa) -> (ca, name) [3]
+  (f, fa) -> (rq, name) [4]
+  (msg1, out) -> (rq, name) [0]
+  (msg1, out) -> (nf, name) [1]
+post
+  node (cfa, name)
+  (l, ld) -> (id, name) [1]
+  (l, ld) -> (nf, name) [2]
+  (msg1, out) -> (nf, name) [0]
+  (msg1, out) -> (id, name) [1]
+==>
+  cfa -> cfa
+  id -> id
+  nf -> nf
+<==
+
+transition "REQ(id, rqnl) 1. rqnl<id>"
+pre
+  (r, req) -> (id, name) [1]
+  (r, req) -> (rqnl, name) [2]
+post
+  (r, req) -> (id, name) [1]
+  (r, req) -> (rqnl, name) [2]
+  (msg1, out) -> (rqnl, name) [0]
+  (msg1, out) -> (id, name) [1]
+==>
+  r -> r
+  id -> id
+  rqnl -> rqnl
+<==
+
+transition "REQ(id, rqnl) 2. id(nl).FL(id, nl)"
+pre
+  (r, req) -> (id, name) [1]
+  (r, req) -> (rqnl, name) [2]
+  (msg1, out) -> (id, name) [0]
+  (msg1, out) -> (nl, name) [1]
+post
+  (f, fl) -> (id, name) [1]
+  (f, fl) -> (nl, name) [1]
+==>
+  id -> id
+  nl -> nl
+<==
+
+//LD(id, nf) and FL(id, nl) ??? leader and follower

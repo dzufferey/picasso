@@ -1,0 +1,488 @@
+/*
+ * Adpated to Picasso from Petruchio by DZ
+ * Project:  Petruchio
+ * Filename: gsm.pi
+ * Created:  16.05.2007
+ * Author:   Tim Strazny
+ * Remarks:  This translation of the GSM handover protocol into the pi calculus
+ *           is taken from Fredrik Orava and Joachim Parrow: "An Algebraic
+ *           Verification of a Mobile Network", p. 11, Fig 2. A formal
+ *           specification of the handover procedure. (1 Mobile Station, 2 Base
+ *           Stations, 1 Mobile Switching Center, 1 channel per Base Station)
+ */
+
+//translate for [x=content] model content as a node label; semantics of [] is tems after receive
+//in and out are global names, ho_com, ho_fail, ho_acc, ch_rel, data are labels
+//TODO sync vs async communication
+
+
+init
+  (p, P) -> (fa, name) [1]
+  (p, P) -> (fp, name) [2]
+  (q, Q) -> (fa, name) [1]
+  node (in, in)
+  node (out, out)
+//TODO add some data send to in
+
+transition "CC(fa, fp, l) := in(v).fa<data>.fa<v>.CC(fa, fp, l)"
+pre
+  (cc, CC) -> (fa, name) [1]
+  (cc, CC) -> (fp, name) [2]
+  (cc, CC) -> (l, name) [3]
+  (msg, msg) -> (in, in) [0]
+  (msg, msg) -> (v, _) [1]
+post
+  (cc, CC) -> (fa, name) [1]
+  (cc, CC) -> (fp, name) [2]
+  (cc, CC) -> (l, name) [3]
+  (msg1, msg) -> (fa, name) [0]
+  (msg1, msg) -> (d, data) [1]
+  (msg2, msg) -> (fa, name) [0]
+  (msg2, msg) -> (v, _) [1]
+  node (in, in)
+==>
+  cc -> cc
+  fa -> fa
+  fp -> fp
+  l -> l
+  in -> in
+<==
+  v -> v
+
+transition "CC(fa, fp, l) := l(m_new).fa<ho_cmd>.fa<m_new>.CC1(fa, fp, l, m_new)"
+pre
+  (cc, CC) -> (fa, name) [1]
+  (cc, CC) -> (fp, name) [2]
+  (cc, CC) -> (l, name) [3]
+  (msg, msg) -> (l, name) [0]
+  (msg, msg) -> (m_new, name) [1]
+post
+  (cc, CC1) -> (fa, name) [1]
+  (cc, CC1) -> (fp, name) [2]
+  (cc, CC1) -> (l, name) [3]
+  (cc, CC1) -> (m_new, name) [4]
+  (msg1, msg) -> (fa, name) [0]
+  (msg1, msg) -> (ho, ho_cmd) [1]
+  (msg2, msg) -> (fa, name) [0]
+  (msg2, msg) -> (m_new, name) [1]
+==>
+  cc -> cc
+  fa -> fa
+  fp -> fp
+  l -> l
+  m_new -> m_new
+<==
+
+transition "CC1(fa, fp, l, m_new) := fp(x).CC2(fa, fp, l, x)"
+pre
+  (cc, CC1) -> (fa, name) [1]
+  (cc, CC1) -> (fp, name) [2]
+  (cc, CC1) -> (l, name) [3]
+  (cc, CC1) -> (m_new, name) [4]
+  (msg, msg) -> (fp, name) [0]
+  (msg, msg) -> (x, _) [1]
+post
+  (cc, CC2) -> (fa, name) [1]
+  (cc, CC2) -> (fp, name) [2]
+  (cc, CC2) -> (l, name) [3]
+  (cc, CC2) -> (x, _) [4]
+  node (m_new, name)
+==>
+  cc -> cc
+  fa -> fa
+  fp -> fp
+  l -> l
+  m_new -> m_new
+<==
+  x -> x
+
+transition "CC1(fa, fp, l, m_new) := fa(y).CC3(fa, fp, l, m_new, y)"
+pre
+  (cc, CC1) -> (fa, name) [1]
+  (cc, CC1) -> (fp, name) [2]
+  (cc, CC1) -> (l, name) [3]
+  (cc, CC1) -> (m_new, name) [4]
+  (msg, msg) -> (fa, name) [0]
+  (msg, msg) -> (y, _) [1]
+post
+  (cc, CC3) -> (fa, name) [1]
+  (cc, CC3) -> (fp, name) [2]
+  (cc, CC3) -> (l, name) [3]
+  (cc, CC3) -> (m_new, name) [4]
+  (cc, CC3) -> (y, _) [5]
+==>
+  cc -> cc
+  fa -> fa
+  fp -> fp
+  l -> l
+  m_new -> m_new
+<==
+  y -> y
+
+transition "CC2(fa, fp, l, x) := [x=ho_com].fa<ch_rel>.CC2a(fa, fp, l)"
+pre
+  (cc, CC2) -> (fa, name) [1]
+  (cc, CC2) -> (fp, name) [2]
+  (cc, CC2) -> (l, name) [3]
+  (cc, CC2) -> (x, ho_com) [4]
+post
+  (cc, CC2a) -> (fa, name) [1]
+  (cc, CC2a) -> (fp, name) [2]
+  (cc, CC2a) -> (l, name) [3]
+  (msg, msg) -> (fa, name) [0]
+  (msg, msg) -> (ch, ch_rel) [1]
+==>
+  cc -> cc
+  fa -> fa
+  fp -> fp
+  l -> l
+<==
+
+transition "CC2a(fa, fp, l) := fa(m_old).l<m_old>.CC(fp, fa, l)"
+pre
+  (cc, CC2a) -> (fa, name) [1]
+  (cc, CC2a) -> (fp, name) [2]
+  (cc, CC2a) -> (l, name) [3]
+  (msg, msg) -> (l, name) [0]
+  (msg, msg) -> (m_old, name) [1]
+post
+  (cc, CC) -> (fp, name) [1]
+  (cc, CC) -> (fa, name) [2]
+  (cc, CC) -> (l, name) [3]
+  (msg, msg) -> (l, name) [0]
+  (msg, msg) -> (m_old, name) [1]
+==>
+  cc -> cc
+  fa -> fa
+  fp -> fp
+  l -> l
+  m_old -> m_old
+<==
+
+transition "CC3(fa, fp, l, m_new, y) := [y=ho_fail].l<m_new>.CC(fa, fp, l)"
+pre
+  (cc, CC3) -> (fa, name) [1]
+  (cc, CC3) -> (fp, name) [2]
+  (cc, CC3) -> (l, name) [3]
+  (cc, CC3) -> (m_new, name) [4]
+  (cc, CC3) -> (y, ho_fail) [5]
+post
+  (cc, CC) -> (fa, name) [1]
+  (cc, CC) -> (fp, name) [2]
+  (cc, CC) -> (l, name) [3]
+  (msg, msg) -> (l, name) [0]
+  (msg, msg) -> (m_new, name) [1]
+==>
+  cc -> cc
+  fa -> fa
+  fp -> fp
+  l -> l
+  m_new -> m_new
+<==
+
+transition "HC(l, m) := l<m>.HC1(l);"
+pre
+  (hc, HC) -> (l, name) [1]
+  (hc, HC) -> (m, name) [2]
+post
+  (hc, HC1) -> (l, name) [1]
+  (msg, msg) -> (l, name) [0]
+  (msg, msg) -> (m, name) [1]
+==>
+  hc -> hc
+  l -> l
+  m -> m
+<==
+
+transition "HC1(l) := l(m_new).HC(l, m_new);"
+pre
+  (hc, HC1) -> (l, name) [1]
+  (msg, msg) -> (l, name) [0]
+  (msg, msg) -> (m_new, name) [1]
+post
+  (hc, HC) -> (l, name) [1]
+  (hc, HC) -> (m_new, name) [2]
+==>
+  hc -> hc
+  l -> l
+  m_new -> m_new
+<==
+
+transition "MSC(fa, fp, m) := new l.(HC(l, m) | CC(fa, fp, l));"
+pre
+  (ms, MSC) -> (fa, name) [1]
+  (ms, MSC) -> (fp, name) [2]
+  (ms, MSC) -> (m, name) [3]
+post
+  (hc, HC) -> (l, name) [1]
+  (hc, HC) -> (m, name) [2]
+  (cc, CC) -> (fa, name) [1]
+  (cc, CC) -> (fp, name) [2]
+  (cc, CC) -> (l, name) [3]
+==>
+  fa -> fa
+  fp -> fp
+  m -> m
+<==
+
+transition "BSa(f, m) := f(x).BSa1(f, m, x)"
+pre
+  (b, BSa2) -> (f, name) [1]
+  (b, BSa2) -> (m, name) [2]
+  (msg, msg) -> (f, name) [0]
+  (msg, msg) -> (x, _) [1]
+post
+  (b, BSa1) -> (f, name) [1]
+  (b, BSa1) -> (m, name) [2]
+  (b, BSa1) -> (x, _) [3]
+==>
+  b -> b
+  m -> m
+  f -> f
+<==
+  x -> x
+
+transition "BSa1(f, m, x) := [x=data].f(v).m<data>.m<v>.BSa(f, m)"
+pre
+  (b, BSa1) -> (f, name) [1]
+  (b, BSa1) -> (m, name) [2]
+  (b, BSa1) -> (x, data) [3]
+  (msg, msg) -> (f, name) [0]
+  (msg, msg) -> (v, _) [1]
+post
+  (b, BSa) -> (f, name) [1]
+  (b, BSa) -> (m, name) [2]
+  (msg1, msg) -> (m, name) [0]
+  (msg1, msg) -> (d, data) [1]
+  (msg2, msg) -> (m, name) [0]
+  (msg2, msg) -> (v, _) [1]
+==>
+  b -> b
+  m -> m
+  f -> f
+<==
+  v -> v
+
+transition "BSa1(f, m, x) := [x=ho_cmd].f(v).m<ho_cmd>.m<v>.BSa2(f, m)"
+pre
+  (b, BSa1) -> (f, name) [1]
+  (b, BSa1) -> (m, name) [2]
+  (b, BSa1) -> (x, ho_cmd) [3]
+  (msg, msg) -> (f, name) [0]
+  (msg, msg) -> (v, _) [1]
+post
+  (b, BSa2) -> (f, name) [1]
+  (b, BSa2) -> (m, name) [2]
+  (msg1, msg) -> (m, name) [0]
+  (msg1, msg) -> (ho, ho_cmd) [1]
+  (msg2, msg) -> (m, name) [0]
+  (msg2, msg) -> (v, _) [1]
+==>
+  b -> b
+  m -> m
+  f -> f
+<==
+  v -> v
+
+transition "BSa2(f, m) := f(y).BSa3(f, m, y)"
+pre
+  (b, BSa2) -> (f, name) [1]
+  (b, BSa2) -> (m, name) [2]
+  (msg, msg) -> (f, name) [0]
+  (msg, msg) -> (y, _) [1]
+post
+  (b, BSa3) -> (f, name) [1]
+  (b, BSa3) -> (m, name) [2]
+  (b, BSa3) -> (y, _) [3]
+==>
+  b -> b
+  m -> m
+  f -> f
+<==
+  y -> y
+
+transition "BSa2(f, m) := m(z).BSa4(f, m, z)"
+pre
+  (b, BSa2) -> (f, name) [1]
+  (b, BSa2) -> (m, name) [2]
+  (msg, msg) -> (m, name) [0]
+  (msg, msg) -> (z, _) [1]
+post
+  (b, BSa4) -> (f, name) [1]
+  (b, BSa4) -> (m, name) [2]
+  (b, BSa4) -> (z, _) [3]
+==>
+  b -> b
+  m -> m
+  f -> f
+<==
+  z -> z
+
+
+transition "BSa3(f, m, y) := [y=ch_rel].f<m>.BSp(f, m)"
+pre
+  (b, BSa3) -> (f, name) [1]
+  (b, BSa3) -> (m, name) [2]
+  (b, BSa3) -> (y, ch_rel) [3]
+post
+  (b, BSp) -> (f, name) [1]
+  (b, BSp) -> (m, name) [2]
+  (msg, msg) -> (f, name) [0]
+  (msg, msg) -> (m, name) [1]
+==>
+  b -> b
+  m -> m
+  f -> f
+<==
+
+transition "BSa4(f, m, z) := [z=ho_fail].f<ho_fail>.BSa(f, m)"
+pre
+  (b, BSa4) -> (f, name) [1]
+  (b, BSa4) -> (m, name) [2]
+  (b, BSa4) -> (z, ho_fail) [3]
+post
+  (b, BSa) -> (f, name) [1]
+  (b, BSa) -> (m, name) [2]
+  (msg, msg) -> (f, name) [0]
+  (msg, msg) -> (z, ho_fail) [1]
+==>
+  b -> b
+  m -> m
+  f -> f
+<==
+
+transition "BSp(f, m) := m(x).BSp1(f, m, x)"
+pre
+  (b, BSp) -> (f, name) [1]
+  (b, BSp) -> (m, name) [2]
+  (msg, msg) -> (m, name) [0]
+  (msg, msg) -> (x, _) [1]
+post
+  (b, BSp1) -> (f, name) [1]
+  (b, BSp1) -> (m, name) [2]
+  (b, BSp1) -> (x, _) [3]
+==>
+  b -> b
+  m -> m
+  f -> f
+<==
+  x -> x
+
+transition "BSp1(f, m, x) := [x=ho_acc].f<ho_com>.BSa(f, m);"
+pre
+  (b, BSp1) -> (f, name) [1]
+  (b, BSp1) -> (m, name) [2]
+  (b, BSp1) -> (x, ho_acc) [3]
+post
+  (b, BSa) -> (f, name) [1]
+  (b, BSa) -> (m, name) [2]
+  (msg, msg) -> (f, name) [0]
+  (msg, msg) -> (x, ho_com) [1]
+==>
+  b -> b
+  m -> m
+  f -> f
+<==
+
+transition "MS(m) := m(x).MS1(m, x)"
+pre
+  (ms1, MS) -> (m, name) [1]
+  (msg, msg) -> (m, name) [0]
+  (msg, msg) -> (x, _) [1]
+post
+  (ms1, MS1) -> (m, name) [1]
+  (ms1, MS1) -> (x, _) [2]
+==>
+  ms1 -> ms1
+  m -> m
+<==
+  x -> x
+
+transition "MS1(m, x) := [x=data].m(v).out<v>.MS(m)"
+pre
+  (ms1, MS1) -> (m, name) [1]
+  (ms1, MS1) -> (data, data) [2]
+  (msg, msg) -> (m, name) [0]
+  (msg, msg) -> (v, _) [1]
+  node (out, out)
+post
+  (ms1, MS) -> (m, name) [1]
+  (msg, msg) -> (out, out) [0]
+  (msg, msg) -> (v, _) [1]
+==>
+  ms1 -> ms1
+  m -> m
+  out -> out
+<==
+  v -> v
+
+transition "MS1(m, x) := [x=ho_cmd].m(m_new).MS2(m, m_new)"
+pre
+  (ms1, MS1) -> (m, name) [1]
+  (ms1, MS1) -> (ho, ho_cmd) [2]
+  (msg, msg) -> (m, name) [0]
+  (msg, msg) -> (m_new, name) [1]
+post
+  (ms1, MS2) -> (m, name) [1]
+  (ms1, MS2) -> (m_new, name) [2]
+==>
+  ms1 -> ms1
+  m -> m
+  m_new -> m_new
+<==
+
+transition "MS2(m, m_new) := m_new<ho_acc>.MS(m_new)"
+pre
+  (ms1, MS2) -> (m, name) [1]
+  (ms1, MS2) -> (m_new, name) [2]
+post
+  (ms1, MS) -> (m_new, name) [1]
+  (msg, msg) -> (m_new, name) [0]
+  (msg, msg) -> (ho, ho_acc) [1]
+  node (m, name)
+==>
+  ms1 -> ms1
+  m -> m
+  m_new -> m_new
+<==
+
+transition "MS2(m, m_new) := m<ho_fail>.MS(m)"
+pre
+  (ms1, MS2) -> (m, name) [1]
+  (ms1, MS2) -> (m_new, name) [2]
+post
+  (ms1, MS) -> (m, name) [1]
+  (msg, msg) -> (m, name) [0]
+  (msg, msg) -> (ho, ho_fail) [1]
+  node (m_new, name)
+==>
+  ms1 -> ms1
+  m -> m
+  m_new -> m_new
+<==
+
+transition "P(fa, fp) := new m.(MSC(fa, fp, m) | BSp(fp, m))"
+pre
+  (p, P) -> (fa, name) [1]
+  (p, P) -> (fp, name) [2]
+post
+  (ms, MSC) -> (fa, name) [1]
+  (ms, MSC) -> (fp, name) [2]
+  (ms, MSC) -> (m, name) [3]
+  (bs, BSp) -> (fp, name) [1]
+  (bs, BSp) -> (m, name) [2]
+==>
+  fa -> fa
+  fp -> fp
+<==
+
+transition "Q(fa) := new m.(BSa(fa, m) | MS(m))" 
+pre
+  (q, Q) -> (fa, name) [1]
+post
+  (bs, BSa) -> (fa, name) [1]
+  (bs, BSa) -> (m, name) [2]
+  (ms, Ms) -> (m, name) [1]
+==>
+  fa -> fa
+<==

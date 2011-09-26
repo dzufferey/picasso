@@ -1,0 +1,152 @@
+package picasso.ast
+
+sealed abstract class Literal
+case class Bool(b: Boolean) extends Literal {
+  override def toString = b.toString
+}
+//case class Integer(i: Int)  extends Literal
+case class StringVal(str: String) extends Literal {
+  override def toString = ("\""+str+"\"")
+}
+
+//TODO should Expression be typed ?
+//basic types as uninterpreted, boolean, integer (interval), string, multiSet[type], channel[contract]
+//everyting should be straightforward but the channel typing.
+sealed abstract class Expression
+case class Value(l: Literal) extends Expression {
+  override def toString = l.toString
+}
+case class ID(smth: String) extends Expression {
+  override def toString = smth
+}
+case class Application(fct: String, args: List[Expression]) extends Expression {
+  override def toString = fct + args.mkString("(", ", " ,")")
+}
+case class Tuple(values: List[Expression]) extends Expression {
+  override def toString = values.mkString("(", ", " ,")")
+}
+case object Any extends Expression
+
+object Unit {
+  def apply() = Tuple(Nil)
+  def unapply(e: Expression): Option[Unit] = e match {
+    case Tuple(Nil) => Some(())
+    case _ => None
+  }
+}
+
+object EmptySet {
+  def apply() = Application("new-set", Nil)
+  def unapply(e: Expression): Option[Unit] = e match {
+    case Application("new-set", Nil) => Some()
+    case _ => None
+  }
+}
+
+object NewChannel {
+  def apply() = Application("new-channel", Nil)
+  def unapply(e: Expression): Option[Unit] = e match {
+    case Application("new-channel", Nil) => Some()
+    case _ => None
+  }
+}
+
+object Create {
+  def apply(name: String, args: List[Expression]) = Application("create", ID(name) :: args)
+  def unapply(e: Expression): Option[(String, List[Expression])] = e match {
+    case Application("create", ID(name) :: args) => Some(name, args)
+    case _ => None
+  }
+}
+
+//TODO more extractors 
+
+sealed abstract class Pattern
+case class PatternLit(l: Literal) extends Pattern {
+  override def toString = l.toString
+}
+case class PatternTuple(lst: List[Pattern]) extends Pattern {
+  override def toString = lst.mkString("(", ", " ,")")
+}
+case class Case(uid: String, args: List[Pattern]) extends Pattern {
+  override def toString = uid + args.mkString("(", ", " ,")")
+}
+case object Wildcard extends Pattern {
+  override def toString = "_"
+}
+case class Ident(lid: String) extends Pattern {
+  override def toString = lid
+}
+
+sealed abstract class Process
+case class Block(stmts: List[Process]) extends Process
+case class Affect(id: String, value: Expression) extends Process {
+  override def toString = id + " := " + value
+}
+case class Declaration(id: String, variable: Boolean, value: Expression) extends Process {
+  override def toString = (if (variable) "var " else "val ") + id + " := " + value
+}
+case class Expr(e: Expression) extends Process {
+  override def toString = e.toString
+}
+case class Send(dest: Expression, content: Expression) extends Process {
+  override def toString = dest + "!" + content
+}
+case class Receive(cases: List[(Expression,Pattern,Process)]) extends Process
+case class ITE(condition: Expression, caseTrue: Process, caseFalse: Process) extends Process
+case class While(condition: Expression, body: Process) extends Process
+case class ForEachGeneric(id: String, set: Expression, yieldOpt: Option[(String,String)], body: Process) extends Process
+
+object Zero {
+  def apply() = Block(Nil)
+  def unapply(p: Process): Option[Unit] = p match {
+    case Block(Nil) => Some(())
+    case Receive(Nil) => Some(())
+    case Block(Receive(Nil) :: Nil) => Some(())
+    case _ => None
+  }
+}
+object ForEach {
+  def apply(id: String, set: Expression, body: Process) = ForEachGeneric(id, set, None, body)
+  def unapply(p: Process): Option[(String, Expression, Process)] = p match {
+    case ForEachGeneric(id, set, None, body) => Some((id, set, body))
+    case _ => None
+  }
+}
+
+object ForEachYield {
+  def apply(x: String, setX: Expression, y: String, setY: String,  body: Process) = ForEachGeneric(x, setX, Some((y, setY)), body)
+  def unapply(p: Process): Option[(String, Expression, String, String, Process)] = p match {
+    case ForEachGeneric(id, setId, Some((y,sy)), body) => Some((id, setId, y, sy, body))
+    case _ => None
+  }
+}
+
+//TODO define a normal form on the program
+
+import scala.collection.immutable.Set
+import scala.collection.immutable.Map
+import picasso.graph._
+
+//program counter
+//case class PC(loc: String)
+
+//state of a particular agent (needed for the global system configuration)
+//the store should contains only local variable (boolean, string), not channels or sets
+class State[PC](val pc: PC, store: Map[ID, Literal]) {
+  def apply(id: ID) = store(id)
+}
+
+//TODO rather than Process on the edges, should have some guarded command language
+/** An agent ...
+ *  @param id the name of the agent kind
+ *  @param params the parameters for the agent creation
+ *  @param transitions transitions
+ *  @param init the initial location
+ *  @param errorLoc the error locations
+ */
+class AgentDefinition[PC](val id: String, params: List[ID], transition: Map[PC,Map[Process,Set[PC]]], init: PC, errorLoc: Set[PC])
+  extends Automaton[GT.ELGT{type V = PC; type EL = Process}](transition, init, errorLoc) { }
+
+// define transitions (matching I/O prefixes, internal transitions, ...)
+// reduction rules ...

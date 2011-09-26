@@ -1,0 +1,80 @@
+/*
+ * Adpated to Picasso from Petruchio by DZ
+ * Project:  Petruchio
+ * File: clientServerNoFCP.pi
+ * Author: Tim Strazny
+ * Created: 06.01.2008
+ * Remark:  This example is taken from
+ *          Roland Meyer, Victor Khomenko, and Tim Strazny. 
+ *          A Practical Approach to Verification of Mobile Systems 
+ *          Using Net Unfoldings. 20 pages, accepted for publication
+ *          at the 29th International Conference on Application and  
+ *          Theory of Petri Nets and Other Models of Concurrency, 
+ *          ATPN 2008, February 2008.
+ */
+
+
+init
+  (c1, client) -> (url, name) [1]
+  (c2, client) -> (url, name) [1]
+  (s, server) -> (url, name) [1]
+
+//CLIENT(url) := new ip.url<ip>.ip(session).session(x).CLIENT(url);
+transition "Client 1. new ip.url<ip>"
+pre
+  (c1, client) -> (url, name) [1]
+post
+  (c1, client1) -> (url, name) [1]
+  (c1, client1) -> (ip, name) [2]
+  (msg, out) -> (url, name) [0]
+  (msg, out) -> (ip, name) [1]
+==>
+  c1 -> c1
+  url -> url
+<==
+
+transition "Client 2. ip(session)"
+pre
+  (c1, client1) -> (url, name) [1]
+  (c1, client1) -> (ip, name) [2]
+  (msg, out) -> (ip, name) [0]
+  (msg, out) -> (ses, name) [1]
+post
+  (c1, client2) -> (url, name) [1]
+  (c1, client2) -> (ses, name) [2]
+==>
+  c1 -> c1
+  url -> url
+  ses -> ses
+<==
+
+transition "Client 3. session(x)"
+pre
+  (c1, client2) -> (url, name) [1]
+  (c1, client2) -> (ses, name) [2]
+  (msg, out) -> (ses, name) [0]
+post
+  (c1, client) -> (url, name) [1]
+==>
+  c1 -> c1
+  url -> url
+<==
+
+
+//SERVER(url) := url(y).(new ses.y<ses>.ses<ses>.0|SERVER(url));
+transition "Server url(y).(new ses.y<ses>.ses<ses>.0|SERVER(url))"
+pre
+  (s, server) -> (url, name) [1]
+  (msg, out) -> (url, name) [0]
+  (msg, out) -> (ip, name) [1]
+post
+  (s, server) -> (url, name) [1]
+  (msg1, out) -> (ip, name) [0]
+  (msg1, out) -> (ses, name) [1]
+  (msg2, out) -> (ses, name) [0]
+==>
+  s -> s
+  url -> url
+  ip -> ip
+<==
+
