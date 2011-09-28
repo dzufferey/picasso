@@ -1,5 +1,8 @@
 package picasso
 
-object Main extends scala.App {
-  Console.println("Hello World")
+object Main {
+
+  def main(args: Array[String]): Unit = {
+    Console.println("Hello World")
+  }
 }
