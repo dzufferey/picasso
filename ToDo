@@ -14,8 +14,11 @@ Graph:
 Algorithm
 =========
 
--partial order reduction: a path for acceleration make sense iff there are dependencies between transition (+ arbitrary order for incomparable trs)
+-a path for acceleration make sense iff there are dependencies between transition (+ arbitrary order for incomparable trs)
 -finite sequence of path to accelerate (might happen with partial order reduction) (i.e. acceleration.hasNext == false)
+-(dynamic) partial order reduction:
+    (1) preserving only 'single node' covering: look at the shape of transitions and check which ones are independent.
+    (2) preserving covering of properlies with multiples node: ...
 
 Frontend
 ========

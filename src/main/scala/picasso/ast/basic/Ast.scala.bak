@@ -1,0 +1,30 @@
+package picasso.ast.basic
+
+//TODO define a normal form on the program
+
+import scala.collection.immutable.Set
+import scala.collection.immutable.Map
+import picasso.graph._
+
+//program counter
+//case class PC(loc: String)
+
+//state of a particular agent (needed for the global system configuration)
+//the store should contains only local variable (boolean, string), not channels or sets
+class State[PC](val pc: PC, store: Map[ID, Literal]) {
+  def apply(id: ID) = store(id)
+}
+
+//TODO rather than Process on the edges, should have some guarded command language
+/** An agent ...
+ *  @param id the name of the agent kind
+ *  @param params the parameters for the agent creation
+ *  @param transitions transitions
+ *  @param init the initial location
+ *  @param errorLoc the error locations
+ */
+class AgentDefinition[PC](val id: String, params: List[ID], transition: Map[PC,Map[Process,Set[PC]]], init: PC, errorLoc: Set[PC])
+  extends Automaton[GT.ELGT{type V = PC; type EL = Process}](transition, init, errorLoc) { }
+
+// define transitions (matching I/O prefixes, internal transitions, ...)
+// reduction rules ...
