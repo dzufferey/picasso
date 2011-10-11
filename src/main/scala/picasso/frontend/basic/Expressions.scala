@@ -1,6 +1,6 @@
 package picasso.frontend.basic
 
-sealed abstract class Expression
+sealed abstract class Expression extends scala.util.parsing.input.Positional
 case class Value(l: Literal) extends Expression {
   override def toString = l.toString
 }

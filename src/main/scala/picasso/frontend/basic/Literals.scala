@@ -2,7 +2,7 @@ package picasso.frontend.basic
 
 import picasso.math.hol.{Literal => HLiteral}
 
-sealed abstract class Literal
+sealed abstract class Literal extends scala.util.parsing.input.Positional
 
 case class Bool(b: Boolean) extends Literal {
   override def toString = b.toString

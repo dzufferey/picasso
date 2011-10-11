@@ -1,6 +1,6 @@
 package picasso.frontend.basic
 
-sealed abstract class Process
+sealed abstract class Process extends scala.util.parsing.input.Positional
 case class Block(stmts: List[Process]) extends Process
 case class Affect(id: String, value: Expression) extends Process {
   override def toString = id + " := " + value
@@ -60,22 +60,15 @@ object Processes {
 
   //if not easilyConvertible then translate to AgentDefinition
   def toAgent(id: String, params: List[String], p: Process): AgentDefinition[PC] = {
-    var counter = 0
-    def freshLoc: String = { //TODO Positional
-      counter += 1
-      id + "_loc_"+counter
-    }
-    def freshLocP(p: Process): PC = freshLoc
-    def freshLocE(e: Expression): PC = freshLoc
-    def mkCfa(init: PC, edge: Process, last: PC, assignTo: Option[String] = None): List[(PC, picasso.ast.Process, PC)] = edge match {
+    def freshLoc(where: scala.util.parsing.input.Positional): String = id+"("+where.pos+")"
+    def mkCfa(init: PC, edge: Process, last: PC): List[(PC, picasso.ast.Process, PC)] = edge match {
       case Affect(id /*String*/, value /*Expression*/) =>
-        assert(assignTo.isEmpty)
         val id2 = picasso.ast.ID(picasso.math.hol.Variable(id)) //TODO type ?
         val value2 = Expressions.exp2Exp(value)
         List((init,picasso.ast.Affect(id2, value2),last))
 
       case Declaration(id /*String*/, mutable, value /*Expression*/) =>
-        mkCfa(init, Affect(id, value), last, assignTo) //assume no name clash / shadowing
+        mkCfa(init, Affect(id, value), last) //assume no name clash / shadowing
 
       case Expr(e /*Expression*/) =>
         List((init,picasso.ast.Expr(Expressions.exp2Exp(e)),last))
@@ -88,16 +81,15 @@ object Processes {
       case Receive(cases /*List[(Expression,Pattern,Process)]*/) => cases flatMap { case (expr, pat, p) =>
         val expr2 = Expressions.exp2Exp(expr)
         val pat2 = Patterns.pat2Pat(pat)
-        val afterPattern = freshLocP(p)
-        (init, picasso.ast.Receive(expr2, pat2), afterPattern) :: mkCfa(afterPattern, p, last, assignTo)
+        val afterPattern = freshLoc(p)
+        (init, picasso.ast.Receive(expr2, pat2), afterPattern) :: mkCfa(afterPattern, p, last)
       }
 
       case Block(stmts) =>
         //TODO Block(Nil) is Zero
-        val newLocs = (stmts.tail) map freshLocP
+        val newLocs = (stmts.tail) map freshLoc
         val inits = init :: newLocs
         val lasts = newLocs ::: List(last)
-        assert(assignTo.isEmpty) //TODO assignTo ?
         stmts zip (inits zip lasts) flatMap {
           case (edge, (init, end)) => mkCfa(init, edge, end)
         }
@@ -106,19 +98,18 @@ object Processes {
         val cond = Expressions.exp2Exp(condition)
         val condFalse = picasso.ast.Application("!", List(cond))
         //true
-        val trueCase = freshLocP(caseTrue)
+        val trueCase = freshLoc(caseTrue)
         val trueGuard = picasso.ast.Assume(cond)
-        ((init, trueGuard, trueCase)) :: mkCfa( trueCase, caseTrue, last, assignTo)
+        ((init, trueGuard, trueCase)) :: mkCfa( trueCase, caseTrue, last)
         //false
-        val falseCase = freshLocP(caseFalse)
+        val falseCase = freshLoc(caseFalse)
         val falseGuard = picasso.ast.Assume(condFalse)
-        ((init, falseGuard, falseCase)) :: mkCfa( falseCase, caseFalse, last, assignTo)
+        ((init, falseGuard, falseCase)) :: mkCfa( falseCase, caseFalse, last)
 
       case While(condition, body) =>
-        assert(assignTo.isEmpty)
         val cond = Expressions.exp2Exp(condition)
         val condFalse = picasso.ast.Application("!", List(cond))
-        val loopBody = freshLocP(body)
+        val loopBody = freshLoc(body)
         val trueGuard = picasso.ast.Assume(cond)
         val falseGuard = picasso.ast.Assume(condFalse)
         ((init, trueGuard, loopBody)) :: ((init,falseGuard,last)) :: mkCfa( loopBody, body, init)
@@ -128,8 +119,8 @@ object Processes {
 
     }
     val params2 = params map { id => picasso.ast.ID(picasso.math.hol.Variable(id)) } //TODO types ??
-    val init = freshLoc
-    val end = freshLoc
+    val init = id + "_start" 
+    val end = id + "_end"
     val cfa = Automaton[GT.ELGT{type V = PC; type EL = picasso.ast.Process}](mkCfa(init, p, end), init, Set(end))
     //TODO the whole thing might need types
     new AgentDefinition[PC](id, params2, cfa)

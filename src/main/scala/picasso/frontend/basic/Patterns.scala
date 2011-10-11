@@ -1,6 +1,6 @@
 package picasso.frontend.basic
 
-sealed abstract class Pattern
+sealed abstract class Pattern extends scala.util.parsing.input.Positional
 case class PatternLit(l: Literal) extends Pattern {
   override def toString = l.toString
 }

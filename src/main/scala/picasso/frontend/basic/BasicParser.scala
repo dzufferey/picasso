@@ -10,22 +10,22 @@ object BasicParser extends StandardTokenParsers {
   lexical.delimiters += ("begin", "end", ";", ",")
   lexical.reserved += (":=", "var", "val", "if", "then", "else", "while", "foreach", "do", "yield", "in", "!", "?", "_", "=>", "*", "select", "case")
 
-  def literal: Parser[Literal] =
-    ( "true"                                        ^^^ Bool(true)
+  def literal: Parser[Literal] = positioned(
+      "true"                                        ^^^ Bool(true)
     | "false"                                       ^^^ Bool(false)
     //| numericLit                                    ^^ ( int => Integer(int.toInt) )
     | stringLit                                     ^^ ( str => StringVal(str) )
     )
 
-  def pattern: Parser[Pattern] =
-    ( literal                                       ^^ ( lit => PatternLit(lit) )
+  def pattern: Parser[Pattern] = positioned(
+      literal                                       ^^ ( lit => PatternLit(lit) )
     | "(" ~> repsep(pattern, ",") <~ ")"            ^^ ( lst => PatternTuple(lst) )
     | ident ~ opt("(" ~> repsep(pattern, ",") <~ ")")  ^^ { case id ~ Some(args) => Case(id, args)
                                                             case id ~ None => Ident(id) }
     )
 
-  def expr: Parser[Expression] =
-    ( literal                                       ^^ ( lit => Value(lit) )
+  def expr: Parser[Expression] = positioned(
+      literal                                       ^^ ( lit => Value(lit) )
     | "*"                                           ^^^ Any
     | "(" ~> repsep(expr, ",") <~ ")"               ^^ ( lst => Tuple(lst) )
     | ident ~ opt("(" ~> repsep(expr, ",") <~ ")")  ^^ { case id ~ Some(args) => Application(id, args)
@@ -35,8 +35,8 @@ object BasicParser extends StandardTokenParsers {
   def cases: Parser[(Expression,Pattern,Process)] =
     ("case" ~> expr) ~ ("?" ~> pattern) ~ ("=>" ~> proc) ^^ {case a ~ b ~ c => (a,b,c)}
 
-  def proc: Parser[Process] =
-    ( "begin" ~> repsep(proc, ";") <~ "end"         ^^ ( stmts => Block(stmts))
+  def proc: Parser[Process] = positioned(
+      "begin" ~> repsep(proc, ";") <~ "end"         ^^ ( stmts => Block(stmts))
     | ("var" ~> ident) ~ (":=" ~> expr)             ^^ { case id ~ value => Declaration(id, true, value) }
     | ("val" ~> ident) ~ (":=" ~> expr)             ^^ { case id ~ value => Declaration(id, false, value) }
     | ident ~ (":=" ~> expr)                        ^^ { case id ~ value => Affect(id, value) }
@@ -55,6 +55,7 @@ object BasicParser extends StandardTokenParsers {
     )
 
   //TODO actor definition
+  //TODO init configuration: List of names + list of agents with parameters (lit or names)
 
   //example
   def main(args: Array[String]) {
