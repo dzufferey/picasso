@@ -1,4 +1,4 @@
-package picasso.ast.basic
+package picasso.frontend.basic
 
 sealed abstract class Expression
 case class Value(l: Literal) extends Expression {

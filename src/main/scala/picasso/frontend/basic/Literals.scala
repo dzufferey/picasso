@@ -1,4 +1,4 @@
-package picasso.ast.basic
+package picasso.frontend.basic
 
 import picasso.math.hol.{Literal => HLiteral}
 

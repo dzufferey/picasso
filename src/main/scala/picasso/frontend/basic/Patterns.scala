@@ -1,4 +1,4 @@
-package picasso.ast.basic
+package picasso.frontend.basic
 
 sealed abstract class Pattern
 case class PatternLit(l: Literal) extends Pattern {

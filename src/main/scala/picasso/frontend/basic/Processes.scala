@@ -1,4 +1,4 @@
-package picasso.ast.basic
+package picasso.frontend.basic
 
 sealed abstract class Process
 case class Block(stmts: List[Process]) extends Process
@@ -93,6 +93,7 @@ object Processes {
       }
 
       case Block(stmts) =>
+        //TODO Block(Nil) is Zero
         val newLocs = (stmts.tail) map freshLocP
         val inits = init :: newLocs
         val lasts = newLocs ::: List(last)
@@ -130,39 +131,8 @@ object Processes {
     val init = freshLoc
     val end = freshLoc
     val cfa = Automaton[GT.ELGT{type V = PC; type EL = picasso.ast.Process}](mkCfa(init, p, end), init, Set(end))
+    //TODO the whole thing might need types
     new AgentDefinition[PC](id, params2, cfa)
   }
 
-  /*
-  case Affect(id: String, value: Expression)
-  case Declaration(id: String, variable: Boolean, value: Expression)
-  case Expr(e: Expression)
-  case Send(dest: Expression, content: Expression)
-  case Receive(cases: List[(Expression,Pattern,Process)])
-  case Block(stmts: List[Process])
-  //these things are expressible only at the agent level ...
-  case ITE(condition: Expression, caseTrue: Process, caseFalse: Process)
-  case While(condition: Expression, body: Process)
-  case ForEachGeneric(id: String, set: Expression, yieldOpt: Option[(String,String)], body: Process)
-  */
-
 }
-
-/* conversion to 
-sealed abstract class Process {
-case class Block(stmts: List[Process]) extends Process {
-case class Affect(id: ID, value: Expression) extends Process {
-case class Expr(e: Expression) extends Process {
-case class Send(dest: Expression, content: Expression) extends Process {
-case class Receive(src: Expression, pat: Pattern) extends Process {
-
-object Skip { apply(), unapply(p: Process): Boolean
-object Zero { apply(), unapply(p: Process): Boolean
-//for collection use:
-object EmptySet { apply(), unapply(e: Expression): Boolean
-object SetIsEmpty { apply(e: Expression), unapply(e: Expression): Option[Expression]
-object SetAdd { apply(e1: Expression, e2: Expression), unapply(e: Expression): Option[(Expression,Expression)]
-object SetMinus { apply(e1: Expression, e2: Expression), unapply(e: Expression): Option[(Expression,Expression)]
-object SetChoose { apply(e: Expression), unapply(e: Expression): Option[Expression]//do not remove the chosen element from the set
-object SetPick { apply(e: Expression), unapply(e: Expression): Option[Expression]//do remove the chosen element from the set (this operation is not side-effect free)
-*/
