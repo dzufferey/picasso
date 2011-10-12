@@ -7,8 +7,13 @@ import scala.util.parsing.combinator.token._
 import scala.util.parsing.combinator.syntactical._
 
 object BasicParser extends StandardTokenParsers {
-  lexical.delimiters += ("begin", "end", ";", ",")
-  lexical.reserved += (":=", "var", "val", "if", "then", "else", "while", "foreach", "do", "yield", "in", "!", "?", "_", "=>", "*", "select", "case")
+  lexical.delimiters += (";", ",", "(", ")", "!", "?", "_", "=>", ":=")
+  lexical.reserved += ( "begin", "end", "var", "val", "new",
+                        "if", "then", "else", "true", "false",
+                        "while", "foreach", "do", "yield", "in",
+                        "select", "case", "initial")
+
+  //TODO declaration of case classes ?
 
   def literal: Parser[Literal] = positioned(
       "true"                                        ^^^ Bool(true)
@@ -24,11 +29,15 @@ object BasicParser extends StandardTokenParsers {
                                                             case id ~ None => Ident(id) }
     )
 
+  //TODO allow some form of infix operation (=, !=)
+  //TODO '!' as unary not
+  //TODO functions with special meaning about sets ...
   def expr: Parser[Expression] = positioned(
       literal                                       ^^ ( lit => Value(lit) )
-    | "*"                                           ^^^ Any
+    | "_"                                           ^^^ Any
     | "(" ~> repsep(expr, ",") <~ ")"               ^^ ( lst => Tuple(lst) )
-    | ident ~ opt("(" ~> repsep(expr, ",") <~ ")")  ^^ { case id ~ Some(args) => Application(id, args)
+    | ident ~ opt("(" ~> repsep(expr, ",") <~ ")")  ^^ { case "newChannel" ~ Some(Nil) => NewChannel()
+                                                         case id ~ Some(args) => Application(id, args)
                                                          case id ~ None => ID(id) }
     )
 
@@ -43,6 +52,9 @@ object BasicParser extends StandardTokenParsers {
     | expr ~ ("!" ~> expr)                          ^^ { case dest ~ value => Send(dest, value) }
     | expr                                          ^^ ( e => Expr(e) )
     | "select" ~> rep1(cases)                       ^^ ( cases => Receive(cases))
+    | ("new" ~> ident ~ ("(" ~> repsep(expr, ",") <~ ")"))  ^^ {
+                                                        case id ~ args => Expr(Create(id, args))
+                                                    }
     | ("if" ~> expr) ~ ("then" ~> proc) ~ opt("else" ~> proc) ^^ {
                                                          case e ~ tr ~ Some(fa) => ITE(e,tr,fa)
                                                          case e ~ tr ~ None => ITE(e,tr,Expr(Unit()))
@@ -54,14 +66,22 @@ object BasicParser extends StandardTokenParsers {
                                                     }
     )
 
-  //TODO actor definition
-  //TODO init configuration: List of names + list of agents with parameters (lit or names)
+  def actor: Parser[Actor] = positioned(
+    ident ~ ("(" ~> repsep(ident, ",") <~")") ~ proc    ^^ { case id ~ params ~ body => Actor(id, params, body) }
+  )
+
+  def initial: Parser[Seq[(String,Seq[Expression])]] =
+    "initial" ~> rep1sep(ident ~ ("(" ~> repsep(expr, ",") <~")"), ";")  ^^ (_ map {case id ~ args => (id, args)})
+    //The set of names can be inferred from the parameters of the actors.
+
+  def system: Parser[(Seq[Actor], Seq[(String,Seq[Expression])])] =
+    rep1(actor) ~ initial                          ^^ { case actors ~ init => (actors, init) }
 
   //example
-  def main(args: Array[String]) {
-    val tokens = new lexical.Scanner(args(0))
-    println(args(0))
-    println(phrase(proc)(tokens))
+  def apply(toParse: String) = {
+    val tokens = new lexical.Scanner(toParse)
+    phrase(system)(tokens)
   }
+
 }
 

@@ -1,0 +1,24 @@
+Server(self)
+  while true do
+    select
+      case self ? Query(sender) => sender ! Reply()
+
+Env(server)
+  while true do new Client(server)
+
+Client(server)
+  begin
+    val self := newChannel();
+    while _ do
+      begin
+        self ! Timeout();
+        server ! Query(self);
+        select
+          case self ? Timeout() => ()
+          case self ? Reply() => ()
+      end
+  end
+
+initial
+  Server(s);
+  Env(s)
