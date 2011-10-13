@@ -2,7 +2,7 @@ package picasso.frontend
 
 import org.scalatest._
 import picasso.utils._
-import picasso.model._
+import picasso.model.dbp._
 
 class DBPGraphsSuite extends FunSuite {
   

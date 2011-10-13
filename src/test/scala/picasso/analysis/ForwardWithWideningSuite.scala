@@ -1,6 +1,6 @@
 package picasso.analysis
 
-import picasso.model.{PetriNet, PNTransition, PNState}
+import picasso.model.pn._
 
 import org.scalatest._
 

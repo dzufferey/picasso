@@ -154,7 +154,7 @@ class Analysis(val global: Global, val picasso: PicassoPlugin)
 
   def computeCover = {
     assert(extractedDBP.isDefined && initState.isDefined)
-    val procSimpleForward = new _root_.picasso.model.DepthBoundedProcess[DBC](extractedDBP.get) with _root_.picasso.analysis.ForwardWithWidening
+    val procSimpleForward = new _root_.picasso.model.dbp.DepthBoundedProcess[DBC](extractedDBP.get) with _root_.picasso.analysis.ForwardWithWidening
     val cover = procSimpleForward.computeCover(initState.get)
     //Logger("Plugin", LogDebug, "cover is " + cover)
     Logger("Plugin", LogDebug, "cover 'size' is " + cover.basis.size)
@@ -164,7 +164,7 @@ class Analysis(val global: Global, val picasso: PicassoPlugin)
 
   def testForPossibleTerminationUsingFullCover = {
     val cover = computeCover
-    //val unreachable = _root_.picasso.model.DepthBoundedConf.empty[DBC] + _root_.picasso.model.Thread("NEVER")
+    //val unreachable = _root_.picasso.model.dbp.DepthBoundedConf.empty[DBC] + _root_.picasso.model.dbp.Thread("NEVER")
     //assert(!cover(unreachable))
     val mainFinishes = makeConf(List((unk, msgDest, DBCN("finished"))))
     cover(mainFinishes)
@@ -173,7 +173,7 @@ class Analysis(val global: Global, val picasso: PicassoPlugin)
   def testForError = {
     assert(extractedDBP.isDefined && initState.isDefined)
     val errorConf = emptyConf + errorState
-    val procSimpleForward = new _root_.picasso.model.DepthBoundedProcess[DBC](extractedDBP.get) with _root_.picasso.analysis.ForwardWithWidening
+    val procSimpleForward = new _root_.picasso.model.dbp.DepthBoundedProcess[DBC](extractedDBP.get) with _root_.picasso.analysis.ForwardWithWidening
     procSimpleForward.forwardCoveringWithTrace(initState.get, errorConf)
   }
 

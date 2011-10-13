@@ -1,6 +1,4 @@
-package picasso.ast
-
-//TODO instead of using the PI prefix for Zero and ProcessID, should this be in its own package ?
+package picasso.frontend.pi
 
 import scala.collection.immutable.TreeSet
 import scala.collection.immutable.{TreeMap, Map}
@@ -71,7 +69,7 @@ case class Repetition(process: PiProcess) extends PiProcess {
   def isObservablePrefix(name: String): Boolean = process isObservablePrefix name
 }
 
-case class InputPrefix(channel: String, args: List[String], process: PiProcess) extends PiProcess {
+case class Input(channel: String, args: List[String], process: PiProcess) extends PiProcess {
   private lazy val fn = (process.freeNames /: args)(_ - _) + channel
   def freeNames: Set[String] = fn
   private lazy val bn = (process.boundNames /: args)(_ + _)
@@ -79,7 +77,7 @@ case class InputPrefix(channel: String, args: List[String], process: PiProcess) 
   def alphaUnsafe(map: Map[String, String]): PiProcess = {
     val channel2 = map.getOrElse(channel, channel)
     val map2 = map -- args
-    InputPrefix(channel2, args, process.alphaUnsafe(map2))
+    Input(channel2, args, process.alphaUnsafe(map2))
   }
   def alpha(map: Map[String, String]): PiProcess = {
     val imageSet = Set.empty[String] ++ map.values
@@ -90,66 +88,66 @@ case class InputPrefix(channel: String, args: List[String], process: PiProcess) 
     else {
       val channel2 = map.getOrElse(channel, channel)
       val map2 = map -- args
-      InputPrefix(channel2, args, process.alpha(map2))
+      Input(channel2, args, process.alpha(map2))
     }
   }
   def alphaAll(map: Map[String, String]): PiProcess = {
     val channel2 = map.getOrElse(channel, channel)
     val args2 = args map ( n => map.getOrElse(n, n))
-    InputPrefix(channel2, args2, process.alphaAll(map))
+    Input(channel2, args2, process.alphaAll(map))
   }
   def isObservablePrefix(name: String): Boolean = name == channel
 }
 
-case class OutputPrefix(channel: String, args: List[String], process: PiProcess) extends PiProcess {
+case class Output(channel: String, args: List[String], process: PiProcess) extends PiProcess {
   private lazy val fn = (process.freeNames /: args)(_ + _) + channel
   def freeNames: Set[String] = fn
   def boundNames: Set[String] = process.boundNames
   def alphaUnsafe(map: Map[String, String]): PiProcess = {
     val channel2 = map.getOrElse(channel, channel)
     val args2 = args map ( n => map.getOrElse(n, n))
-    OutputPrefix(channel2, args2, process.alphaUnsafe(map))
+    Output(channel2, args2, process.alphaUnsafe(map))
   }
   def alpha(map: Map[String, String]): PiProcess = {
     val channel2 = map.getOrElse(channel, channel)
     val args2 = args map ( n => map.getOrElse(n, n))
-    OutputPrefix(channel2, args2, process.alpha(map))
+    Output(channel2, args2, process.alpha(map))
   }
   def alphaAll(map: Map[String, String]): PiProcess = {
     val channel2 = map.getOrElse(channel, channel)
     val args2 = args map ( n => map.getOrElse(n, n))
-    OutputPrefix(channel2, args2, process.alphaAll(map))
+    Output(channel2, args2, process.alphaAll(map))
   }
   def isObservablePrefix(name: String): Boolean = name == channel
 }
 
-case object PiZero extends PiProcess {
+case object Zero extends PiProcess {
   def freeNames: Set[String] = TreeSet.empty[String]
   def boundNames: Set[String] = TreeSet.empty[String]
-  def alphaUnsafe(map: Map[String, String]): PiProcess = PiZero
-  def alpha(map: Map[String, String]): PiProcess= PiZero
-  def alphaAll(map: Map[String, String]): PiProcess= PiZero
+  def alphaUnsafe(map: Map[String, String]): PiProcess = Zero
+  def alpha(map: Map[String, String]): PiProcess= Zero
+  def alphaAll(map: Map[String, String]): PiProcess= Zero
   def isObservablePrefix(name: String): Boolean = false
 }
 
-case class PiProcessID(id: String, args: List[String]) extends PiProcess {
+case class ProcessID(id: String, args: List[String]) extends PiProcess {
   def freeNames: Set[String] = (TreeSet.empty[String] /: args)(_ + _)
   def boundNames: Set[String] = TreeSet.empty[String]
-  def alphaUnsafe(map: Map[String, String]): PiProcess = PiProcessID(id, args map ( n => map.getOrElse(n, n)))
-  def alpha(map: Map[String, String]): PiProcess = PiProcessID(id, args map ( n => map.getOrElse(n, n)))
-  def alphaAll(map: Map[String, String]): PiProcess = PiProcessID(id, args map ( n => map.getOrElse(n, n)))
+  def alphaUnsafe(map: Map[String, String]): PiProcess = ProcessID(id, args map ( n => map.getOrElse(n, n)))
+  def alpha(map: Map[String, String]): PiProcess = ProcessID(id, args map ( n => map.getOrElse(n, n)))
+  def alphaAll(map: Map[String, String]): PiProcess = ProcessID(id, args map ( n => map.getOrElse(n, n)))
   def isObservablePrefix(name: String): Boolean = false
 }
 
 object PiProcess {
 
   def isInputPrefix(p: PiProcess) = p match {
-    case InputPrefix(_,_,_) => true
+    case Input(_,_,_) => true
     case _ => false
   }
 
   def isOutputPrefix(p: PiProcess) = p match {
-    case OutputPrefix(_,_,_) => true
+    case Output(_,_,_) => true
     case _ => false
   }
 

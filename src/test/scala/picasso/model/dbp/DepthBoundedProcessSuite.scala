@@ -1,4 +1,4 @@
-package picasso.model
+package picasso.model.dbp
 
 import org.scalatest._
 import picasso.math.WellPartialOrdering._

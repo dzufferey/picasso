@@ -417,7 +417,7 @@ trait DBPTranslator {
       val readyToPack = if (agt.cfa.targetStates(b)) {
         //if b is final remove it from the transitions (graph and maps)
         trs map { case (title, g1, g2, mapForward, mapBackward, forbidden) =>
-          val bStates = g2.vertices.filter(_.state == DBCS[PC](b))
+          val bStates = g2.vertices.filter(_.state == picasso.model.dbp.DBCS[PC](b)) //TODO do we really needs to use DBCS here ?
           //Console.println("g2 -> " + g2.vertices)
           //Console.println("b("+b+") -> " + bStates)
           assert(!bStates.isEmpty)

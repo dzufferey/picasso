@@ -1,5 +1,4 @@
 package picasso.frontend.basic
-import picasso.ast.basic._
 
 import scala.util.parsing.combinator._
 import scala.util.parsing.combinator.lexical._

@@ -2,7 +2,6 @@ package picasso.frontend.basic
 
 import org.scalatest._
 import picasso.utils._
-import picasso.model._
 
 class ParserSuite extends FunSuite {
   

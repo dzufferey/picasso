@@ -1,4 +1,4 @@
-package picasso.model
+package picasso.model.pn
 
 import picasso.math._
 import scala.math.Ordering

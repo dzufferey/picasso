@@ -1,6 +1,6 @@
 package picasso.frontend
 
-import picasso.model._
+import picasso.model.dbp._
 import picasso.math._
 import picasso.utils._
 import picasso.analysis._
