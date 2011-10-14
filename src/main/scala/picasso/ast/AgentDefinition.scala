@@ -39,8 +39,29 @@ class AgentDefinition[PC](val id: String, val params: List[ID], val cfa: Automat
 
   //TODO checks if the agent is "unrolled", i.e. have only simple (easy to translate) expression on the edges.
 
-  //TODO liveness analysis and insert havoc statement
-  //simpler that way or keep a scope of live variables (so we can detect a read from unk/any)
+  //TODO have a scope of live variables (so we can detect a read from unk/any)
+  lazy val liveVariables: Map[PC, Set[ID]] = {
+    val read = readMap
+    val written = writeMap
+    assert(written.keySet == read.keySet)
+    read.map{ case (k,v) => (k, v intersect written(k))}
+  }
+
+  //defaultValue: at the initState, the argument are written!
+  lazy val writeMap: Map[PC, Set[ID]] = {
+    def default(s: PC) = if (s == cfa.initState) params.toSet
+                         else Set.empty[ID]
+    cfa.aiFixpoint( ((written: Set[ID], p: Process) => written ++ p.writtenIDs),//TODO only correct if there are no blocks
+                    ((a: Set[ID], b: Set[ID]) => a ++ b),
+                    ((a: Set[ID], b: Set[ID]) => b subsetOf a),
+                    default)
+  }
+
+  lazy val readMap: Map[PC, Set[ID]] = 
+    cfa.aiFixpointBackward( ((read: Set[ID], p: Process) => read -- p.writtenIDs ++ p.readIDs),//TODO only correct if there are no blocks
+                            ((a: Set[ID], b: Set[ID]) => a ++ b),
+                            ((a: Set[ID], b: Set[ID]) => b subsetOf a),
+                            (_ => Set.empty[ID]) )
 
   //what about the read from Any ?
   //(1) do a case split (more expensive but provide increase precision)

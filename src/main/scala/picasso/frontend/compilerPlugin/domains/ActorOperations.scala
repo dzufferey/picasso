@@ -155,11 +155,11 @@ trait ActorOperations {
         val n2 = DBCN(b)
         val (destNode, destEdges1) = if (dest == thisChannel) accessID(n1, thisNode, dest, Some(thisNode)) else accessID(n1, thisNode, dest, None)
         //static references don't need to have an edge in the LHS graph (therefore filter with liveAt)
-        val readRefs = readIDs(Expr(e)).filter(x => liveAt(a)(x)).map(id => (id,unk)).toMap
+        val readRefs = e.ids.filter(x => liveAt(a)(x)).map(id => (id,unk)).toMap
         val livesBefore = readRefs + (dest -> destNode) ++ (if (readRefs contains thisChannel) List(thisChannel -> thisNode) else Nil)
         val (m, post) = graphOfExpr(e, livesBefore)
         val g1 = makeConf(livesBefore.toList.flatMap{case (id,n) => accessID(n1,thisNode,id,n)}) + destNode //need to add dest node since static nodes don't have edges
-        val livesAfter = readIDs(Send(dest, e)).filter(liveAt(b)(_)) //the ids in e are after
+        val livesAfter = Send(dest, e).readIDs.filter(liveAt(b)(_)) //the ids in e are after
         //Logger("Plugin", LogDebug, "Send, liveAfter: " + livesAfter)
         val edgesAfter = 
           livesAfter.flatMap(id => accessID(n2,thisNode,id,livesBefore(id))) +

@@ -6,14 +6,14 @@ import picasso.ast.{Ident => PIdent, Process => PProcess, _}
 import picasso.math.hol.{Type => HType, ClassType => HClassType, Application => HApplication, Bool => HBool, Wildcard => HWildcard, Binding => HBinding, _}
 import picasso.graph._
 import picasso.model.dbp._
-import picasso.transform.DefDBP
 import picasso.math._
 import scala.tools.nsc._
 
 trait AuxDefinitions extends DefDBP {
   self: AnalysisUniverse =>
   
-  def nodeForLiteral[T](l : Literal[T]) = DBCN(l.toString)
+  def DBCN[T](l : Literal[T]) = DBCN(l.toString)
+  def DBCN_Any = DBCN("Any")
 
   /** a generic name in the pi-calculus sense. */
   def fresh = DBCN("name")

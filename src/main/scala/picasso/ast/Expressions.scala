@@ -17,15 +17,18 @@ case object GlobalScope extends AccessMode //is a global ref
 //everyting should be straightforward but the channel typing.
 sealed abstract class Expression {
   def toStringRaw: String
+  def ids: Set[ID]
 }
 case class Value[T](l: Literal[T]) extends Expression {
   override def toString = l.toString
   def toStringRaw = "Value("+l.toString+")"
+  def ids = Set.empty[ID]
 }
 case class ID(id: Variable) extends Expression {
   override def toString = id.toString
   def toStringRaw = "ID" + id.toStringFull
   def toStringFull = id.toStringFull
+  def ids = Set[ID](this)
   var accessMode: AccessMode = LocalScope
   def setMode(m: AccessMode): this.type = {
     accessMode = m
@@ -35,14 +38,23 @@ case class ID(id: Variable) extends Expression {
 case class Application(fct: String, args: List[Expression]) extends Expression {
   def toStringRaw = "Application("+fct+","+args.map(_.toStringRaw).mkString("",",",")")
   override def toString = fct + args.mkString("(", ", " ,")")
+  def ids = {
+    val args = this match {
+      case Create(_, args) => args
+      case Application(_, args) => args
+    }
+    (Set.empty[ID] /: args)(_ ++ _.ids)
+  }
 }
 //Tuple as Application ?
 case class Tuple(values: List[Expression]) extends Expression {
   def toStringRaw = values.map(_.toStringRaw).mkString("Tuple(",",",")")
   override def toString = values.mkString("(", ", " ,")")
+  def ids = (Set.empty[ID] /: values)(_ ++ _.ids)
 }
 case object Any extends Expression {
   def toStringRaw = toString
+  def ids = Set.empty[ID]
 }
 
 object Bool {

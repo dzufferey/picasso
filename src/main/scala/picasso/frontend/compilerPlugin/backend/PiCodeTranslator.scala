@@ -445,7 +445,7 @@ trait PiCodeTranslator {
   }
 
   def frameOk(pre: Map[Variable, Boolean], p: PProcess, post: Map[Variable, Boolean]) = {
-    val toCheck = pre -- writtenIDs(p).map(_.id)
+    val toCheck = pre -- p.writtenIDs.map(_.id)
     toCheck.keys forall (s => !(post contains s) || pre(s) == post(s))
   }
 

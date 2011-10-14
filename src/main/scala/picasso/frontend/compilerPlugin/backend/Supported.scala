@@ -81,7 +81,7 @@ trait Supported {
         changeExpr(src) match {
           case Any =>
             Logger("Plugin", LogInfo, "src become Any => throwing away: " + rcv)
-            assert(idsInPattern(changePat(pat)).isEmpty)
+            assert(changePat(pat).ids.isEmpty)
             Skip()
           case src2 => Receive(src2, changePat(pat))
         }
@@ -125,92 +125,28 @@ trait Supported {
     new AgentDefinition(agt.id, agt.params, cfa3)
   }
 
+
+  ///////////////////////////////////////
+  //  TODO move this to somewhere else //
+  ///////////////////////////////////////
+
   //using AI fixpoint to compute the set of value that can be at one point
   //  compute what value comes from what if a variable comes only from one source it can be propagated
   //  a value never read can be thrown away if it side effect-free (otherwise simple not affect it)
   //TODO
-
-  //Domains for AI
-  // in term or read and write, sets of Strings can be used
-
-  def idsInExpression(e: Expression): Set[ID] = e match {
-    case PValue(_) | Any => Set.empty[ID]
-    case smth @ ID(_) => Set(smth)
-    case Create(_, args) => (Set.empty[ID] /: args)(_ ++ idsInExpression(_))
-    case Application(fct, args) => (Set.empty[ID] /: args)(_ ++ idsInExpression(_))
-    case Tuple(values) => (Set.empty[ID] /: values)(_ ++ idsInExpression(_))
-  }
-  def idsInPattern(p: Pattern): Set[ID] = p match {
-    case PatternLit(_) | Wildcard => Set.empty[ID]
-    case PatternTuple(lst) => (Set.empty[ID] /: lst)(_ ++ idsInPattern(_))
-    case Case(uid, args) => (Set.empty[ID] /: args)(_ ++ idsInPattern(_))
-    case Binding(lid, p2) => idsInPattern(p2) + lid
-  }
-  def readIDs(p: PProcess): Set[ID] = p match {
-    case PBlock(stmts) => (Set.empty[ID] /: stmts)(_ ++ readIDs(_))
-    case Affect(_, value) => idsInExpression(value)
-    case Expr(e) => idsInExpression(e)
-    case Send(dest, content) => idsInExpression(dest) ++ idsInExpression(content)
-    case Receive(src, _) => idsInExpression(src)
-  }
-  def writtenIDs(p: PProcess): Set[ID] = p match {
-    case PBlock(stmts) => (Set.empty[ID] /: stmts)(_ ++ writtenIDs(_))
-    case Affect(id, _) => Set(id)
-    case Expr(_) | Send(_, _) => Set.empty[ID]
-    case Receive(_, pat) => idsInPattern(pat)
-  }
-
-
-  //only correct if there are no blocks
-  def postWritten(written: Set[ID], p: PProcess): Set[ID] = {
-    val w = writtenIDs(p)
-    written ++ w //reading does not change since it can happen multiple times
-  }
-  //only correct if there are no blocks
-  //write "cancels" read
-  def preRead(read: Set[ID], p: PProcess): Set[ID] = {
-    val r = readIDs(p)
-    val w = writtenIDs(p)
-    read -- w ++ r
-  }
 
   //This part is also about taking into account the state of the local variables
   //this can be done independently for each method and dispatchTable (since methods modify states only through accessors)
   //basically, at each location determine the values of the boolean variables.
   //... .. .
 
-  //defaultValue: at the initState, the argument are written!
-  def writeMap[PC](agt: AgentDefinition[PC]): Map[PC, Set[ID]] = {
-    def default(s: PC) = if (s == agt.cfa.initState) agt.params.toSet
-                         else Set.empty[ID]
-    agt.cfa.aiFixpoint( postWritten,
-                        ((a: Set[ID], b: Set[ID]) => a ++ b),
-                        ((a: Set[ID], b: Set[ID]) => b subsetOf a),
-                         default)
-  }
-
-  def readMap[PC](agt: AgentDefinition[PC]): Map[PC, Set[ID]] = 
-    agt.cfa.aiFixpointBackward( preRead,
-                                ((a: Set[ID], b: Set[ID]) => a ++ b),
-                                ((a: Set[ID], b: Set[ID]) => b subsetOf a),
-                                (_ => Set.empty[ID]) )
-
   def liveVariables[PC](agt: AgentDefinition[PC]): Map[PC, Set[ID]] = {
-    //it is very likely that the read map is sufficient ...
-    val read = readMap(agt)
-    val written = writeMap(agt)
-    assert(written.keySet == read.keySet)
-    read.map{ case (k,v) => (k, v intersect written(k))}
+    agt.liveVariables
   }
 
   def liveVariablesRestrictedTo[PC](syms: Iterable[Symbol], agt: AgentDefinition[PC]): Map[PC, Set[ID]] = {
     val varIDs = (syms map IDOfSymbol).toSet
     liveVariables(agt).mapValues( _ intersect varIDs)
-  }
-
-  def liveBooleanVariables[PC](m: Method, agt: AgentDefinition[PC]): Map[PC, Set[ID]] = {
-    val booleanVars = m.localVariables.filter(isBoolean(_))
-    liveVariablesRestrictedTo(booleanVars, agt)
   }
 
 }

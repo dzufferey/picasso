@@ -175,7 +175,7 @@ trait DBPTranslator {
     //(1) get what is live, and what should die
     val variable = p.id //only thing that gets written
     val varLiveBefore = testLive(liveAt,a,variable)
-    val allRead = readIDs(p) filter canDoSomethingWith //possible that variable is part of allRead
+    val allRead = p.readIDs filter canDoSomethingWith //possible that variable is part of allRead
     val (staying, dying) = allRead.partition(testLive(liveAt,b,_))
     //(2) adapt the lhs
     val addToKillIDs = (dying ++ (if (varLiveBefore) List(variable) else Nil)) -- mapIDlhs.keys
@@ -368,7 +368,7 @@ trait DBPTranslator {
     }
     
     case (clazz, a, p @ Affect(variable, PValue(lit)), b, liveAt) => {
-      val stringNode = nodeForLiteral(lit)
+      val stringNode = DBCN(lit)
       val thisNode = unk
       val n1 = DBCN(a)
       val n2 = DBCN(b)
