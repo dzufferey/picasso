@@ -286,7 +286,7 @@ trait DBPTranslator {
     case (clazz, a, af @ Affect(id @ ID(_), NewChannel()), b, liveAt) => {
       val n1 = DBCN(a)
       val n2 = DBCN(b)
-      val n3 = fresh
+      val n3 = DBCN_Name
       val thisNode = unk
       val g1 = emptyConf + n1
       val g2 = makeConf(accessID(n2,thisNode,id,n3))

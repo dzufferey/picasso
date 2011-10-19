@@ -94,6 +94,9 @@ trait DefDBP {
   //TODO generic constructors for Literals/Any/...
   def DBCN[T](s: Literal[T]): DBCN
   def DBCN_Any: DBCN
+  def DBCN_Name: DBCN //a pi-calculus name
+  def DBCN_Unit: DBCN
+  def DBCN_Case(uid: String): DBCN //case class
 
 }
 

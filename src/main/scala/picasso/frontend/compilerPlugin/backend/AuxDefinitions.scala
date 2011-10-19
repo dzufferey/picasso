@@ -14,9 +14,9 @@ trait AuxDefinitions extends DefDBP {
   
   def DBCN[T](l : Literal[T]) = DBCN(l.toString)
   def DBCN_Any = DBCN("Any")
-
-  /** a generic name in the pi-calculus sense. */
-  def fresh = DBCN("name")
+  def DBCN_Name = DBCN("name")
+  def DBCN_Unit = DBCN("()")
+  def DBCN_Case(uid: String) = DBCN(uid)
 
   def errorState = DBCN("error")
   
