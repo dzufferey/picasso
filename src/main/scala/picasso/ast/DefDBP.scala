@@ -16,7 +16,7 @@ trait DefDBP {
     type EL = Variable
   }
    
-  type DBCN = Thread[DBC#State]
+  //type DBCN = Thread[DBC#State] = DBC#V
   type DBCC = DepthBoundedConf[DBC]
   type DBT = DepthBoundedTransition[DBC]
   type DBP = DepthBoundedProcess[DBC]
@@ -85,18 +85,21 @@ trait DefDBP {
     DepthBoundedTransition[DBC](id, g1, g2, m1p, m2p, forbidden)(ordering)
   }
 
-  def DBCN(s: PC): DBCN = Thread(DBCS[PC](s))
-  def DBCN(s: DBC#State): DBCN = Thread(s)
+  def DBCN(s: PC): DBC#V = Thread(DBCS[PC](s))
+  def DBCN(s: DBC#State): DBC#V = Thread(s)
   
   /* match anything */
   def unk = DBCN(DBCS.unk[PC])
 
+  def isUnk(s: DBC#V) = s.state.isWildcard
+
   //TODO generic constructors for Literals/Any/...
-  def DBCN[T](s: Literal[T]): DBCN
-  def DBCN_Any: DBCN
-  def DBCN_Name: DBCN //a pi-calculus name
-  def DBCN_Unit: DBCN
-  def DBCN_Case(uid: String): DBCN //case class
+  def DBCN[T](s: Literal[T]): DBC#V
+  def DBCN_Any: DBC#V
+  def DBCN_Name: DBC#V //a pi-calculus name
+  def DBCN_Unit: DBC#V
+  def DBCN_Case(uid: String): DBC#V //case class
+  def DBCN_Error: DBC#V //assert fail or something like that
 
 }
 

@@ -17,8 +17,7 @@ trait AuxDefinitions extends DefDBP {
   def DBCN_Name = DBCN("name")
   def DBCN_Unit = DBCN("()")
   def DBCN_Case(uid: String) = DBCN(uid)
-
-  def errorState = DBCN("error")
+  def DBCN_Error = DBCN("error")
   
   def matchTrueAny = DBCN(DBCS[PC](Set("true","Any")))
   def matchFalseAny = DBCN(DBCS[PC](Set("false","Any")))

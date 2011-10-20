@@ -226,10 +226,10 @@ trait DBPTranslator {
       val trs: List[(DBCC,DBCC,Map[DBC#V,DBC#V],Map[DBC#V,DBC#V])] = e match {
         case PValue(Bool(true)) => List((simpleG1, simpleG2, simpleMapping, Map.empty[DBC#V,DBC#V]))
         case PValue(Bool(false)) =>
-          val errNode = errorState
+          val errNode = DBCN_Error
           List((simpleG1, emptyConf + errNode, Map(n1 -> errNode), Map.empty[DBC#V,DBC#V]))
         case id @ ID(v) if v.tpe == HBool =>
-          val valueNodes = List((matchTrueAny, n2), (matchFalseAny, errorState))
+          val valueNodes = List((matchTrueAny, n2), (matchFalseAny, DBCN_Error))
           valueNodes map { case(n,n2) =>
             val g1 = makeConf(accessID(n1,thisNode,id,n))
             val g2 =

@@ -45,11 +45,12 @@ trait AstToDBP[A] {
   //expressions that are supposed to translate as graph: literal, variables(ref), patterns, alg-datatypes, ...
   //things that reflect change in the graphs: Assert/Assume, Havoc, Affect, Send, Receive
 
-  //transition context: map: Map[ID, DBC#V]
+  type Context = Map[ID, DBC#V] //when making a transition: keep track of the node created for an ID
+  def emptyContext = Map.empty[ID, DBC#V]
 
 
-  //TODO return a new map ?
-  def makeStateFor(agt: AgentDefinition[PC], map: Map[ID, DBC#V], controlState: PC, params: Seq[(ID, Expression)]): (DBCN, DBCC) = {
+  //TODO when an actor creates another actor of the same kind -> name clash!!
+  def makeStateFor(agt: AgentDefinition[PC], map: Context, controlState: PC, params: Seq[(ID, Expression)]): (DBC#V, DBCC, Context) = {
     //complete the params: live values that are not defined ? (use Wildcard)
     val live = agt.liveVariables(controlState)
     val (defined, undef) = live.partition(id => params.exists(_._1 == id))
@@ -63,12 +64,17 @@ trait AstToDBP[A] {
     })
     val (graph3, map3) = ((graph2, map2) /: defined)( (graphAndMap, id) => {
       val expr = params.find(_._1 == id).get._2
-      val (pointed, graphExpr) = graphOfExpr(expr, graphAndMap._2)
-      val mapNew = graphAndMap._2 + (id -> pointed) 
+      val (pointed, graphExpr, mapExpr) = graphOfExpr(expr, graphAndMap._2)
+      //TODO check that the context and the expr are compatible.
+      val mapNew = mapExpr + (id -> pointed) 
       val graphNew = graphAndMap._1 ++ graphExpr + (mainNode, id.id, pointed)
       (graphNew, mapNew)
     })
-    (mainNode, graph3)
+    (mainNode, graph3, map3)
+  }
+
+  def boolAssignToNode(assign: Map[ID, Boolean]): Context = {
+    for ((id,value) <- assign) yield (id,DBCN(Bool(value)))
   }
 
   def initialConfiguration: DBCC = {
@@ -82,16 +88,23 @@ trait AstToDBP[A] {
     sys.error("TODO")
   }
 
-  def graphOfExpr(e: Expression, map: Map[ID, DBC#V]): (DBC#V, DBCC) = e match {
+  def hasSideEffect(e: Expression): Boolean = e match {
+    case NewChannel() | Create(_, _) => true
+    case Application(fct, args) => args exists hasSideEffect //TODO or interpreted fct with side effect
+    case Tuple(args) => args exists hasSideEffect
+    case _ => false
+  }
+
+  def graphOfExpr(e: Expression, map: Context): (DBC#V, DBCC, Context) = e match {
     case Any =>
       val node = DBCN_Any
-      (node, emptyConf + node)
+      (node, emptyConf + node, map)
     case Value(literal) =>
       val node = DBCN(literal)
-      (node, emptyConf + node)
+      (node, emptyConf + node, map)
     case NewChannel() =>
       val node = DBCN_Name
-      (node, emptyConf + node)
+      (node, emptyConf + node, map)
     case Create(agt, args) =>
       val agtDef = agents.find(_.id == agt) match {
         case Some(aDef) => aDef
@@ -100,20 +113,24 @@ trait AstToDBP[A] {
       makeStateFor(agtDef, map, agtDef.cfa.initState, agtDef.params zip args)
     case id @ ID(v) =>
       val node = map.getOrElse(id, unk)
-      //TODO add id->node to the map and return the map ?
-      (node, emptyConf + node)
+      (node, emptyConf + node, map + (id -> node))
     case Application(fct, args) =>
       if (isInterpreted(fct)) {
         Logger.logAndThrow("AstToDBP", LogError, "graphOfExpr does not deal with interpreted functions ("+fct+")")
       } else { //not interpreted (alg datatype)
         val refNode = DBCN_Case(fct)
-        val sub = args.map(graphOfExpr(_,map)).zipWithIndex
-        val graph = ((emptyConf + refNode) /: sub){case (acc, ((n,g),i)) => acc ++ g + (refNode, Variable(i.toString), n)} //TODO type ?
-        (refNode, graph)
+        val sub = Array.ofDim[(DBC#V, DBCC, Int)](args.size)
+        val newContext = (map /: args.zipWithIndex){ case (acc, (a,i)) => 
+          val (n,g,c) = graphOfExpr(a, acc)
+          sub(i) = (n,g,i)
+          c
+        }
+        val graph = ((emptyConf + refNode) /: sub){ case (acc, (n,g,i)) => acc ++ g + (refNode, Variable(i.toString), n)} //TODO type ?
+        (refNode, graph, newContext)
       }
     case Unit() =>
       val node = DBCN_Unit
-      (node, emptyConf + node)
+      (node, emptyConf + node, map)
     case Tuple(args) => graphOfExpr(Application("Tuple", args), map)
   }
 
@@ -121,7 +138,7 @@ trait AstToDBP[A] {
   //choose whether the result is true or false get the possible combinations of values that realize it
   //
   
-  def makeTransition(a: PC, proc: Process, b: PC): Seq[DBT] = proc match {
+  def makeTransition(agt: AgentDefinition[PC], a: PC, proc: Process, b: PC): Seq[DBT] = proc match {
     case Zero() =>
       val before = DBCN(a)
       val trs = makeTrans( proc.toString,
@@ -137,17 +154,69 @@ trait AstToDBP[A] {
                            Map(before -> after), Map.empty[DBC#V, DBC#V],
                            None )
       List(trs)
-    case Assert(e) => sys.error("TODO") //TODO boolean interpreted fct
-    case Assume(e) => sys.error("TODO") //TODO boolean interpreted fct
-    case Havoc(vars) => sys.error("TODO")
-    case Block(lst) => sys.error("TODO")
-    case Expr(expr) => sys.error("TODO")
+    case Assert(e) =>
+      assert(BooleanFunctions.isBooleanInterpreted(e))
+      val trueAssigns = BooleanFunctions.assigns(true, e) map boolAssignToNode
+      val trueTrs = for(assign <- trueAssigns) yield {
+        val (node1, graph1, context1) = makeStateFor(agt, assign, a, Seq[(ID, Expression)]())
+        val (node2, graph2, context2) = makeStateFor(agt, assign, b, Seq[(ID, Expression)]())
+        val (kept, news) = context1.keys.partition(k => context2 contains k)
+        assert(news.isEmpty)
+        val (defined, undefs) = kept.partition(k => isUnk(context2(k)))
+        val mapForward = Map(node1 -> node2) ++ defined.map(k => (context1(k), context2(k)))
+        val mapBackward = Map.empty[DBC#V,DBC#V] ++ undefs.map(k => (context2(k), context1(k)))
+        makeTrans( proc.toString, graph1, graph2, mapForward, mapBackward, None)
+      }
+      val falseAssigns = BooleanFunctions.assigns(false, e) map boolAssignToNode
+      val falseTrs = for(assign <- falseAssigns) yield {
+        val (node1, graph1, context1) = makeStateFor(agt, assign, a, Seq[(ID, Expression)]())
+        val error = DBCN_Error
+        val mapForward = Map(node1 -> error)
+        makeTrans( proc.toString, graph1, emptyConf + error, mapForward, Map.empty[DBC#V,DBC#V], None)
+      }
+      trueTrs ++ falseTrs
+    case Assume(e) => //assumes are more relaxed than assert (they don't fail on false, just block)
+      assert(BooleanFunctions.isBooleanInterpreted(e))
+      val trueAssigns = BooleanFunctions.assigns(true, e) map boolAssignToNode
+      val trueTrs = for(assign <- trueAssigns) yield {
+        val (node1, graph1, context1) = makeStateFor(agt, assign, a, Seq[(ID, Expression)]())
+        val (node2, graph2, context2) = makeStateFor(agt, assign, b, Seq[(ID, Expression)]())
+        val (kept, news) = context1.keys.partition(k => context2 contains k)
+        assert(news.isEmpty)
+        val (defined, undefs) = kept.partition(k => isUnk(context2(k)))
+        val mapForward = Map(node1 -> node2) ++ defined.map(k => (context1(k), context2(k)))
+        val mapBackward = Map.empty[DBC#V,DBC#V] ++ undefs.map(k => (context2(k), context1(k)))
+        makeTrans( proc.toString, graph1, graph2, mapForward, mapBackward, None)
+      }
+      trueTrs
+    case Havoc(vars) =>
+      sys.error("TODO")
+    case Block(lst) =>
+      //TODO make sure it is not too tricky to translate (scope of temporary variables)
+      //the dimplest way is to introduce tmp variables
+      sys.error("TODO")
+    case Expr(expr) => 
+      if (hasSideEffect(expr)) {
+        val (_, graph, context) = graphOfExpr(expr, emptyContext)
+        val before = DBCN(a)
+        val after = DBCN(b)
+        val beforeScope = context.filterKeys(k => agt.liveVariables(a)(k))
+        val afterScope = context.filterKeys(k => agt.liveVariables(b)(k))
+        val danglingNodes = beforeScope.filterKeys(k => !afterScope.contains(k)) //TODO k is a reference, not a value (dead values can be discarded) -> look at the type of k
+        assert(afterScope.keySet subsetOf beforeScope.keySet)//no element that comes out of nowhere
+        val beforeGraph = emptyConf + before ++ beforeScope.toList.map{ case (k,v) => (before, k.id, v)}
+        val afterGraph = (graph /: danglingNodes.values)(_+_) + after ++ afterScope.toList.map{ case (k,v) => (after, k.id, v)}
+        sys.error("TODO connect the things in scope")
+      } else {
+        Logger("AstToDBP", LogWarning, "generating trivial transition for " + proc + " -> " + proc.toStringRaw)
+        makeTransition(agt, a, Skip(), b)
+      }
     case Affect(variable, expr) => sys.error("TODO") //TODO isInterpreted ...
     case Send(dest, content) => sys.error("TODO")
     case Receive(src, pat) => sys.error("TODO")
   }
 
-  def makeTransitions(agts: AgentDefinition[PC]): Seq[DBT] = {
+  def makeTransitions(agt: AgentDefinition[PC]): Seq[DBT] = {
     sys.error("TODO")
   }
 

@@ -172,7 +172,7 @@ class Analysis(val global: Global, val picasso: PicassoPlugin)
   
   def testForError = {
     assert(extractedDBP.isDefined && initState.isDefined)
-    val errorConf = emptyConf + errorState
+    val errorConf = emptyConf + DBCN_Error
     val procSimpleForward = new _root_.picasso.model.dbp.DepthBoundedProcess[DBC](extractedDBP.get) with _root_.picasso.analysis.ForwardWithWidening
     procSimpleForward.forwardCoveringWithTrace(initState.get, errorConf)
   }

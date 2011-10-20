@@ -1,6 +1,6 @@
 package picasso.math.hol
 
-sealed abstract class Type
+sealed abstract class Type 
 case object Bool extends Type { override def toString = "Bool" }
 case object Int extends Type { override def toString = "Int" }
 case object String extends Type { override def toString = "String" }
