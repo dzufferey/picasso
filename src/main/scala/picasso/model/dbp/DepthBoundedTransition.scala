@@ -6,12 +6,12 @@ import picasso.math.WellPartialOrdering._
 import picasso.graph._
 
 
-class DepthBoundedTransition[P <: DBCT](id: String,
-                                        lhs: DepthBoundedConf[P],
-                                        rhs: DepthBoundedConf[P],
-                                        hr: Map[P#V, P#V],
-                                        hk: Map[P#V, P#V],
-                                        inh: Option[DepthBoundedConf[P]] = None)(implicit wpo: WellPartialOrdering[P#State])
+class DepthBoundedTransition[P <: DBCT](val id: String,
+                                        val lhs: DepthBoundedConf[P],
+                                        val rhs: DepthBoundedConf[P],
+                                        val hr: Map[P#V, P#V],
+                                        val hk: Map[P#V, P#V],
+                                        val inh: Option[DepthBoundedConf[P]] = None)(implicit wpo: WellPartialOrdering[P#State])
 extends Transition[DepthBoundedConf[P]] 
 {
 

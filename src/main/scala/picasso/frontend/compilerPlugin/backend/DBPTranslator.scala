@@ -140,7 +140,7 @@ trait DBPTranslator {
       (node, emptyConf + node, Map.empty[ID, DBC#V])
     case Binding(id, pat) =>
       val (idNode, graph, map) = graphOfPattern(pat)
-      (idNode, graph, Map[ID, DBC#V](id -> idNode))
+      (idNode, graph, Map[ID, DBC#V](id -> idNode)) //TODO map + ?
     case PatternTuple(lst) => graphOfPattern(Case("Tuple", lst))
     case Wildcard =>
       val node = unk

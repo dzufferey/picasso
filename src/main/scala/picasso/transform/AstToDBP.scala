@@ -24,17 +24,8 @@ trait AstToDBP[A] {
 
   //import self._
 
-  //TODO type for the returned DBP
-  //this can be copy pasted from compilerPlugin/backend/AuxDefinitions.scala
-  //now the issue is that putting everything as nested classes limits the scope of what is visible and what we can do.
-  //or put this at the top level, but then ...
-  //or wrap it using mixin
-
-  //check that the processes on the edges are things that are easy to translate.
-  //otherwise it might need to unrolling
-  def easyToTransform(agt: AgentDefinition[PC]): Boolean = {
-    sys.error("TODO")
-  }
+  //TODO LocalScope vs GlobalScope vs ClassScope ...
+  //for the moment assumes only local
 
   //TODO (expr) split by type ? -> bool, string, actor, collection
   //The current solution is compilerPlugin/domains/ is somehow modular,
@@ -52,6 +43,8 @@ trait AstToDBP[A] {
   //this can then be used to generate the real transition graph.
   //this could also take care of the aliasing problems (generates the transition with and without aliases)
   //...
+
+  //TODO a way to automatically handle the scope issues
 
   //TODO when an actor creates another actor of the same kind -> name clash!!
   def makeStateFor(agt: AgentDefinition[PC], map: Context, controlState: PC, params: Seq[(ID, Expression)]): Seq[(DBC#V, DBCC, Context)] = {
@@ -105,6 +98,29 @@ trait AstToDBP[A] {
     case tpe @ (Function( _, _) | HWildcard | UnInterpreted(_)) => 
       Logger("AstToDBP", LogWarning, "isReference("+id+") -> '"+tpe+"' ? returns true (defensive option)")
       true
+  }
+  
+  /** The precondition graph that a pattern matches + mapping of bindings'id to graph node.
+   * @returns (main node, graph, binding \mapsto node) */
+  def graphOfPattern(e: Pattern): (DBC#V, DBCC, Context) = e match {
+    case Case(name, lst) =>
+      val refNode = DBCN_Case(name)
+      val sub = (lst map graphOfPattern).zipWithIndex
+      val (graph, map) = ((emptyConf + refNode, Map.empty[ID,DBC#V]) /: sub){
+        case ((g1,m1), ((n,g2,m2),i)) => (g1 ++ g2 + (refNode, Variable(i.toString), n), m1 ++ m2) //TODO Variable type
+      }
+      (refNode, graph, map)
+    case PatternLit(literal) =>
+      val node = DBCN(literal)
+      (node, emptyConf + node, emptyContext)
+    case Wildcard =>
+      val node = unk
+      (node, emptyConf + node, emptyContext)
+    case Binding(id, pat) =>
+      val (idNode, graph, map) = graphOfPattern(pat)
+      (idNode, graph, map + (id -> idNode))
+    case PatternTuple(lst) => graphOfPattern(Case("Tuple", lst))
+    case _ => Logger.logAndThrow("AstToDBP", LogError, "graphOfPattern??? " + e)
   }
 
   def graphForNonInterpretedExpr(e: Expression, map: Context): Seq[(DBC#V, DBCC, Context)] = e match {
@@ -180,10 +196,6 @@ trait AstToDBP[A] {
     (atB diff atA, atA intersect atB, atA diff atB)
   }
 
-  //TODO boolean functions.
-  //choose whether the result is true or false get the possible combinations of values that realize it
-  //
-  
   def makeTransition(agt: AgentDefinition[PC], a: PC, proc: Process, b: PC): Seq[DBT] = proc match {
     case Zero() =>
       val before = DBCN(a)
@@ -280,24 +292,51 @@ trait AstToDBP[A] {
         makeTransition(agt, a, Skip(), b)
       }
       
-    case Affect(variable, expr) =>
-      val cases = graphOfExpr(expr, emptyContext)
-      val before = DBCN(a)
-      val after = DBCN(b)
+    case Affect(id, expr) => //TODO for the moment assumes that everything has a local scope.
+      //TODO there is this horribly complex makeAffect in DBPTranslator ...
       val (coming, staying, dying) = compareScopes(agt, a, b)
-      for ((node, graph, context) <- cases) yield {
-        //TODO before: all read variables + the old value of variables (if live)
-        //TODO after: after -> node (+ things that are still live)
-        sys.error("TODO: ...")
+      if (staying(id) || coming(id)) { //need to remember id
+        val before = DBCN(a)
+        val after = DBCN(b)
+        val cases = graphOfExpr(expr, emptyContext)
+        for ((node, graph, context) <- cases) yield {
+          if (!coming(id)) { //id has a previous value
+          }
+          //TODO before: all read variables + the old value of variables (if live)
+          //TODO after: after -> node (+ things that are still live)
+          sys.error("TODO: ...")
+        }
+      } else { //otherwise like an expr
+        makeTransition(agt, a, Expr(expr), b)
       }
 
-    case Send(dest, content) => sys.error("TODO")
+    case Send(dest @ ID(_), content) =>
+      val (coming, staying, dying) = compareScopes(agt, a, b)
+      val before = DBCN(a)
+      val after = DBCN(b)
+      val startContext = emptyContext + (dest -> unk)
+      for ((contentN, contentG, contentC) <- graphOfExpr(content, startContext)) yield {
+        //TODO before -> contentC + connect dest to before
+        //TODO after -> contentN connected to dest as a message
+        sys.error("TODO")
+      }
 
-    case Receive(src, pat) => sys.error("TODO")
+    case Receive(src @ ID(_), pat) =>
+      val (coming, staying, dying) = compareScopes(agt, a, b)
+      val before = DBCN(a)
+      val after = DBCN(b)
+      val (patN, patG, patC) = graphOfPattern(pat)
+      //(src -> unk <- patN)
+      //after: patC
+      sys.error("TODO")
+
+    case other =>
+      Logger.logAndThrow("AstToDBP", LogError, "not supported " + other + " -> " + other.toStringRaw)
   }
 
   def makeTransitions(agt: AgentDefinition[PC]): Seq[DBT] = {
-    sys.error("TODO")
+    val rawTrs =agt.cfa.edges.flatMap{case (a,proc,b) => makeTransition(agt, a, proc, b)}.toSeq
+    rawTrs map checkTransition
   }
 
   def makeTransitions(agts: Seq[AgentDefinition[PC]]): Seq[DBT] = {
