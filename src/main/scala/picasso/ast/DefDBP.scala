@@ -50,6 +50,29 @@ trait DefDBP {
   }
 
   val emptyConf = DepthBoundedConf.empty[DBC]
+
+  def DBCN(s: PC): DBC#V = Thread(DBCS[PC](s))
+  def DBCN(s: DBC#State): DBC#V = Thread(s)
+  
+  /* match anything */
+  def unk = DBCN(DBCS.unk[PC])
+
+  def isUnk(s: DBC#V) = s.state.isWildcard
+
+  //Methods that needs to be implemented by classes extending this trait
+
+  def DBCN[T](s: Literal[T]): DBC#V
+  def DBCN_Any: DBC#V
+  def DBCN_Name: DBC#V //a pi-calculus name
+  def DBCN_Unit: DBC#V
+  def DBCN_Case(uid: String): DBC#V //case class
+  def DBCN_Error: DBC#V //assert fail or something like that
+
+
+  /////////////////////////////////////////////////////////
+  // Methods to help creating configuration, transitions //
+  /////////////////////////////////////////////////////////
+
   
   /** create a DBCC from edges */
   def makeConf(trvs: Traversable[(DBC#V, DBC#EL, DBC#V)]): DBCC = {
@@ -88,22 +111,6 @@ trait DefDBP {
   def checkTransition(tr: DBT): DBT = {
     makeTrans(tr.id, tr.lhs, tr.rhs, tr.hr, tr.hk, tr.inh)
   }
-
-  def DBCN(s: PC): DBC#V = Thread(DBCS[PC](s))
-  def DBCN(s: DBC#State): DBC#V = Thread(s)
-  
-  /* match anything */
-  def unk = DBCN(DBCS.unk[PC])
-
-  def isUnk(s: DBC#V) = s.state.isWildcard
-
-  //TODO generic constructors for Literals/Any/...
-  def DBCN[T](s: Literal[T]): DBC#V
-  def DBCN_Any: DBC#V
-  def DBCN_Name: DBC#V //a pi-calculus name
-  def DBCN_Unit: DBC#V
-  def DBCN_Case(uid: String): DBC#V //case class
-  def DBCN_Error: DBC#V //assert fail or something like that
 
 }
 

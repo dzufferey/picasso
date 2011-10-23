@@ -195,6 +195,8 @@ extends Traceable[P#V,P#EL] {
   def outDegree(v: V): Map[EL, Int] = adjacencyMap(v).mapValues(_.size)
   def outDegreeAll: Map[V, Int] = adjacencyMap.map{case (v, m) => (v, m.values.foldLeft(0)( (acc,set) => acc + set.size )) }
 
+  def edgesWith(v: V) = edges.filter{case (n1,l,n2) => n1 == v || n2 == v}
+
     /*
     def isTraceValid(t: Trace[B,C]): Boolean = {
       def checkNext(current: Set[A], transition: C, target: B): Set[A] = {
