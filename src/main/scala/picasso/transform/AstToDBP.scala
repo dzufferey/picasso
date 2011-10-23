@@ -104,59 +104,56 @@ trait AstToDBP[A] {
   // take care of the scope //
   ////////////////////////////
   
-  //assumes that if two nodes in a and b are the same, then make a mapping from one to the other
+  /** Assumes that the nodes in context are read.
+   *  For nodes that don't die and that are not assigned, carry over the read value.
+   */
   def checkScope( agt: AgentDefinition[PC], a: PC, b: PC,
-                  _nA: DBC#V, _gA: DBCC, _cA: Context,
-                  _nB: DBC#V, _gB: DBCC, _cB: Context
+                  nA: DBC#V, _gA: DBCC, nB: DBC#V, _gB: DBCC,
+                  context: Context, assigned: List[ID]
                 ): (DBCC, DBCC, Map[DBC#V, DBC#V], Map[DBC#V, DBC#V]) = {
     //as variables that we can modify
-    var nA = _nA
     var gA = _gA
-    var cA = _cA
-    var nB = _nB
     var gB = _gB
-    var cB = _cB
     var forward = Map(nA -> nB)
     var backward = Map.empty[DBC#V, DBC#V]
+    //first put all the read variables
+    for ((id,n) <- context) gA = gA + (nA, id.id, n)
     //
     val (coming, staying, dying) = compareScopes(agt, a, b)
-    //for coming nodes: nothing special, just check that they are in the B graph
-    for (id <- coming) assert(!(cA contains id) && (cB contains id))
+    //for coming nodes: nothing special, just check that they are assigned
+    assert(coming subsetOf assigned.toSet)
     //for dying nodes: checks they are in A and not in B, + keep dangling node for references
     for (id <- dying) {
-      assert(!(cB contains id))
-      val nodeA = cA.getOrElse(id, unk)
-      val nodeB = cB.getOrElse(id, nodeA)
-      //cA = cA + (id -> nodeA)
-      gA = gA + (nA, id.id, nodeA)
+      val node = context.getOrElse(id, unk)
+      gA = gA + (nA, id.id, node)
       if (isReference(id)) { //keep a dangling node
-        gB = gB + nodeB
-        if (isUnk(nodeB)) backward = backward + (nodeB -> nodeA)
-        else forward = forward + (nodeA -> nodeB)
-      } else if (gB.edgesWith(nodeB).isEmpty) { //remove the node if there are no edges from/to it
-        gB = gB - nodeB
+        gB = gB + node
+      } else if (gB.edgesWith(node).isEmpty) { //remove the node if there are no edges from/to it
+        gB = gB - node
       } //else pointed by/points to some otherthing, better keep it.
     }
-    //for ths staying nodes: checks they are in both. If their values change, check if danglingNodes must be kept.
+    //for the staying nodes: checks they are in both. If their values change, check if danglingNodes must be kept.
     for (id <- staying) {
-      if ((cA contains id) && (cB contains id) && cA(id) != cB(id)) { //the nodes changed in the means time, so ...
-        val nodeA = cA(id)
-        //assumes ID was affected to a new value
-        if (isReference(id)) { //keep a dangling node
-          gB = gB + nodeA
-          if (isUnk(nodeA)) backward = backward + (nodeA -> nodeA)
-          else forward = forward + (nodeA -> nodeA)
-        } else if (gB.edgesWith(nodeA).isEmpty) { //remove the node if there are no edges from/to it
-          gB = gB - nodeA
-        } //else pointed by/points to some otherthing, better keep it.
-      } else if ((cA contains id) && !(cB contains id)) { //in A, but not in B (add to B, assume unchanged)
-        gB = gB + (nB, id.id, cA(id))
-        cB = cB + (id -> cA(id))
-      } else if (!(cA contains id) && (cB contains id)) { //not in A, but in B ?? was overwritten ?
-        Logger.logAndThrow("AstToDBP", LogError, "checkScope: staying node ("+id+") in B, but not in A ??")
-      } //otherwise not in A and not in B
+      if (context contains id) {
+        val node = context(id)
+        if (assigned contains id) {
+          if (isReference(id)) { //keep a dangling node
+            gB = gB + node
+          }
+        } else {
+          gB = gB + (nB, id.id, node)
+        }
+      } else {
+        if (assigned contains id) {
+          if (isReference(id)) { //keep a dangling node
+            val node = unk
+            gA = gA + (nA, id.id, node)
+            gB = gB + node
+          }
+        }
+      }
     }
-    for (n <- gA.vertices intersect gB.vertices) {
+    for (n <- gA.vertices intersect gB.vertices) {//TODO check that this is address equality, not pointer equality.
       if (isUnk(n)) backward = backward + (n -> n)
       else forward = forward + (n -> n)
     }
