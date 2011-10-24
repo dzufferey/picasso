@@ -2,7 +2,7 @@ package picasso.ast
 
 import picasso.model.dbp._
 import picasso.math._
-import picasso.math.hol.{Variable, Literal}
+import picasso.math.hol.{Variable, Literal, Channel}
 import picasso.graph._
 
 //generic set of definition to help create DBP
@@ -56,8 +56,10 @@ trait DefDBP {
   
   /* match anything */
   def unk = DBCN(DBCS.unk[PC])
-
   def isUnk(s: DBC#V) = s.state.isWildcard
+
+  /** Message destination */
+  val msgDest = Variable("to") setType Channel()
 
   //Methods that needs to be implemented by classes extending this trait
 

@@ -109,7 +109,7 @@ trait AstToDBP[A] {
    */
   def checkScope( agt: AgentDefinition[PC], a: PC, b: PC,
                   nA: DBC#V, _gA: DBCC, nB: DBC#V, _gB: DBCC,
-                  context: Context, assigned: List[ID]
+                  context: Context, assigned: Set[ID]
                 ): (DBCC, DBCC, Map[DBC#V, DBC#V], Map[DBC#V, DBC#V]) = {
     //as variables that we can modify
     var gA = _gA
@@ -121,7 +121,7 @@ trait AstToDBP[A] {
     //
     val (coming, staying, dying) = compareScopes(agt, a, b)
     //for coming nodes: nothing special, just check that they are assigned
-    assert(coming subsetOf assigned.toSet)
+    assert(coming subsetOf assigned)
     //for dying nodes: checks they are in A and not in B, + keep dangling node for references
     for (id <- dying) {
       val node = context.getOrElse(id, unk)
@@ -134,17 +134,19 @@ trait AstToDBP[A] {
     }
     //for the staying nodes: checks they are in both. If their values change, check if danglingNodes must be kept.
     for (id <- staying) {
-      if (context contains id) {
+      if (context contains id) {//accessed
         val node = context(id)
-        if (assigned contains id) {
+        if (assigned contains id) {//gets a new value
           if (isReference(id)) { //keep a dangling node
             gB = gB + node
+          } else if (gB.edgesWith(node).isEmpty) { //remove the node if there are no edges from/to it
+            gB = gB - node
           }
         } else {
           gB = gB + (nB, id.id, node)
         }
-      } else {
-        if (assigned contains id) {
+      } else {//not accessed
+        if (assigned contains id) {//gets a new value
           if (isReference(id)) { //keep a dangling node
             val node = unk
             gA = gA + (nA, id.id, node)
@@ -276,35 +278,23 @@ trait AstToDBP[A] {
       assert(coming.isEmpty)
       val before = DBCN(a)
       val after = DBCN(b)
-      val stayingNodes = staying.map(_ -> unk).toMap
-      val dyingNodes = dying.map(_ -> unk).toMap
-      val danglingNodes = dyingNodes.filterKeys(isReference(_))
-      val beforeGraph = emptyConf + before ++ (stayingNodes ++ dyingNodes).map{case (id,n) => (before, id.id, n)}
-      val afterGraph = (emptyConf /: danglingNodes.values)(_+_) + after ++ stayingNodes.map{case (id,n) => (after, id.id, n)}
-      val mapForward = Map(before -> after)
-      val mapBackward = Map.empty[DBC#V, DBC#V] ++ (stayingNodes ++ danglingNodes).map(n => (n._2, n._2))
-      val trs = makeTrans( proc.toString, beforeGraph, afterGraph,
-                           mapForward, mapBackward, None)
+      val (beforeG, afterG, forward, backward) = checkScope(agt, a, b, before, emptyConf + before, after, emptyConf + after, emptyContext, Set.empty[ID])
+      val trs = makeTrans( proc.toString, beforeG, afterG, forward, backward, None)
       List(trs)
     
     case Assert(e) =>
-      //TODO change to use graphForInterpretedExpr
+      //TODO change to use graphOfExpr
       assert(BooleanFunctions.isBooleanInterpreted(e))
-      val emp = Seq[(ID, Expression)]()
+      val before = DBCN(a)
+      val after = DBCN(b)
       val trueAssigns = BooleanFunctions.assigns(true, e) map boolAssignToNode
-      val trueTrs = for(assign <- trueAssigns;
-                        ((node1, graph1, context1), (node2, graph2, context2)) <-
-                          makeStateFor(agt, assign, a, emp) zip makeStateFor(agt, assign, b, emp)) yield {
-        val (kept, news) = context1.keys.partition(k => context2 contains k)
-        assert(news.isEmpty)
-        val (defined, undefs) = kept.partition(k => isUnk(context2(k)))
-        val mapForward = Map(node1 -> node2) ++ defined.map(k => (context1(k), context2(k)))
-        val mapBackward = Map.empty[DBC#V,DBC#V] ++ undefs.map(k => (context2(k), context1(k)))
-        makeTrans( proc.toString, graph1, graph2, mapForward, mapBackward, None)
+      val trueTrs = for(assign <- trueAssigns) yield {
+        val (g1, g2, forward, backward) = checkScope(agt, a, b, before, emptyConf + before, after, emptyConf + after, emptyContext, Set.empty[ID])
+        makeTrans( proc.toString, g1, g2, forward, backward, None)
       }
       val falseAssigns = BooleanFunctions.assigns(false, e) map boolAssignToNode
       val falseTrs = for(assign <- falseAssigns;
-                        (node1, graph1, context1) <- makeStateFor(agt, assign, a, emp)) yield {
+                        (node1, graph1, context1) <- makeStateFor(agt, assign, a, Seq[(ID, Expression)]())) yield {
         val error = DBCN_Error
         val mapForward = Map(node1 -> error)
         makeTrans( proc.toString, graph1, emptyConf + error, mapForward, Map.empty[DBC#V,DBC#V], None)
@@ -312,28 +302,23 @@ trait AstToDBP[A] {
       trueTrs ++ falseTrs
     
     case Assume(e) => //assumes are more relaxed than assert (they don't fail on false, just block)
-      //TODO change to use graphForInterpretedExpr
+      //TODO change to use graphOfExpr
       assert(BooleanFunctions.isBooleanInterpreted(e))
-      val emp = Seq[(ID, Expression)]()
+      val before = DBCN(a)
+      val after = DBCN(b)
       val trueAssigns = BooleanFunctions.assigns(true, e) map boolAssignToNode
-      val trueTrs = for(assign <- trueAssigns;
-                        ((node1, graph1, context1), (node2, graph2, context2)) <-
-                          makeStateFor(agt, assign, a, emp) zip makeStateFor(agt, assign, b, emp)) yield {
-        val (kept, news) = context1.keys.partition(k => context2 contains k)
-        assert(news.isEmpty)
-        val (defined, undefs) = kept.partition(k => isUnk(context2(k)))
-        val mapForward = Map(node1 -> node2) ++ defined.map(k => (context1(k), context2(k)))
-        val mapBackward = Map.empty[DBC#V,DBC#V] ++ undefs.map(k => (context2(k), context1(k)))
-        makeTrans( proc.toString, graph1, graph2, mapForward, mapBackward, None)
+      val trueTrs = for(assign <- trueAssigns) yield {
+        val (g1, g2, forward, backward) = checkScope(agt, a, b, before, emptyConf + before, after, emptyConf + after, emptyContext, Set.empty[ID])
+        makeTrans( proc.toString, g1, g2, forward, backward, None)
       }
       trueTrs
     
-    case Havoc(vars) =>
+    case Havoc(vars) =>//TODO case split of Any ?
       sys.error("TODO Havoc")
     
     case Block(lst) =>
       //TODO make sure it is not too tricky to translate (scope of temporary variables)
-      //the dimplest way is to introduce tmp variables
+      //the simplest way is to introduce tmp variables
       sys.error("TODO Block")
       
     case Expr(expr) => 
@@ -341,16 +326,10 @@ trait AstToDBP[A] {
         for ((_, graph, context) <- graphOfExpr(expr, emptyContext)) yield {
           val before = DBCN(a)
           val after = DBCN(b)
-          val beforeScope = context.filterKeys(k => agt.liveVariables(a)(k))
-          val afterScope = context.filterKeys(k => agt.liveVariables(b)(k))
-          val danglingNodes = beforeScope.filterKeys(k => !afterScope.contains(k) && isReference(k)) //dead values can be discarded
-          assert(afterScope.keySet subsetOf beforeScope.keySet)//no element that comes out of nowhere
-          val beforeGraph = emptyConf + before ++ beforeScope.toList.map{ case (k,v) => (before, k.id, v)}
-          val afterGraph = (graph /: danglingNodes.values)(_+_) + after ++ afterScope.toList.map{ case (k,v) => (after, k.id, v)}
-          val (defined, undefs) = beforeScope.filterKeys(k => afterScope.contains(k) || danglingNodes.contains(k)).partition{case (k,v) => isUnk(v)}
-          val mapForward = Map(before -> after) ++  defined.map(k => (k._2, k._2))
-          val mapBackward = Map.empty[DBC#V,DBC#V] ++ undefs.map(k => (k._2, k._2))
-          makeTrans( proc.toString, beforeGraph, afterGraph, mapForward, mapBackward, None)
+          val graphBe = emptyConf + before
+          val graphAf = graph + after
+          val (g1, g2, forward, backward) = checkScope(agt, a, b, before, graphBe, after, graphAf, context, Set.empty[ID])
+          makeTrans( proc.toString, g1, g2, forward, backward, None)
         }
       } else {
         Logger("AstToDBP", LogWarning, "generating trivial transition for " + proc + " -> " + proc.toStringRaw)
@@ -358,18 +337,15 @@ trait AstToDBP[A] {
       }
       
     case Affect(id, expr) => //TODO for the moment assumes that everything has a local scope.
-      //TODO there is this horribly complex makeAffect in DBPTranslator ...
-      val (coming, staying, dying) = compareScopes(agt, a, b)
-      if (staying(id) || coming(id)) { //need to remember id
+      if (agt.liveVariables(b)(id)) { //need to remember id
         val before = DBCN(a)
         val after = DBCN(b)
         val cases = graphOfExpr(expr, emptyContext)
         for ((node, graph, context) <- cases) yield {
-          if (!coming(id)) { //id has a previous value
-          }
-          //TODO before: all read variables + the old value of variables (if live)
-          //TODO after: after -> node (+ things that are still live)
-          sys.error("TODO: ...")
+          val graphBe = emptyConf + before
+          val graphAf = graph + (after, id.id, node)
+          val (g1, g2, forward, backward) = checkScope(agt, a, b, before, graphBe, after, graphAf, context, Set(id))
+          makeTrans( proc.toString, g1, g2, forward, backward, None)
         }
       } else { //otherwise like an expr
         makeTransition(agt, a, Expr(expr), b)
@@ -381,19 +357,22 @@ trait AstToDBP[A] {
       val after = DBCN(b)
       val startContext = emptyContext + (dest -> unk)
       for ((contentN, contentG, contentC) <- graphOfExpr(content, startContext)) yield {
-        //TODO before -> contentC + connect dest to before
-        //TODO after -> contentN connected to dest as a message
-        sys.error("TODO")
+        val graphBe = emptyConf + (before, dest.id, startContext(dest))
+        val graphAf = contentG + after + (contentN, msgDest, startContext(dest))
+        val (g1, g2, forward, backward) = checkScope(agt, a, b, before, graphBe, after, graphAf, contentC, Set.empty[ID])
+        makeTrans( proc.toString, g1, g2, forward, backward, None)
       }
 
     case Receive(src @ ID(_), pat) =>
       val (coming, staying, dying) = compareScopes(agt, a, b)
       val before = DBCN(a)
       val after = DBCN(b)
+      val startContext = emptyContext + (src -> unk)
       val (patN, patG, patC) = graphOfPattern(pat)
-      //(src -> unk <- patN)
-      //after: patC
-      sys.error("TODO")
+      val graphBe = patG + (before, src.id, startContext(src)) + (patN, msgDest, startContext(src))
+      val graphAf = emptyConf + after ++ patC.toList.map{ case (id, n) => (after, id.id, n)}
+      val (g1, g2, forward, backward) = checkScope(agt, a, b, before, graphBe, after, graphAf, startContext, patC.keySet)
+      Seq(makeTrans( proc.toString, g1, g2, forward, backward, None))
 
     case other =>
       Logger.logAndThrow("AstToDBP", LogError, "not supported " + other + " -> " + other.toStringRaw)

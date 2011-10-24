@@ -30,8 +30,6 @@ trait AuxDefinitions extends DefDBP {
   val thisVar = Variable("this") setType Channel() //TODO this should have the type of the class it is associated with
   val thisChannel = ID(thisVar)
 
-  /** Message destination */
-  val msgDest = Variable("to") setType Channel()
   
   /** Wrap content + return address into a 'Message' */
   def addReturnAddress(msg: Expression, returnAddress: Expression = thisChannel) = Application("Message", List(returnAddress, msg))
