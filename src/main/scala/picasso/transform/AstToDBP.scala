@@ -13,16 +13,9 @@ import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, Log
 abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expression) extends DefDBP {
   type PC = A
 
-  val transitions: Iterable[DBT]
+  lazy val transitions: Iterable[DBT] = makeTransitions(agents)
 
-  val initConf: DBCC
-
-}
-
-trait AstToDBP[A] {
-  self: DBPWrapper[A] =>
-
-  //import self._
+  lazy val initConf: DBCC = initialConfiguration(init)
 
   //TODO LocalScope vs GlobalScope vs ClassScope ...
   //for the moment assumes only local
@@ -70,19 +63,24 @@ trait AstToDBP[A] {
     graphsAndContexts.map{case (graph, context) => (mainNode, graph, context)}
   }
 
+  def initialConfiguration(init: Expression): DBCC = init match {
+    case Tuple(lst) =>
+      //TODO look at init and create a DBCC
+      //init is a list(tuple) of processID(args)
+      sys.error("TODO")
+    case err =>
+      Logger.logAndThrow("AstToDBP", LogWarning, "initialConfiguration expects a tuple, not "+err)
+  }
+
   def boolAssignToNode(assign: Map[ID, Boolean]): Context = {
     for ((id,value) <- assign) yield (id,DBCN(Bool(value)))
   }
 
-  def initialConfiguration: DBCC = {
-    //TODO look at init and create a DBCC
-    //init is a list(tuple) of processID(args)
-    sys.error("TODO")
-  }
-
-  //TODO interpreted fct: boolean + collection
-  def isInterpreted(fct: String): Boolean = {
-    sys.error("TODO")
+  //interpreted fct: boolean + collection
+  def isInterpreted(e: Expression): Boolean = {
+    //TODO more: collections
+    //TODO only one level (bool)
+    BooleanFunctions.isBooleanInterpreted(e)
   }
 
   def hasSideEffect(e: Expression): Boolean = e match {
@@ -209,8 +207,8 @@ trait AstToDBP[A] {
     case id @ ID(v) =>
       val node = map.getOrElse(id, unk)
       Seq((node, emptyConf + node, map + (id -> node)))
-    case Application(fct, args) =>
-      if (isInterpreted(fct)) {
+    case ap @ Application(fct, args) =>
+      if (isInterpreted(ap)) {
         Logger.logAndThrow("AstToDBP", LogError, "graphOfExpr does not deal with interpreted functions ("+fct+")")
       } else { //not interpreted (alg datatype)
         val refNode = DBCN_Case(fct)
@@ -249,11 +247,9 @@ trait AstToDBP[A] {
     }
   }
   
-  def graphOfExpr(e: Expression, map: Context): Seq[(DBC#V, DBCC, Context)] = e match {
-    case Application(fct, _) =>
-      if (isInterpreted(fct)) graphForInterpretedExpr(e, map)
-      else graphForNonInterpretedExpr(e, map)
-    case _ => graphOfExpr(e, map)
+  def graphOfExpr(e: Expression, map: Context): Seq[(DBC#V, DBCC, Context)] = {
+    if (isInterpreted(e)) graphForInterpretedExpr(e, map)
+    else graphForNonInterpretedExpr(e, map)
   }
 
   //returns: new, live, dying

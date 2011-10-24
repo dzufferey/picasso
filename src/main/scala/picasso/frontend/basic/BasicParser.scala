@@ -69,6 +69,7 @@ object BasicParser extends StandardTokenParsers {
     ident ~ ("(" ~> repsep(ident, ",") <~")") ~ proc    ^^ { case id ~ params ~ body => Actor(id, params, body) }
   )
 
+  //TODO more structured
   def initial: Parser[Seq[(String,Seq[Expression])]] =
     "initial" ~> rep1sep(ident ~ ("(" ~> repsep(expr, ",") <~")"), ";")  ^^ (_ map {case id ~ args => (id, args)})
     //The set of names can be inferred from the parameters of the actors.
