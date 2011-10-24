@@ -65,9 +65,25 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
 
   def initialConfiguration(init: Expression): DBCC = init match {
     case Tuple(lst) =>
-      //TODO look at init and create a DBCC
-      //init is a list(tuple) of processID(args)
-      sys.error("TODO")
+      val processes = lst map {
+        case Create(name, args) => (name, args)
+        case err => Logger.logAndThrow("AstToDBP", LogWarning, "initialConfiguration expects Create, not "+err)
+      }
+      //first fetch the IDs -> assume those are channel
+      val channels = processes.flatMap(_._2).flatMap{case id @ ID(_) => List(id) case _ => None}.toSet
+      val context = channels.map(_ -> DBCN_Name).toMap[ID, DBC#V]
+      val graphs = processes.map{ case (agt, args) =>
+        val agtDef = agents.find(_.id == agt) match {
+          case Some(aDef) => aDef
+          case None => Logger.logAndThrow("AstToDBP", LogError, "agent '"+agt+"' no found")
+        }
+        val newAgt = makeStateFor(agtDef, context, agtDef.cfa.initState, agtDef.params zip args)
+        if (newAgt.size != 1) {
+          Logger.logAndThrow("AstToDBP", LogWarning, "initialConfiguration expects determinitic start configuration")
+        }
+        newAgt.head._2
+      }
+      graphs.reduceLeft(_ ++ _)
     case err =>
       Logger.logAndThrow("AstToDBP", LogWarning, "initialConfiguration expects a tuple, not "+err)
   }
