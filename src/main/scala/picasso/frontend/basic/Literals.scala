@@ -1,16 +1,18 @@
 package picasso.frontend.basic
 
-import picasso.math.hol.{Literal => HLiteral}
+import picasso.math.hol.{Literal => HLiteral, Bool => HBool, String => HString}
 
-sealed abstract class Literal extends scala.util.parsing.input.Positional
+sealed abstract class Literal extends scala.util.parsing.input.Positional with Typed
 
 case class Bool(b: Boolean) extends Literal {
+  this.setType(HBool)
   override def toString = b.toString
 }
 
 //case class Integer(i: Int)  extends Literal
 
 case class StringVal(str: String) extends Literal {
+  this.setType(HString)
   override def toString = ("\""+str+"\"")
 }
 

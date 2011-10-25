@@ -69,7 +69,7 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
     case Tuple(lst) =>
       val processes = lst map {
         case Create(name, args) => (name, args)
-        case err => Logger.logAndThrow("AstToDBP", LogWarning, "initialConfiguration expects Create, not "+err)
+        case err => Logger.logAndThrow("DBPWrapper", LogWarning, "initialConfiguration expects Create, not "+err)
       }
       //first fetch the IDs -> assume those are channel
       val channels = processes.flatMap(_._2).flatMap{case id @ ID(_) => List(id) case _ => None}.toSet
@@ -77,17 +77,17 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
       val graphs = processes.map{ case (agt, args) =>
         val agtDef = agents.find(_.id == agt) match {
           case Some(aDef) => aDef
-          case None => Logger.logAndThrow("AstToDBP", LogError, "agent '"+agt+"' no found")
+          case None => Logger.logAndThrow("DBPWrapper", LogError, "agent '"+agt+"' no found")
         }
         val newAgt = makeStateFor(agtDef, context, agtDef.cfa.initState, agtDef.params zip args)
         if (newAgt.size != 1) {
-          Logger.logAndThrow("AstToDBP", LogError, "initialConfiguration expects determinitic start configuration, got: " + newAgt + "\n with init = " + init)
+          Logger.logAndThrow("DBPWrapper", LogError, "initialConfiguration expects determinitic start configuration for "+agt+", got: " + newAgt)
         }
         newAgt.head._2
       }
       graphs.reduceLeft(_ ++ _)
     case err =>
-      Logger.logAndThrow("AstToDBP", LogWarning, "initialConfiguration expects a tuple, not "+err)
+      Logger.logAndThrow("DBPWrapper", LogWarning, "initialConfiguration expects a tuple, not "+err)
   }
 
   def boolAssignToNode(assign: Map[ID, Boolean]): Context = {
@@ -111,8 +111,8 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
   def isReference(id: ID): Boolean = id.id.tpe match {
     case HClassType( _, _) => true
     case HBool | HString | HInt | FiniteValues(_) => false
-    case tpe @ (Function( _, _) | HWildcard | UnInterpreted(_)) => 
-      Logger("AstToDBP", LogWarning, "isReference("+id+") -> '"+tpe+"' ? returns true (defensive option)")
+    case tpe @ (Function( _, _) | HWildcard | UnInterpreted(_) | TypeVariable(_)) => 
+      Logger("DBPWrapper", LogWarning, "isReference("+id+") -> '"+tpe+"' ? returns true (defensive option)")
       true
   }
 
@@ -203,7 +203,7 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
       val (idNode, graph, map) = graphOfPattern(pat)
       (idNode, graph, map + (id -> idNode))
     case PatternTuple(lst) => graphOfPattern(Case("Tuple", lst))
-    case _ => Logger.logAndThrow("AstToDBP", LogError, "graphOfPattern??? " + e)
+    case _ => Logger.logAndThrow("DBPWrapper", LogError, "graphOfPattern??? " + e)
   }
 
   def graphForNonInterpretedExpr(e: Expression, map: Context): Seq[(DBC#V, DBCC, Context)] = e match {
@@ -219,7 +219,7 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
     case Create(agt, args) =>
       val agtDef = agents.find(_.id == agt) match {
         case Some(aDef) => aDef
-        case None => Logger.logAndThrow("AstToDBP", LogError, "agent '"+agt+"' no found")
+        case None => Logger.logAndThrow("DBPWrapper", LogError, "agent '"+agt+"' no found")
       }
       makeStateFor(agtDef, map, agtDef.cfa.initState, agtDef.params zip args)
     case id @ ID(v) =>
@@ -227,7 +227,7 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
       Seq((node, emptyConf + node, map + (id -> node)))
     case ap @ Application(fct, args) =>
       if (isInterpreted(ap)) {
-        Logger.logAndThrow("AstToDBP", LogError, "graphOfExpr does not deal with interpreted functions ("+fct+")")
+        Logger.logAndThrow("DBPWrapper", LogError, "graphOfExpr does not deal with interpreted functions ("+fct+")")
       } else { //not interpreted (alg datatype)
         val refNode = DBCN_Case(fct)
         def processArgs(args: List[Expression], idx: Int, acc: DBCC, context: Context): Seq[(DBCC, Context)] = args match {
@@ -261,7 +261,7 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
       })
       resultTrue ++ resultFalse
     } else {
-      Logger.logAndThrow("AstToDBP", LogWarning, "graphForInterpretedExpr does only boolean for the moment, not " + e)
+      Logger.logAndThrow("DBPWrapper", LogWarning, "graphForInterpretedExpr does only boolean for the moment, not " + e)
     }
   }
   
@@ -346,7 +346,7 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
           makeTrans( proc.toString, g1, g2, forward, backward, None)
         }
       } else {
-        Logger("AstToDBP", LogWarning, "generating trivial transition for " + proc + " -> " + proc.toStringRaw)
+        Logger("DBPWrapper", LogWarning, "generating trivial transition for " + proc + " -> " + proc.toStringRaw)
         makeTransition(agt, a, Skip(), b)
       }
       
@@ -389,7 +389,7 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
       Seq(makeTrans( proc.toString, g1, g2, forward, backward, None))
 
     case other =>
-      Logger.logAndThrow("AstToDBP", LogError, "not supported " + other + " -> " + other.toStringRaw)
+      Logger.logAndThrow("DBPWrapper", LogError, "not supported " + other + " -> " + other.toStringRaw)
   }
 
   def makeTransitions(agt: AgentDefinition[PC]): Seq[DBT] = {

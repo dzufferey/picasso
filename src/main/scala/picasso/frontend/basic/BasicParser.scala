@@ -46,9 +46,9 @@ object BasicParser extends StandardTokenParsers {
 
   def proc: Parser[Process] = positioned(
       "begin" ~> repsep(proc, ";") <~ "end"         ^^ ( stmts => Block(stmts))
-    | ("var" ~> ident) ~ (":=" ~> expr)             ^^ { case id ~ value => Declaration(id, true, value) }
-    | ("val" ~> ident) ~ (":=" ~> expr)             ^^ { case id ~ value => Declaration(id, false, value) }
-    | ident ~ (":=" ~> expr)                        ^^ { case id ~ value => Affect(id, value) }
+    | ("var" ~> ident) ~ (":=" ~> expr)             ^^ { case id ~ value => Declaration(ID(id), true, value) }
+    | ("val" ~> ident) ~ (":=" ~> expr)             ^^ { case id ~ value => Declaration(ID(id), false, value) }
+    | ident ~ (":=" ~> expr)                        ^^ { case id ~ value => Affect(ID(id), value) }
     | expr ~ ("!" ~> expr)                          ^^ { case dest ~ value => Send(dest, value) }
     | expr                                          ^^ ( e => Expr(e) )
     | "select" ~> rep1(cases)                       ^^ ( cases => Receive(cases))
@@ -61,13 +61,13 @@ object BasicParser extends StandardTokenParsers {
                                                        }
     | ("while" ~> expr) ~ ("do" ~> proc)            ^^ { case cond ~ body => While(cond, body) }
     | ("foreach" ~> ident) ~ ("in" ~> expr) ~ ("do" ~> proc) ~ opt(("yield" ~> ident) ~ ("in" ~> ident)) ^^ {
-                                                      case x ~ set ~ body ~ None => ForEach(x, set, body)
-                                                      case x ~ setX ~ body ~ Some(y ~ setY) => ForEachYield(x, setX, y, setY, body)
+                                                      case x ~ set ~ body ~ None => ForEach(ID(x), set, body)
+                                                      case x ~ setX ~ body ~ Some(y ~ setY) => ForEachYield(ID(x), setX, ID(y), ID(setY), body)
                                                     }
     )
 
   def actor: Parser[Actor] = positioned(
-    ident ~ ("(" ~> repsep(ident, ",") <~")") ~ proc    ^^ { case id ~ params ~ body => Actor(id, params, body) }
+    ident ~ ("(" ~> repsep(ident, ",") <~")") ~ proc    ^^ { case id ~ params ~ body => Actor(id, params map (ID(_)), body) }
   )
 
   //TODO more structured

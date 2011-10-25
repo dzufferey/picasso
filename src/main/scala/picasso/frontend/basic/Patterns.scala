@@ -1,19 +1,27 @@
 package picasso.frontend.basic
 
-sealed abstract class Pattern extends scala.util.parsing.input.Positional
+sealed abstract class Pattern extends scala.util.parsing.input.Positional with Typed
+abstract class SymPat extends Pattern with Sym
+
 case class PatternLit(l: Literal) extends Pattern {
+  setType(l.tpe)
   override def toString = l.toString
 }
-case class PatternTuple(lst: List[Pattern]) extends Pattern {
-  override def toString = lst.mkString("(", ", " ,")")
-}
-case class Case(uid: String, args: List[Pattern]) extends Pattern {
-  override def toString = uid + args.mkString("(", ", " ,")")
-}
+
 case object Wildcard extends Pattern {
   override def toString = "_"
 }
-case class Ident(lid: String) extends Pattern {
+
+case class PatternTuple(lst: List[Pattern]) extends Pattern {
+  override def toString = lst.mkString("(", ", " ,")")
+}
+
+case class Case(uid: String, args: List[Pattern]) extends SymPat {
+  override def toString = uid + args.mkString("(", ", " ,")")
+}
+
+//TODO binding ?
+case class Ident(lid: String) extends SymPat {
   override def toString = lid
 }
 

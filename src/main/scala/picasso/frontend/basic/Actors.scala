@@ -1,12 +1,12 @@
 package picasso.frontend.basic
 
-case class Actor(id: String, params: List[String], body: Process) extends scala.util.parsing.input.Positional
+import picasso.ast.AgentDefinition
+import picasso.graph._
+
+case class Actor(id: String, params: List[ID], body: Process) extends scala.util.parsing.input.Positional
 
 object Actors {
   
-  import picasso.ast.AgentDefinition
-  import picasso.graph._
-
   type PC = String
 
   def actor2Agent(a: Actor): AgentDefinition[PC] = {
@@ -14,12 +14,12 @@ object Actors {
     val params = a.params
     def freshLoc(where: scala.util.parsing.input.Positional): String = id+"("+where.pos+")"
     def mkCfa(init: PC, edge: Process, last: PC): List[(PC, picasso.ast.Process, PC)] = edge match {
-      case Affect(id /*String*/, value /*Expression*/) =>
-        val id2 = picasso.ast.ID(picasso.math.hol.Variable(id)) //TODO type ?
+      case Affect(id /*ID*/, value /*Expression*/) =>
+        val id2 = Expressions.id2ID(id)
         val value2 = Expressions.exp2Exp(value)
         List((init,picasso.ast.Affect(id2, value2),last))
 
-      case Declaration(id /*String*/, mutable, value /*Expression*/) =>
+      case Declaration(id /*ID*/, mutable, value /*Expression*/) =>
         mkCfa(init, Affect(id, value), last) //assume no name clash / shadowing
 
       case Expr(e /*Expression*/) =>
@@ -70,7 +70,7 @@ object Actors {
         sys.error("TODO: ForEachGeneric")
 
     }
-    val params2 = params map { id => picasso.ast.ID(picasso.math.hol.Variable(id)) } //TODO types ??
+    val params2 = params map Expressions.id2ID
     val init = id + "_start" 
     val end = id + "_end"
     val cfa = Automaton[GT.ELGT{type V = PC; type EL = picasso.ast.Process}](mkCfa(init, a.body, end), init, Set(end))

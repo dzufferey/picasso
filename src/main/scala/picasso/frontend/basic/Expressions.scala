@@ -1,13 +1,17 @@
 package picasso.frontend.basic
 
-sealed abstract class Expression extends scala.util.parsing.input.Positional
+sealed abstract class Expression extends scala.util.parsing.input.Positional with Typed
+
+abstract class SymExpr extends Expression with Sym
+
 case class Value(l: Literal) extends Expression {
+  setType(l.tpe)
   override def toString = l.toString
 }
-case class ID(smth: String) extends Expression {
-  override def toString = smth
+case class ID(id: String) extends SymExpr {
+  override def toString = id 
 }
-case class Application(fct: String, args: List[Expression]) extends Expression {
+case class Application(fct: String, args: List[Expression]) extends SymExpr {
   override def toString = fct + args.mkString("(", ", " ,")")
 }
 case class Tuple(values: List[Expression]) extends Expression {
@@ -60,7 +64,7 @@ object Create {
 object Expressions {
 
   def any2Any = picasso.ast.Any
-  def id2ID(id: ID): picasso.ast.ID = picasso.ast.ID(picasso.math.hol.Variable(id.smth)) //default mode is LocalScope
+  def id2ID(id: ID): picasso.ast.ID = picasso.ast.ID(picasso.math.hol.Variable(id.id) setType id.tpe) //default mode is LocalScope
   def value2Value(v: Value): picasso.ast.Expression = v.l match {
     case b @ Bool(_) => picasso.ast.Value[Boolean](Literals.bool2Lit(b))
     case s @ StringVal(_) => picasso.ast.Value[String](Literals.string2Lit(s))
