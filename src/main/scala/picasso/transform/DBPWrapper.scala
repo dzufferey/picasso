@@ -17,6 +17,8 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
 
   lazy val initConf: DBCC = initialConfiguration(init)
 
+  lazy val system = new DBP(transitions.toList)(confOrdering, ordering)
+
   //TODO LocalScope vs GlobalScope vs ClassScope ...
   //for the moment assumes only local
 
@@ -79,7 +81,7 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
         }
         val newAgt = makeStateFor(agtDef, context, agtDef.cfa.initState, agtDef.params zip args)
         if (newAgt.size != 1) {
-          Logger.logAndThrow("AstToDBP", LogWarning, "initialConfiguration expects determinitic start configuration")
+          Logger.logAndThrow("AstToDBP", LogError, "initialConfiguration expects determinitic start configuration, got: " + newAgt + "\n with init = " + init)
         }
         newAgt.head._2
       }

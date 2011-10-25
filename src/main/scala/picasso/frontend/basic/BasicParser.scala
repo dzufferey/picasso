@@ -4,6 +4,7 @@ import scala.util.parsing.combinator._
 import scala.util.parsing.combinator.lexical._
 import scala.util.parsing.combinator.token._
 import scala.util.parsing.combinator.syntactical._
+import picasso.utils.IO
 
 object BasicParser extends StandardTokenParsers {
   lexical.delimiters += (";", ",", "(", ")", "!", "?", "_", "=>", ":=")
@@ -70,17 +71,20 @@ object BasicParser extends StandardTokenParsers {
   )
 
   //TODO more structured
-  def initial: Parser[Seq[(String,Seq[Expression])]] =
-    "initial" ~> rep1sep(ident ~ ("(" ~> repsep(expr, ",") <~")"), ";")  ^^ (_ map {case id ~ args => (id, args)})
+  def initial: Parser[Expression] =
+    "initial" ~> rep1sep(ident ~ ("(" ~> repsep(expr, ",") <~")"), ";")  ^^ (lst => Tuple(lst map {case id ~ args => Create(id, args)}))
     //The set of names can be inferred from the parameters of the actors.
 
-  def system: Parser[(Seq[Actor], Seq[(String,Seq[Expression])])] =
+  def system: Parser[(Seq[Actor], Expression)] =
     rep1(actor) ~ initial                          ^^ { case actors ~ init => (actors, init) }
 
-  //example
   def apply(toParse: String) = {
     val tokens = new lexical.Scanner(toParse)
     phrase(system)(tokens)
+  }
+
+  def parseFile(fileName: String) = {
+    apply(IO.readTextFile(fileName))
   }
 
 }
