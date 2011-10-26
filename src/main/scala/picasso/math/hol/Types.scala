@@ -47,6 +47,12 @@ case object Wildcard extends Type {
   def alpha(subst: Map[TypeVariable, Type]) = this 
 }
 
+case class Product(cmpts: List[Type]) extends Type {
+  override def toString = cmpts.mkString("","*","")
+  def freeParameters = (Set[TypeVariable]() /: cmpts)(_ ++ _.freeParameters)
+  def alpha(subst: Map[TypeVariable, Type]) = Product(cmpts.map(_.alpha(subst))) 
+}
+
 case class Function(args: List[Type], returns: Type) extends Type {
   override def toString = args.mkString("(","->","->") + returns + ")"
   def freeParameters = (returns.freeParameters /: args)(_ ++ _.freeParameters)
@@ -115,6 +121,18 @@ object ActorType {
   }
   def unapply(tpe: Type): Option[(String, List[Type])] = tpe match {
     case ct @ ClassType(a, b) if ct.isActor => Some((a,b))
+    case _ => None
+  }
+}
+
+object CaseType {
+  def apply(name: String, lst: List[Type]): Type = {
+    val ct = ClassType(name, lst)
+    ct.isCase = true
+    ct
+  }
+  def unapply(tpe: Type): Option[(String, List[Type])] = tpe match {
+    case ct @ ClassType(a, b) if ct.isCase => Some((a,b))
     case _ => None
   }
 }

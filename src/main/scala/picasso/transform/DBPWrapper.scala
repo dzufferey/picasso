@@ -111,7 +111,7 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
   def isReference(id: ID): Boolean = id.id.tpe match {
     case HClassType( _, _) => true
     case HBool | HString | HInt | FiniteValues(_) => false
-    case tpe @ (Function( _, _) | HWildcard | UnInterpreted(_) | TypeVariable(_)) => 
+    case tpe @ (Function( _, _) | HWildcard | UnInterpreted(_) | TypeVariable(_) | Product(_)) => 
       Logger("DBPWrapper", LogWarning, "isReference("+id+") -> '"+tpe+"' ? returns true (defensive option)")
       true
   }
