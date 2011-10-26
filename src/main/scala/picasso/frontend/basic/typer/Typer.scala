@@ -3,6 +3,7 @@ package picasso.frontend.basic.typer
 import picasso.frontend.basic._
 import picasso.graph._
 import picasso.math.hol.{Bool => BoolT, Int => IntT, String => StringT, Wildcard => WildcardT, Literal => _, Application => _, _}
+import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger}
 
 
 object Typer {
@@ -93,52 +94,156 @@ object Typer {
   }
   */
 
-  //TODO
-  def assignSymbols(a: Actor) {
+  def assignSymbolsToVars(a: Actor) {
+    def inScope(id: ID, scope: Map[String, Symbol]) {
+        assert(scope contains id.id)
+        if (id.symbol == NoSymbol) id.symbol = scope(id.id)
+        else assert(id.symbol == scope(id.id))
+    }
+    def binds(name: String, sym: Sym, scope: Map[String, Symbol]): Map[String, Symbol] = {
+      assert(sym.symbol == NoSymbol)
+      val newSym = Symbol(name)
+      sym setSymbol newSym
+      scope + (name -> newSym)
+    }
     def processPo(proc: Process, scope: Map[String, Symbol]): Map[String, Symbol] = proc match {
-      case Block(stmts) => sys.error("TODO")
-      case Affect(id, value) => sys.error("TODO")
-      case Declaration(id, variable, value) => sys.error("TODO")
-      case Expr(e) => sys.error("TODO")
-      case Send(dest, content) => sys.error("TODO")
-      case Receive(cases /*List[(Expression,Pattern,Process)]*/) => sys.error("TODO")
-      case ITE(condition , caseTrue, caseFalse) => sys.error("TODO")
-      case While(condition , body) => sys.error("TODO")
-      case ForEachGeneric(id, set, yieldOpt, body) => sys.error("TODO")
+      case Affect(id, value) =>
+        inScope(id, scope)
+        processE(value, scope)
+        scope
+      case Declaration(id, variable, value) =>
+        processE(value, scope)
+        binds(id.id, id, scope)
+      case Expr(e) =>
+        processE(e, scope)
+      case Send(dest, content) =>
+        processE(dest, scope)
+        processE(content, scope)
+        scope
+      case Receive(cases /*List[(Expression,Pattern,Process)]*/) =>
+        for  ((src, pat, proc) <- cases) {
+          processE(src, scope)
+          val scope2 = processPa(pat, scope)
+          processPo(proc, scope2)
+        }
+        scope
+      case Block(stmts) =>
+        (scope /: stmts)((scp, p) => processPo(p, scp))
+        scope
+      case ITE(condition , caseTrue, caseFalse) =>
+        processE(condition, scope)
+        processPo(caseTrue, scope)
+        processPo(caseFalse, scope)
+        scope
+      case While(condition , body) =>
+        processE(condition, scope)
+        processPo(body, scope)
+        scope
+      case ForEachGeneric(id, set, yieldOpt, body) =>
+        processE(set, scope)
+        val innerScope1 = binds(id.id, id, scope)
+        val innerScope  = yieldOpt match {
+          case Some((y,_)) =>
+            assert(y.id != id.id)
+            binds(y.id, y, innerScope1)
+          case None => innerScope1
+        }
+        processPo(body, innerScope)
+        yieldOpt match {
+          case Some((_,ys)) => binds(ys.id, ys, scope)
+          case None => scope
+        }
     }
     def processPa(pat: Pattern, scope: Map[String, Symbol]): Map[String, Symbol] = pat match {
       case PatternLit(_) | Wildcard => scope
       case PatternTuple(lst) => (scope /: lst)((scp, e) => processPa(e, scp))
       case c @ Case(uid, args) => (scope /: args)((scp, e) => processPa(e, scp)) 
-      case id @ Ident(lid) if id.symbol == NoSymbol =>
-        val symbol = scope.getOrElse(lid, Symbol("variable"))
-        id.symbol = symbol
-        scope + (lid -> symbol)
-      case id @ Ident(lid)  =>
-        if (scope contains lid) scope
-        else scope + (lid -> id.symbol)
+      case id @ Ident(lid) => binds(lid, id, scope)
     }
     def processE(expr: Expression, scope: Map[String, Symbol]): Map[String, Symbol] = expr match {
       case Value(_) | Any => scope
+      case Create(_, args) => (scope /: args)((scp, e) => processE(e, scp))
       case Application(_, args) => (scope /: args)((scp, e) => processE(e, scp))
-      case v @ ID(name) if v.symbol == NoSymbol =>
-        val symbol = scope.getOrElse(name, Symbol("variable"))
-        v.symbol = symbol
-        scope + (name -> symbol)
-      case v @ ID(name) =>
-        if (scope contains name) scope
-        else scope + (name -> v.symbol)
+      case id @ ID(_) =>
+        inScope(id, scope)
+        scope
       case Tuple(args) => (scope /: args)((scp, e) => processE(e, scp))
     }
-    sys.error("TODO")
-    //process(e, Map.empty[String, Symbol])
+    val startScope = (Map.empty[String, Symbol] /: a.params)( (acc, id) => binds(id.id, id, acc) )
+    processPo(a.body, startScope)
+  }
+
+  // -> there are a both interpreted fct, alg datatypes and creates ...
+  // -> all those things have a global scope => should collect them first and give them unique symbols
+  def assignSymbolsToApplication(actors: Seq[Actor]) {
+    val actorsDef = scala.collection.mutable.HashMap[String, Symbol]()
+    def actorDef(name: String, sym: Sym) {
+      sym.symbol = actorsDef.getOrElseUpdate(name, Symbol(name))
+    }
+    val caseClasses = scala.collection.mutable.HashMap[String, Symbol]()
+    def caseClass(name: String, sym: Sym) {
+      sym.symbol = caseClasses.getOrElseUpdate(name, Symbol(name))
+    }
+
+    def processA(act: Actor) {
+      actorDef(act.id, act)
+      processPo(act.body)
+    }
+    def processPo(proc: Process): Unit = proc match {
+      case Affect(id, value) => processE(value)
+      case Declaration(id, variable, value) => processE(value)
+      case Expr(e) => processE(e)
+      case Send(dest, content) =>
+        processE(dest)
+        processE(content)
+      case Receive(cases) =>
+        for ((src, pat, proc) <- cases) {
+          processE(src)
+          processPa(pat)
+          processPo(proc)
+        }
+      case Block(stmts) => stmts foreach processPo
+      case ITE(condition, caseTrue, caseFalse) =>
+        processE(condition)
+        processPo(caseTrue)
+        processPo(caseFalse)
+      case While(condition , body) =>
+        processE(condition)
+        processPo(body)
+      case ForEachGeneric(id, set, yieldOpt, body) =>
+        processE(set)
+        processPo(body)
+    }
+    def processPa(pat: Pattern): Unit = pat match {
+      case PatternLit(_) | Wildcard | Ident(_) => ()
+      case PatternTuple(lst) => lst foreach processPa
+      case c @ Case(uid, args) => 
+        args foreach processPa
+        caseClass(uid, c)
+    }
+    def processE(expr: Expression): Unit = expr match {
+      case Value(_) | Any => ()
+      case Tuple(args) => args foreach processE
+      case ap @ Create(cls, args) =>
+        ap match {
+          case ap @ Application(_, _) => actorDef(cls, ap)
+          case _ => sys.error("not possible")
+        }
+      case ap @ Application(fct, args) =>
+        args foreach processE
+        val defined = Definitions.forName(fct)
+        if (defined.size > 1) Logger.logAndThrow("Typer", LogError, "no overloading for the moment ("+fct+")") 
+        else if (defined.size == 1) ap.symbol = defined.head.symbol
+        else caseClass(fct, ap)
+    }
+    actors foreach processA
   }
     
 
   //value already take the type of the literal contained
   def typeLiteral(l: Value): TypingResult[Value] = TypingSuccess(l)
 
-  /*
+  /* TODO
   def extractEquations(e: Expression): (Map[TypeVariable, Symbol], TypingResult[Expression], TypeConstraints) = {
     var symbolToType = scala.collection.mutable.HashMap[Symbol, Type]()
     def processVariables(v: Variable): (TypingResult[Variable], TypeConstraints) = {
