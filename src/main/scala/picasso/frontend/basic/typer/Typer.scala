@@ -82,11 +82,14 @@ object Typer {
       //(3) unifies type equations
       val eqs2 = eqs.normalize
       //Console.println("equations extracted: " + eqs)
+      Logger("Typer", LogDebug, "typing constraints are " + eqs2)
       val solution = solveConstraints(eqs2)
       //Console.println("able to solve equations: " + solution.isDefined)
       //(4) uses the type info to resolve the overloading and replace the types
       solution.headOption match {
-        case Some(subst) => putTypes(a2.get, subst)
+        case Some(subst) =>
+          Logger("Typer", LogDebug, "typing solution is " + subst)
+          putTypes(a2.get, subst)
         case None => TypingFailure("cannot solve: " + eqs2)
       }
     }
@@ -246,7 +249,7 @@ object Typer {
     val symbolToType = scala.collection.mutable.HashMap[Symbol, Type]()
 
     def processIdent[T <: Sym with Typed](v: T): (TypingResult[T], TypeConstraints) = {
-      if (v.tpe == Wildcard) {
+      if (v.tpe == WildcardT) {
         var newTpe = symbolToType.getOrElse(v.symbol, Type.freshTypeVar)
         symbolToType += (v.symbol -> newTpe)
         //Console.println("fresh type for " + v + " " + v.symbol + " -> " + newTpe)
@@ -266,15 +269,16 @@ object Typer {
       val typedID = paramsTResult.map(_.get)
       //represents an actor as a fct: params -> classType ? (i.e. type of Ctor)
       val actCtorType = symbolToType.getOrElseUpdate(a.symbol, Function(typedID map (_.tpe), ActorType(a.id, Nil)))
-      val actType = actCtorType match {
-        case Function(_, r) => r
+      val (argsType, actType) = actCtorType match {
+        case Function(a, r) => (a, r)
         case err => Logger.logAndThrow("Typer", LogError, "Ctor type is not a fct ("+err+")") 
       }
+      val applyCstr = typedID.map(_.tpe).zip(argsType).map{case (a,b) => SingleCstr(a,b)}
       //then type the body
       val (bodyTR, bodyCstr) = processPo(a.body)
       if (bodyTR.success) {
         val a2 = Actor(a.id, typedID, bodyTR.get) setType actType setSymbol a.symbol
-        (TypingSuccess(a2), ConjCstr(bodyCstr :: paramsCstr))
+        (TypingSuccess(a2), ConjCstr(bodyCstr :: applyCstr ::: paramsCstr))
       } else {
         (bodyTR.error, TrivialCstr)
       }
@@ -455,6 +459,7 @@ object Typer {
     }
 
     val (tpe, cstrs) = (actors map processA).unzip
+    Logger("Typer", LogDebug, "symbolToType " + symbolToType.mkString("\n","\n",""))
     if (tpe forall (_.success)) {
       (TypingSuccess(tpe map (_.get)), ConjCstr(cstrs.toList))
     } else {

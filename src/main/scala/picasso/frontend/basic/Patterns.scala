@@ -1,28 +1,40 @@
 package picasso.frontend.basic
 
-sealed abstract class Pattern extends scala.util.parsing.input.Positional with Typed
+import picasso.math.hol.{Type, Wildcard => WildcardT}
+
+sealed abstract class Pattern extends scala.util.parsing.input.Positional with Typed {
+  def toStringFull: String
+}
 abstract class SymPat extends Pattern with Sym
 
 case class PatternLit(l: Literal) extends Pattern {
   setType(l.tpe)
   override def toString = l.toString
+  def toStringFull = toString
 }
 
 case object Wildcard extends Pattern {
   override def toString = "_"
+  def toStringFull = toString
 }
 
 case class PatternTuple(lst: List[Pattern]) extends Pattern {
   override def toString = lst.mkString("(", ", " ,")")
+  def toStringFull = lst.map(_.toStringFull).mkString("(", ", " ,")")
 }
 
 case class Case(uid: String, args: List[Pattern]) extends SymPat {
   override def toString = uid + args.mkString("(", ", " ,")")
+  def toStringFull = uid + args.map(_.toStringFull).mkString("(", ", " ,")")
 }
 
 //TODO binding ?
 case class Ident(lid: String) extends SymPat {
   override def toString = lid
+  def toStringFull = {
+    if (tpe == WildcardT) lid
+    else lid+":"+tpe
+  }
 }
 
 object Patterns {

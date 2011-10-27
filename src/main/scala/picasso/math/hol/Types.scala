@@ -66,13 +66,13 @@ case class FiniteValues[T](values: List[T]) extends Type {
 }
 
 case class UnInterpreted(id: String) extends Type {
-  override def toString = "?"+id+"?"
+  override def toString = id
   def freeParameters = Set[TypeVariable]()
   def alpha(subst: Map[TypeVariable, Type]) = this 
 }
 
 case class TypeVariable(name: String) extends Type {
-  override def toString = name
+  override def toString = "'"+name
   def freeParameters = Set[TypeVariable](this)
   def alpha(subst: Map[TypeVariable, Type]) = subst.getOrElse(this, this)
 }
@@ -139,7 +139,7 @@ object CaseType {
 
 /** Channel/name in the pi-calculus sense */
 object Channel {
-  //not really uninterpreted, but ...
+  //not really uninterpreted, but actually pretty much interpreted
   def apply() = UnInterpreted("name")
   def unapply(tpe: Type): Boolean = tpe match {
     case UnInterpreted("name") => true

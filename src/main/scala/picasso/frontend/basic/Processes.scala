@@ -1,23 +1,40 @@
 package picasso.frontend.basic
 
-sealed abstract class Process extends scala.util.parsing.input.Positional
-case class Block(stmts: List[Process]) extends Process
+import picasso.utils.Misc
+
+sealed abstract class Process extends scala.util.parsing.input.Positional 
+case class Block(stmts: List[Process]) extends Process {
+  override def toString = "begin\n" + Misc.indent("  ", stmts.mkString("",";\n","")) + "\nend\n"
+}
 case class Affect(id: ID, value: Expression) extends Process {
   override def toString = id + " := " + value
 }
 case class Declaration(id: ID, variable: Boolean, value: Expression) extends Process {
-  override def toString = (if (variable) "var " else "val ") + id + " := " + value
+  override def toString = (if (variable) "var " else "val ") + id.toStringFull + " := " + value
 }
 case class Expr(e: Expression) extends Process {
   override def toString = e.toString
 }
 case class Send(dest: Expression, content: Expression) extends Process {
-  override def toString = dest + "!" + content
+  override def toString = dest + " ! " + content
 }
-case class Receive(cases: List[(Expression,Pattern,Process)]) extends Process
-case class ITE(condition: Expression, caseTrue: Process, caseFalse: Process) extends Process
-case class While(condition: Expression, body: Process) extends Process
-case class ForEachGeneric(id: ID, set: Expression, yieldOpt: Option[(ID,ID)], body: Process) extends Process
+case class Receive(cases: List[(Expression,Pattern,Process)]) extends Process {
+  override def toString = {
+    val cases1 = cases.map{ case (e,pa,po) =>
+      e + " ? " + pa.toStringFull + " =>\n" + Misc.indent("  ", po.toString)
+    }
+    val casesStr = cases1.map(Misc.indent("  ",_)).mkString("","\n","")
+    "select\n" + casesStr
+  }
+}
+case class ITE(condition: Expression, caseTrue: Process, caseFalse: Process) extends Process {
+  override def toString = "if ("+condition+") then\n" + Misc.indent("  ", caseTrue.toString) + "\nelse\n" + Misc.indent("  ", caseFalse.toString)
+}
+case class While(condition: Expression, body: Process) extends Process {
+  override def toString = "while ("+condition+")\n"+ Misc.indent("  ", body.toString)
+}
+case class ForEachGeneric(id: ID, set: Expression, yieldOpt: Option[(ID,ID)], body: Process) extends Process {
+}
 
 object Zero {
   def apply() = Block(Nil)

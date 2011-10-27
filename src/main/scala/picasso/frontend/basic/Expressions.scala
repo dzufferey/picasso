@@ -1,5 +1,7 @@
 package picasso.frontend.basic
 
+import picasso.math.hol.{Type, Wildcard => WildcardT}
+
 sealed abstract class Expression extends scala.util.parsing.input.Positional with Typed
 
 abstract class SymExpr extends Expression with Sym
@@ -10,6 +12,10 @@ case class Value(l: Literal) extends Expression {
 }
 case class ID(id: String) extends SymExpr {
   override def toString = id 
+  def toStringFull = {
+    if (tpe == WildcardT) toString
+    else id+":"+tpe
+  }
 }
 case class Application(fct: String, args: List[Expression]) extends SymExpr {
   override def toString = fct + args.mkString("(", ", " ,")")

@@ -53,16 +53,8 @@ class Logger {
     if (apply(relatedTo, lvl)) {
       //when content is on multiple lines, each line should be prefixed.
       val prefix = "[" + lvl.color + lvl.message + Console.RESET + "]" + " @ " + relatedTo + ": " 
-      val builder = new StringBuilder(content)
-      //if the last char is a line return, replace it by a space
-      if ((! builder.isEmpty) && (builder(builder.size -1) == '\n')) builder.setLength(builder.size -1)
-      var start = 0
-      while (start < builder.length && builder.indexOf('\n', start) != -1) {
-        val idx = builder.indexOf('\n', start)
-        builder.insert(idx+1, prefix)
-        start = idx + prefix.length + 1
-      }
-      Console.println(prefix + builder)
+      val indented = Misc.indent(prefix, content)
+      Console.println(indented)
     }
   }
 

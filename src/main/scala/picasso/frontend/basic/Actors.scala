@@ -2,8 +2,13 @@ package picasso.frontend.basic
 
 import picasso.ast.AgentDefinition
 import picasso.graph._
+import picasso.utils.Misc
 
-case class Actor(id: String, params: List[ID], body: Process) extends scala.util.parsing.input.Positional with Sym with Typed
+case class Actor(id: String, params: List[ID], body: Process) extends scala.util.parsing.input.Positional with Sym with Typed {
+  override def toString = {
+    id + params.map(_.toStringFull).mkString("(",", ",")") + "\n" + Misc.indent("  ", body.toString)
+  }
+}
 
 object Actors {
   

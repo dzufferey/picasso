@@ -1,6 +1,7 @@
 package picasso.frontend.basic
 
 import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger}
+import picasso.frontend.basic.typer._
 
 object Main {
 
@@ -13,9 +14,17 @@ object Main {
     val pr = BasicParser.parseFile(fn)
     if (pr.successful) {
       val (actors, init) = pr.get
-      def agents = actors map Actors.actor2Agent
-      val initAst = Expressions.exp2Exp(init)
-      new Analysis(agents, initAst)
+      Logger("basic", LogDebug, "Parsed:\n" + actors.mkString("","\n\n",""))
+      val typedActors = Typer(actors)
+      if (typedActors.success) {
+        val tActors = typedActors.get
+        Logger("basic", LogNotice, "Input Program:\n\n" + tActors.mkString("","\n\n","") + "\n")
+        def agents = tActors map Actors.actor2Agent
+        val initAst = Expressions.exp2Exp(init)
+        new Analysis(agents, initAst)
+      } else {
+        Logger.logAndThrow("basic", LogError, "cannot type "+fn+":\n"+typedActors)
+      }
     } else {
       Logger.logAndThrow("basic", LogError, "cannot parse "+fn+":\n"+pr)
     }
