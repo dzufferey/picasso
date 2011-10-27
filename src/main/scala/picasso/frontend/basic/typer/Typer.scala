@@ -71,17 +71,14 @@ object Typer {
     }
   }
 
-  //returns a typed formula (with error, wildcards in case of failure)
-  //The boolean indicates whether the formula was typed
-  /*
-  def apply(e: Expression): TypingResult[Expression] = {
+  def apply(actors: Seq[Actor]): TypingResult[Seq[Actor]] = {
     //(1) scope and symbols of the Expression
     //Console.println("starting to type " + e)
-    assignSymbols(e)
+    assignSymbols(actors)
     //Console.println("symbol assigned")
     //(2) extract type equations
-    val (tvarToSymbol, e2, eqs) = extractEquations(e)
-    if (e2.success) {
+    val (a2, eqs) = extractEquations(actors)
+    if (a2.success) {
       //(3) unifies type equations
       val eqs2 = eqs.normalize
       //Console.println("equations extracted: " + eqs)
@@ -89,18 +86,16 @@ object Typer {
       //Console.println("able to solve equations: " + solution.isDefined)
       //(4) uses the type info to resolve the overloading and replace the types
       solution.headOption match {
-        case Some(subst) => putTypes(e2.get, tvarToSymbol, subst)
+        case Some(subst) => putTypes(a2.get, subst)
         case None => TypingFailure("cannot solve: " + eqs2)
       }
-    } else {
-      e2 
     }
+    a2
   }
-  */
 
   def assignSymbolsToVars(a: Actor) {
     def inScope(id: ID, scope: Map[String, Symbol]) {
-        assert(scope contains id.id)
+        assert(scope contains id.id, "not in scope: " + id)
         if (id.symbol == NoSymbol) id.symbol = scope(id.id)
         else assert(id.symbol == scope(id.id))
     }
@@ -241,9 +236,13 @@ object Typer {
     }
     actors foreach processA
   }
-    
 
-  def extractEquations(actors: Seq[Actor]): (Map[TypeVariable, Symbol], TypingResult[Seq[Actor]], TypeConstraints) = {
+  def assignSymbols(actors: Seq[Actor]) {
+    assignSymbolsToApplication(actors)
+    actors foreach assignSymbolsToVars
+  }
+
+  def extractEquations(actors: Seq[Actor]): (TypingResult[Seq[Actor]], TypeConstraints) = {
     val symbolToType = scala.collection.mutable.HashMap[Symbol, Type]()
 
     def processIdent[T <: Sym with Typed](v: T): (TypingResult[T], TypeConstraints) = {
@@ -261,16 +260,21 @@ object Typer {
     }
 
     //TODO free type in actors ?
-    def constraintsForActor(a: Actor): (TypingResult[Actor], TypeConstraints) = {
+    def processA(a: Actor): (TypingResult[Actor], TypeConstraints) = {
       //params
       val (paramsTResult, paramsCstr) = (a.params map processIdent).unzip
       val typedID = paramsTResult.map(_.get)
       //represents an actor as a fct: params -> classType ? (i.e. type of Ctor)
-      symbolToType += (a.symbol -> Function(typedID map (_.tpe), ActorType(a.id, Nil)))
+      val actCtorType = symbolToType.getOrElseUpdate(a.symbol, Function(typedID map (_.tpe), ActorType(a.id, Nil)))
+      val actType = actCtorType match {
+        case Function(_, r) => r
+        case err => Logger.logAndThrow("Typer", LogError, "Ctor type is not a fct ("+err+")") 
+      }
       //then type the body
       val (bodyTR, bodyCstr) = processPo(a.body)
       if (bodyTR.success) {
-        (TypingSuccess(Actor(a.id, typedID, bodyTR.get)), ConjCstr(bodyCstr :: paramsCstr))
+        val a2 = Actor(a.id, typedID, bodyTR.get) setType actType setSymbol a.symbol
+        (TypingSuccess(a2), ConjCstr(bodyCstr :: paramsCstr))
       } else {
         (bodyTR.error, TrivialCstr)
       }
@@ -301,7 +305,7 @@ object Typer {
         val (contTR, contCstr) = processE(content)
         if (destTR.success) {
           if (contTR.success) {
-            (TypingSuccess(Send(destTR.get, contTR.get)), ConjCstr(List(destCstr, contCstr)))
+            (TypingSuccess(Send(destTR.get, contTR.get)), ConjCstr(List(SingleCstr(destTR.get.tpe, Channel()), destCstr, contCstr)))
           } else (destTR.error, TrivialCstr)
         } else (contTR.error, TrivialCstr)
       case Receive(cases) =>
@@ -312,7 +316,7 @@ object Typer {
           if (srcTR.success) {
             if (patTR.success) {
               if (procTR.success) {
-                (TypingSuccess((srcTR.get, patTR.get, procTR.get)), ConjCstr(List(srcCstr, patCstr, procCstr)))
+                (TypingSuccess((srcTR.get, patTR.get, procTR.get)), ConjCstr(List(SingleCstr(srcTR.get.tpe, Channel()), srcCstr, patCstr, procCstr)))
               } else (procTR.error, TrivialCstr)
             } else (patTR.error, TrivialCstr)
           } else (srcTR.error, TrivialCstr)
@@ -334,7 +338,7 @@ object Typer {
         if (condTR.success) {
           if (trueTR.success) {
             if (falseTR.success) {
-              (TypingSuccess(ITE(condTR.get, trueTR.get, falseTR.get)), ConjCstr(List(condCstr, trueCstr, falseCstr)))
+              (TypingSuccess(ITE(condTR.get, trueTR.get, falseTR.get)), ConjCstr(List(SingleCstr(condTR.get.tpe, BoolT), condCstr, trueCstr, falseCstr)))
             } else (falseTR, TrivialCstr)
           } else (trueTR, TrivialCstr)
         } else (condTR.error, TrivialCstr)
@@ -343,7 +347,7 @@ object Typer {
         val (bodyTR, bodyCstr) = processPo(body)
         if (condTR.success) {
           if (bodyTR.success) {
-            (TypingSuccess(While(condTR.get, bodyTR.get)), ConjCstr(List(condCstr, bodyCstr)))
+            (TypingSuccess(While(condTR.get, bodyTR.get)), ConjCstr(List(SingleCstr(condTR.get.tpe, BoolT), condCstr, bodyCstr)))
           } else (bodyTR, TrivialCstr)
         } else (condTR.error, TrivialCstr)
       case ForEachGeneric(id, set, yieldOpt, body) =>
@@ -391,63 +395,73 @@ object Typer {
         ap match {
           case Create(cls, args) =>
             val (argsTR, argsCstr) = (args map processE).unzip
-            val actorTpe = symbolToType.getOrElseUpdate(ap.symbol, ActorType(cls, args.map(_ => Type.freshTypeVar)))
-            // ...
-            sys.error("TODO")
-          case _ =>
-            //TODO interpreted or case
-            // ...
-            sys.error("TODO")
-        }
-    }
-
-    sys.error("TODO")
-  }
-
-  /* TODO
-  def extractEquations(e: Expression): (Map[TypeVariable, Symbol], TypingResult[Expression], TypeConstraints) = {
-    var symbolToType = scala.collection.mutable.HashMap[Symbol, Type]()
-    def process(e: Expression): (TypingResult[Expression], TypeConstraints) = e match {
-      case a @ Application(fct, args) =>
-        val possibilities = Definitions.forName(fct).filter(_.arity == args.size)
-        if (possibilities.size >= 1) {
-          val (args2, argsCstr) = args.map(process).unzip
-          //leave symbol pending until the overloading is resolved
-          (args2) find (r => !r.success) match {
-            case Some(err) => (err, TrivialCstr)
-            case None =>
-              val unwrappedArgs = args2.map(_.get)
-              val returnT = Type.freshTypeVar
+            val actorTpe = symbolToType.getOrElseUpdate(ap.symbol, Function(args.map(_ => Type.freshTypeVar), ActorType(cls, Nil)))
+            val (argsType, returnType) = actorTpe match { //TODO what if type params
+              case Function(a, r) => (a,r)
+              case other => (Nil, other)
+            }
+            if (argsTR forall (_.success)) {
+              val unwrappedArgs = argsTR.map(_.get)
               val argsTypes = unwrappedArgs.map(_.tpe)
-              val a2 = Application(fct, unwrappedArgs) setType returnT
-              val cases = possibilities.map( deff => {
-                val (argsType, returnType) = deff.freshCopyOfType._2 match {
-                  case FunctionT(a, r) => (a,r)
-                  case other => (Nil, other)
-                }
-                val returnCstr = SingleCstr(returnT, returnType)
-                val argsCstrs = argsType zip argsTypes map { case (a,b) => SingleCstr(a,b) }
-                //Console.println(a + " -> " + argsCstrs + " -> " + returnCstr)
-                ConjCstr(returnCstr :: argsCstrs)
-              })
-              val cstr = ConjCstr(argsCstr ::: List(DisjCstr(cases)))
-              (TypingSuccess(a2), cstr)
-          }
-        } else {
-          //No possible definition for fct
-          (TypingFailure(a + " is not delcared or has the wrong arity"), TrivialCstr)
+              val argsCstrs = argsType zip argsTypes map { case (a,b) => SingleCstr(a,b) }
+              val ap2 = Create(cls, unwrappedArgs) setSymbol ap.symbol setType returnType
+              (TypingSuccess(ap2), ConjCstr(argsCstrs))
+            } else {
+              (argsTR.find(r => !r.success).get, TrivialCstr)
+            }
+          case _ =>
+            val possibilities = Definitions.forName(fct)
+            val possibilities2 = possibilities.filter(_.arity == args.size)
+            if (!possibilities2.isEmpty) {
+              //interpreted
+              val (argsTR, argsCstr) = (args map processE).unzip
+              if (argsTR forall (_.success)) {
+                val returnT = Type.freshTypeVar
+                val unwrappedArgs = argsTR.map(_.get)
+                val a2 = Application(fct, unwrappedArgs) setType returnT setSymbol ap.symbol
+                val argsTypes = unwrappedArgs.map(_.tpe)
+                val cases = possibilities2.map( deff => {
+                  val (argsType, returnType) = deff.freshCopyOfType._2 match {
+                    case Function(a, r) => (a,r)
+                    case other => (Nil, other)
+                  }
+                  val returnCstr = SingleCstr(returnT, returnType)
+                  val argsCstrs = argsType zip argsTypes map { case (a,b) => SingleCstr(a,b) }
+                  //Console.println(a + " -> " + argsCstrs + " -> " + returnCstr)
+                  ConjCstr(returnCstr :: argsCstrs)
+                })
+                val cstr = ConjCstr(argsCstr ::: List(DisjCstr(cases)))
+                (TypingSuccess(a2), cstr)
+              } else {
+                (argsTR.find(r => !r.success).get, TrivialCstr)
+              }
+            } else if (possibilities2.isEmpty && !possibilities.isEmpty) {
+              //interpreted but application has wrong arity
+              (TypingFailure(ap + " has the wrong arity"), TrivialCstr)
+            } else {
+              //case cls
+              val (argsTR, argsCstr) = (args map processE).unzip
+              val caseTpe = symbolToType.getOrElseUpdate(ap.symbol, CaseType(fct, args.map(_ => Type.freshTypeVar)))
+              if (argsTR forall (_.success)) {
+                val argsTyped = argsTR map (_.get)
+                val caseType = CaseType(fct, argsTyped.map(_.tpe))
+                val typed = Application(fct, argsTyped) setType caseType setSymbol ap.symbol
+                (TypingSuccess(typed), ConjCstr(SingleCstr(caseType, caseTpe) :: argsCstr))
+              } else {
+                (argsTR.find(r => !r.success).get, TrivialCstr)
+              }
+            }
         }
     }
-    //
-    val (tpe, cstrs) = process(e)
-    val typeToSymbol = symbolToType.flatMap{
-      case (sym, v @ TypeVariable(_)) => List((v, sym))
-      case _ => Nil
+
+    val (tpe, cstrs) = (actors map processA).unzip
+    if (tpe forall (_.success)) {
+      (TypingSuccess(tpe map (_.get)), ConjCstr(cstrs.toList))
+    } else {
+      (tpe.find(r => !r.success).get.error, TrivialCstr)
     }
-    (typeToSymbol.toMap, tpe, cstrs)
   }
-  */
-  
+
 
   def mergeSubst(base: Map[TypeVariable, Type], addition: Map[TypeVariable, Type]): Map[TypeVariable, Type] = {
     assert(base.keySet.intersect(addition.values.flatMap(_.freeParameters).toSet).isEmpty)
@@ -492,38 +506,79 @@ object Typer {
       if (arg1.size == arg2.size)
         solveConstraints(ConjCstr(SingleCstr(r1,r2) :: (arg1 zip arg2).map{ case (t1,t2) => SingleCstr(t1,t2)})).headOption //TODO what if more than 1
       else None
+    case (Product(p1), Product(p2)) =>
+      if (p1.size == p2.size)
+        solveConstraints(ConjCstr((p1 zip p2).map{ case (t1,t2) => SingleCstr(t1,t2)})).headOption //TODO what if more than 1
+      else None
     case _ => None
   }
   
-
-  //TODO
-  /*
-  def putTypes(e: Expression, tvarToSymbol: Map[TypeVariable, Symbol], subst: Map[TypeVariable, Type]): TypingResult[Expression] = {
-    //in the current version, e contains the appropriate type, so no need to check for the smbols
-    def addType(e: Expression): Unit = e match {
-      case l @ Literal(_) => l.tpe = l.tpe.alpha(subst)
-      case v @ Variable(_) => v.tpe = v.tpe.alpha(subst)
-      case a @ Application(fct, args) =>
-        args foreach addType
-        a.tpe = a.tpe.alpha(subst)
-        //resolve the overloading if needed
-        if (a.symbol == NoSymbol) {
-          val actualType = FunctionT(args.map(_.tpe), a.tpe)
-          Definitions.forName(fct).filter(_.arity == args.size).find( deff => unify(deff.freshCopyOfType._2, actualType).isDefined) match {
-            case Some(deff) => a.symbol = deff.symbol
-            case None => error("cannot resolve overloading")
-          }
+  def putTypes(actors: Seq[Actor], subst: Map[TypeVariable, Type]) {
+    def processA(a: Actor) {
+       a.tpe = a.tpe.alpha(subst)
+       a.params foreach processE
+       processPo(a.body)
+    }
+    def processPo(proc: Process): Unit = proc match {
+      case Affect(id, value) =>
+        processE(id)
+        processE(value)
+      case Declaration(id, variable, value) =>
+        processE(id)
+        processE(value)
+      case Expr(e) => processE(e)
+      case Send(dest, content) =>
+        processE(dest)
+        processE(content)
+      case Receive(cases) =>
+        for ((src, pat, proc) <- cases) {
+          processE(src)
+          processPa(pat)
+          processPo(proc)
         }
-      case Binding(_, vars, expr) =>
-        addType(expr)
-        vars foreach addType
+      case Block(stmts) => stmts foreach processPo
+      case ITE(condition, caseTrue, caseFalse) =>
+        processE(condition)
+        processPo(caseTrue)
+        processPo(caseFalse)
+      case While(condition , body) =>
+        processE(condition)
+        processPo(body)
+      case ForEachGeneric(id, set, yieldOpt, body) =>
+        processE(id)
+        processE(set)
+        processPo(body)
+        for ((y,ys) <- yieldOpt) {
+          processE(y)
+          processE(ys)
+        }
     }
-    try {
-      addType(e)
-      TypingSuccess(e)
-    } catch {
-      case err: java.lang.RuntimeException => TypingError(err.toString)
+    def processPa(pat: Pattern): Unit = pat match {
+      case PatternLit(_) | Wildcard => ()
+      case PatternTuple(lst) => 
+        lst foreach processPa
+        pat.tpe = pat.tpe.alpha(subst)
+      case Case(uid, args) =>
+        args foreach processPa
+        pat.tpe = pat.tpe.alpha(subst)
+      case Ident(_) =>
+        pat.tpe = pat.tpe.alpha(subst)
     }
+    def processE(expr: Expression): Unit = expr match {
+      case Value(_) | Any =>
+      case ID(_) =>
+        expr.tpe = expr.tpe.alpha(subst)
+      case Tuple(args) =>
+        args foreach processE
+        expr.tpe = expr.tpe.alpha(subst)
+      case ap @ Application(fct, args) => //TODO overloading
+        expr.tpe = expr.tpe.alpha(subst)
+        val args2 = ap match {
+          case Create(cls, args) => args
+          case _ => args
+        }
+        args2 foreach processE
+    }
+    actors foreach processA
   }
-  */
 }

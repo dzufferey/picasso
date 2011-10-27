@@ -40,9 +40,9 @@ object EmptySet {
 }
 
 object NewChannel {
-  def apply() = Application("new-channel", Nil)
+  def apply() = Application("newChannel", Nil)
   def unapply(e: Expression): Option[Unit] = e match {
-    case Application("new-channel", Nil) => Some()
+    case Application("newChannel", Nil) => Some()
     case _ => None
   }
 }

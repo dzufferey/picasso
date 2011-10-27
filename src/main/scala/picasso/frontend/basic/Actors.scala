@@ -3,7 +3,7 @@ package picasso.frontend.basic
 import picasso.ast.AgentDefinition
 import picasso.graph._
 
-case class Actor(id: String, params: List[ID], body: Process) extends scala.util.parsing.input.Positional with Sym
+case class Actor(id: String, params: List[ID], body: Process) extends scala.util.parsing.input.Positional with Sym with Typed
 
 object Actors {
   

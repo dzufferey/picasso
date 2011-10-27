@@ -9,7 +9,7 @@ Env(server)
 Client(server)
   begin
     val self := newChannel();
-    while _ do
+    while random() do
       begin
         self ! Timeout();
         server ! Query(self);

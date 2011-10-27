@@ -36,8 +36,7 @@ object BasicParser extends StandardTokenParsers {
       literal                                       ^^ ( lit => Value(lit) )
     | "_"                                           ^^^ Any
     | "(" ~> repsep(expr, ",") <~ ")"               ^^ ( lst => Tuple(lst) )
-    | ident ~ opt("(" ~> repsep(expr, ",") <~ ")")  ^^ { case "newChannel" ~ Some(Nil) => NewChannel()
-                                                         case id ~ Some(args) => Application(id, args)
+    | ident ~ opt("(" ~> repsep(expr, ",") <~ ")")  ^^ { case id ~ Some(args) => Application(id, args)
                                                          case id ~ None => ID(id) }
     )
 

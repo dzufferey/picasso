@@ -12,13 +12,14 @@ object BooleanFunctions {
 
   def isBooleanInterpreted(e: Expression): Boolean = e match {
     case Value(Bool(_)) => true
-    case ID(v) => true //TODO v.tpe == HBool for the moment assumes it is well typed ...
+    case ID(v) => v.tpe == HBool
+    case Application("random", Nil) => true
     case Application("&&", args) => args forall isBooleanInterpreted
     case Application("||", args) => args forall isBooleanInterpreted
     case Application("^", args @ List(a1, a2)) => args forall isBooleanInterpreted
     case Application("!", List(a)) => isBooleanInterpreted(a)
-    case Application("==", args @ List(a1, a2)) => args forall isBooleanInterpreted //TODO dangerous without the var type check
-    case Application("!=", args @ List(a1, a2)) => args forall isBooleanInterpreted //TODO dangerous without the var type check
+    case Application("==", args @ List(a1, a2)) => args forall isBooleanInterpreted
+    case Application("!=", args @ List(a1, a2)) => args forall isBooleanInterpreted
     case _ => false
   }
 
@@ -33,6 +34,7 @@ object BooleanFunctions {
           Seq(pa + (id -> result))
         }
       })
+    case Application("random", Nil) => partialAssigns 
     case Application("!", List(a)) => assigns(!result, partialAssigns, a)
     case Application("&&", args) =>
       if (result) (partialAssigns /: args)( (pas, arg) => assigns(true, pas, arg))

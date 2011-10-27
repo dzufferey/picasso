@@ -72,6 +72,9 @@ object Definitions {
 
   val a = TypeVariable("A") //a sample type param
 
+  //channel
+  val newChannel = newDefinition("newChannel", Function(Nil, Channel()))
+
   //boolean
   val and = newDefinition("&&", BoolT ~> BoolT ~> BoolT)
   val or = newDefinition("||", BoolT ~> BoolT ~> BoolT)
@@ -79,6 +82,7 @@ object Definitions {
   val not = newDefinition("!", BoolT ~> BoolT)
   val equ = newDefinition("=", a ~> a ~> BoolT)
   val neq = newDefinition("!=", a ~> a ~> BoolT)
+  val random = newDefinition("random", Function(Nil, BoolT))
 
   //TODO collection
 
