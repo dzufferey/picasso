@@ -19,7 +19,8 @@ object Main {
       if (typedActors.success) {
         val tActors = typedActors.get
         Logger("basic", LogNotice, "Input Program:\n\n" + tActors.mkString("","\n\n","") + "\n")
-        def agents = tActors map Actors.actor2Agent
+        val agents = tActors map Actors.actor2Agent
+        Logger("basic", LogNotice, "As CFA:\n\n" + agents.mkString("","\n\n","") + "\n")
         val initAst = Expressions.exp2Exp(init)
         new Analysis(agents, initAst)
       } else {

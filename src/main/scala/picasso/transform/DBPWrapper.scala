@@ -5,7 +5,7 @@ import picasso.model.dbp._
 import picasso.math._
 import picasso.math.hol.{Type => HType, ClassType => HClassType, Application => HApplication, Bool => HBool, String => HString, Int => HInt, Wildcard => HWildcard, Binding => HBinding, _}
 import picasso.graph._
-import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger}
+import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger, Misc}
 
 //TODO from AgentDefinition (a set of them) to a set of transition for DBP
 //TODO from an initial state to a graph
@@ -109,7 +109,7 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
   }
 
   def isReference(id: ID): Boolean = id.id.tpe match {
-    case HClassType( _, _) => true
+    case HClassType( _, _) | Channel() => true
     case HBool | HString | HInt | FiniteValues(_) => false
     case tpe @ (Function( _, _) | HWildcard | UnInterpreted(_) | TypeVariable(_) | Product(_)) => 
       Logger("DBPWrapper", LogWarning, "isReference("+id+") -> '"+tpe+"' ? returns true (defensive option)")
@@ -393,7 +393,13 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
   }
 
   def makeTransitions(agt: AgentDefinition[PC]): Seq[DBT] = {
-    val rawTrs =agt.cfa.edges.flatMap{case (a,proc,b) => makeTransition(agt, a, proc, b)}.toSeq
+    val rawTrs = agt.cfa.edges.flatMap{ case (a,proc,b) =>
+      val trs = makeTransition(agt, a, proc, b)
+      Logger("DBPWrapper", LogDebug,
+             "transition for " + (a,proc,b) + " ->\n" +
+             trs.map(t => Misc.docToString(t.toGraphviz(""))).mkString("","\n","\n\n"))
+      trs
+    }.toSeq
     rawTrs map checkTransition
   }
 
