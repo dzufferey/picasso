@@ -1,7 +1,7 @@
 package picasso.math
 
 import picasso.graph.Trace
-
+import scala.collection.GenSeq
 
 trait Transition[S] extends PartialFunction[S,Set[S]] {
 }
@@ -18,18 +18,20 @@ abstract class WSTS {
   
   //transition type
   type T <: Transition[S]
-  def transitions: List[T] //TODO allows for parallel collections
+  def transitions: GenSeq[T]
 
   def post(s: S, t: T): Set[S] = if(t isDefinedAt s) t(s) else Set.empty[S]
   
   def post(s: S): Set[S] = {
     val applicable = transitions filter (_ isDefinedAt s)
-    (Set.empty[S] /: applicable)(_ ++ _(s))
+    val successors = applicable.flatMap(_(s))
+    successors.seq.toSet
   }
   
   def post(s: Set[S], t: T): Set[S] = {
     val applicable = s filter (t.isDefinedAt(_))
-    (Set.empty[S] /: applicable)(_ ++ t(_))
+    val successors = applicable.flatMap(t(_))
+    successors.seq.toSet
   }
   
   def post(s: Set[S]): Set[S] = (Set.empty[S] /: transitions)(_ ++ post(s,_))

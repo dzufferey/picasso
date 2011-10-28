@@ -4,9 +4,10 @@ import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, Log
 import picasso.math._
 import picasso.math.WellPartialOrdering._
 import picasso.graph._
+import scala.collection.GenSeq
 
 
-class DepthBoundedProcess[P <: DBCT](trs: List[DepthBoundedTransition[P]])(implicit wpoConf: WellPartialOrdering[DepthBoundedConf[P]], wpoState: WellPartialOrdering[P#State]) extends WSTS with WADL {
+class DepthBoundedProcess[P <: DBCT](trs: GenSeq[DepthBoundedTransition[P]])(implicit wpoConf: WellPartialOrdering[DepthBoundedConf[P]], wpoState: WellPartialOrdering[P#State]) extends WSTS with WADL {
   type S = DepthBoundedConf[P]
   implicit val ordering : WellPartialOrdering[S] = wpoConf
   val stateOrdering = wpoState
@@ -26,7 +27,8 @@ class DepthBoundedProcess[P <: DBCT](trs: List[DepthBoundedTransition[P]])(impli
   }
   
   type T = DepthBoundedTransition[P]
-  def transitions = trs
+  val trs2 = trs.par
+  def transitions = trs2
 
   def tryAcceleratePair(smaller: S, bigger: S): Option[S] = {
     smaller morphism bigger match {

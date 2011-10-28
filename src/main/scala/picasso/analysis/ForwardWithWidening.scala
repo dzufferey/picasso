@@ -3,6 +3,7 @@ package picasso.analysis
 import picasso.math._
 import picasso.graph._
 import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger}
+import scala.collection.GenSeq
 
 /** Forward analysis algorightm that uses widening instead of acceleration
 TODO:
@@ -142,9 +143,9 @@ trait ForwardWithWidening {
       Nil
     }
 
-    def oneStep(elt: S): List[(T,S)] = transitions.flatMap( t => post(elt,t).toList.map(s => (t -> s)))
+    def oneStep(elt: S): GenSeq[(T,S)] = transitions.flatMap( t => post(elt,t).toList.map(s => (t -> s)))
 
-    def widen(elt: S, t: T, s: S, minElts: MinElements): (T, List[S], S) = {
+    def widen(elt: S, t: T, s: S, minElts: MinElements): (T, Seq[S], S) = {
       var s2 = s
       def tryWiden(s: S): Boolean = {
         if (ordering.lt(s, s2)) {

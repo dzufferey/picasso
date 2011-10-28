@@ -98,9 +98,9 @@ trait KarpMillerTree {
         cover //already subsumed
       } else {
         val newCover = cover + current()
-        val possible = transitions.filter(_ isDefinedAt current())//TODO par, or use post from WADL
+        val possible = transitions.filter(_ isDefinedAt current())
         (newCover /: possible)((acc, t) => {
-          val cs = t(current()).toList.map( s => {
+          val cs = t(current()).toSeq.par.map( s => {
             val acceleratedFrom = current.ancestorSmaller(s)
             val s2 = (s /: acceleratedFrom)( (bigger,smaller) => widening(smaller(), bigger))
             KMNode(current, t, s2, acceleratedFrom.toList)
