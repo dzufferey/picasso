@@ -79,7 +79,7 @@ case class TypeVariable(name: String) extends Type {
 
 case class ClassType( name: String, tparams: List[Type]) extends Type {
   override def toString = name + (if (tparams.isEmpty) "" else tparams.mkString("[",",","]"))
-  def freeParameters = tparams.map(_.freeParameters).reduceLeft(_ ++ _)
+  def freeParameters = (Set[TypeVariable]() /: tparams.map(_.freeParameters))(_ ++ _)
   def alpha(subst: Map[TypeVariable, Type]) = ClassType(name, tparams.map(_.alpha(subst))).copyAttr(this) 
   //a series of flags that gives additional info
   var isActor = false

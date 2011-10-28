@@ -6,8 +6,9 @@ import picasso.frontend.basic.typer._
 object Main {
 
   def main(args: Array[String]) {
-    //TODO put all the pieces toghether: up to Analysis
-    //TODO a simple typer: to know what tings are references and declarations (env to help the conversion)
+    val a = mkAnalysis(args(0))
+    val c = a.computeCover
+    Console.println("Cover is:\n" + c)
   }
 
   def mkAnalysis(fn: String) = {
@@ -22,6 +23,7 @@ object Main {
         val agents = tActors map Actors.actor2Agent
         Logger("basic", LogNotice, "As CFA:\n\n" + agents.mkString("","\n\n","") + "\n")
         val initAst = Expressions.exp2Exp(init)
+        //TODO type initAst
         new Analysis(agents, initAst)
       } else {
         Logger.logAndThrow("basic", LogError, "cannot type "+fn+":\n"+typedActors)

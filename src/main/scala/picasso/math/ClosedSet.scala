@@ -57,10 +57,10 @@ extends IterableLike[A, This]
   override def equals(that: Any): Boolean = that match {
     case that: ClosedSet[_] => //TODO better too many thing extends Iterable
       (self eq that) ||
-      (that canEqual self) &&
+      ((that canEqual self) &&
       (self.size == that.size) &&
       (try that.asInstanceOf[This] forall (partOfBasis(_)) //TODO do we need the symmetric ?
-       catch { case ex: ClassCastException => false })
+       catch { case ex: ClassCastException => false }))
     case _ =>
       false
   }

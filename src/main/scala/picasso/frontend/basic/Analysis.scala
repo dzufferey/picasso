@@ -11,14 +11,14 @@ class Analysis(_agents: Seq[AgentDefinition[Actors.PC]], _init: picasso.ast.Expr
     
   //compute cover
   def computeCover = {
-    val procSimpleForward = new DepthBoundedProcess[DBC](system) with ForwardWithWidening
+    val procSimpleForward = new DepthBoundedProcess[DBC](system) with KarpMillerTree
     procSimpleForward.computeCover(initConf)
   }
 
   //check for assertion failure and other standard errors
   def testForError = {
     val errorConf = emptyConf + DBCN_Error
-    val procSimpleForward = new DepthBoundedProcess[DBC](system) with ForwardWithWidening
+    val procSimpleForward = new DepthBoundedProcess[DBC](system) with KarpMillerTree
     procSimpleForward.forwardCoveringWithTrace(initConf, errorConf)
   }
 

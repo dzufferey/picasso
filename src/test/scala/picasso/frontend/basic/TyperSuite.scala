@@ -8,7 +8,11 @@ class TyperSuite extends FunSuite {
 
   test("should type") {
     val files = List(
-      "client-server.basic"
+      "client-server.basic",
+      "round-robin.basic",
+      "pi_akka_1.basic",
+      "pi_akka_2.basic",
+      "pi_akka_4.basic"
     )
     for (f <- files) {
       val result = BasicParser.parseFile(testDir + f)

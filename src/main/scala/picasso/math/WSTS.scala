@@ -18,7 +18,7 @@ abstract class WSTS {
   
   //transition type
   type T <: Transition[S]
-  def transitions: List[T]
+  def transitions: List[T] //TODO allows for parallel collections
 
   def post(s: S, t: T): Set[S] = if(t isDefinedAt s) t(s) else Set.empty[S]
   

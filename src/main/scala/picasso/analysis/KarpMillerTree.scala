@@ -3,7 +3,7 @@ package picasso.analysis
 import picasso.math._
 import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger}
 
-trait KarkMillerTree {
+trait KarpMillerTree {
   self : WSTS with WADL =>
   
   sealed abstract class KMTree {
@@ -16,8 +16,12 @@ trait KarkMillerTree {
      *  this methods makes only sense if applied at the root. */
     def covers(state: S): Boolean
 
+    def ancestors: Seq[KMTree]
+
     /** Checks whether a states is covered by some parent */
-    def ancestorSmaller(s: S): List[KMTree]
+    def ancestorSmaller(s: S): Seq[KMTree] = {
+      ancestors.drop(1).par.filter(t => ordering.lt(t(), s)).seq
+    }
 
     /** inplace modification of the tree */
     def addChildren(tree: KMTree): Unit
@@ -31,6 +35,8 @@ trait KarkMillerTree {
 
     def extractCover: DownwardClosedSet[S] = (DownwardClosedSet(apply()) /: children)( (acc, c) => acc ++ c.extractCover )
 
+    def size: Int = (1 /: children)((acc,ch) => acc + ch.size)
+
   }
 
   case class KMRoot(state: S) extends KMTree {
@@ -41,7 +47,7 @@ trait KarkMillerTree {
 
     def apply() = state
     def covers(s: S) = ordering.lteq(s, state) || (children exists (_ covers s))
-    def ancestorSmaller(s: S): List[KMTree] = if (ordering.lt(state, s)) List(this) else Nil
+    def ancestors: Seq[KMTree] = Seq(this)
   }
   
   case class KMNode(parent: KMTree, by: T, state: S, acceleratedFrom: List[KMTree]) extends KMTree {
@@ -52,7 +58,7 @@ trait KarkMillerTree {
 
     def apply() = state
     def covers(s: S) = ordering.lteq(s, state) || (children exists (_ covers s))
-    def ancestorSmaller(s: S): List[KMTree] = if (ordering.lt(state, s)) this::parent.ancestorSmaller(s) else parent.ancestorSmaller(s)
+    def ancestors: Seq[KMTree] = this +: parent.ancestors
   }
 
   object TreePrinter {
@@ -72,29 +78,40 @@ trait KarkMillerTree {
 
   }
 
+  var time = java.lang.System.currentTimeMillis
+  def logIteration(tree: KMTree, current: KMTree, cover: DownwardClosedSet[S]) {
+    val newTime = java.lang.System.currentTimeMillis
+    if (newTime - time > 10000) {
+      Logger("Analysis", LogInfo, "KarpMillerTree: tree has size " + tree.size + ",\tcover has size " + cover.size + ",\t current branch depth " + current.ancestors.size)
+      Logger("Analysis", LogDebug, "KarpMillerTree: cover is " + cover)
+      time = newTime
+    }
+  }
+
   def buildTree(initState: S): KMTree = {
+    val root = KMRoot(initState)
     //In Theory, a DFS should be the fastest way to saturate the system, so ...
     //On the side, maintains a (downward-closed) covering set to check for subsumption
     def build(current: KMTree, cover: DownwardClosedSet[S]): DownwardClosedSet[S] = {
+      logIteration(root, current, cover)
       if (cover(current())) {
         cover //already subsumed
       } else {
         val newCover = cover + current()
-        val possible = transitions.filter(_ isDefinedAt current())
-        (cover /: possible)((acc, t) => {
+        val possible = transitions.filter(_ isDefinedAt current())//TODO par, or use post from WADL
+        (newCover /: possible)((acc, t) => {
           val cs = t(current()).toList.map( s => {
             val acceleratedFrom = current.ancestorSmaller(s)
             val s2 = (s /: acceleratedFrom)( (bigger,smaller) => widening(smaller(), bigger))
-            KMNode(current, t, s2, acceleratedFrom)
+            KMNode(current, t, s2, acceleratedFrom.toList)
           })
-          (newCover /: cs)( (acc, c) => {
+          (acc /: cs)( (acc2, c) => {
             current.addChildren(c)
-            build(c, acc)
+            build(c, acc2)
           })
         })
       }
     }
-    val root = KMRoot(initState)
     build(root, DownwardClosedSet.empty[S]) //discard the cover
     Logger("Analysis", LogDebug, "KMTree: final tree is\n" + TreePrinter.print(root))
     root

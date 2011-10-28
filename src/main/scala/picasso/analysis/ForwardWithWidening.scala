@@ -180,6 +180,7 @@ trait ForwardWithWidening {
       val newTime = java.lang.System.currentTimeMillis
       if (newTime - time > 10000) {
         Logger("Analysis", LogInfo, "ForwardWithWidening: cover has size " + cover.size)
+        Logger("Analysis", LogDebug, "ForwardWithWidening: cover is " + cover)
         time = newTime
       }
     }

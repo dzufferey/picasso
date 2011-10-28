@@ -12,7 +12,7 @@ class KarpMillerSuite extends FunSuite {
     val t0 = new PNTransition(List((0,1),(1,1)), List((2,1)))
     val t1 = new PNTransition(List((2,1)), List((3,1),(0,1)))
     val t2 = new PNTransition(List((3,1)), List((1,1),(2,1)))
-    new PetriNet(List(t0,t1,t2)) with KarkMillerTree
+    new PetriNet(List(t0,t1,t2)) with KarpMillerTree
   }
     
   val init1 = new PNState(List(2,1,1,0).toArray)
