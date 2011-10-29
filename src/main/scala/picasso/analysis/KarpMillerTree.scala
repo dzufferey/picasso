@@ -88,7 +88,7 @@ trait KarpMillerTree {
     }
   }
 
-  def buildTree(initState: S): KMTree = {
+  def buildTree(initState: S): (DownwardClosedSet[S], KMTree) = {
     val root = KMRoot(initState)
     //In Theory, a DFS should be the fastest way to saturate the system, so ...
     //On the side, maintains a (downward-closed) covering set to check for subsumption
@@ -112,9 +112,9 @@ trait KarpMillerTree {
         })
       }
     }
-    build(root, DownwardClosedSet.empty[S]) //discard the cover
+    val cover = build(root, DownwardClosedSet.empty[S]) //discard the cover
     Logger("Analysis", LogDebug, "KMTree: final tree is\n" + TreePrinter.print(root))
-    root
+    (cover, root)
   }
 
   private def toTrace(nodes: List[KMTree]): TransfiniteTrace[S,T] = {
@@ -155,19 +155,21 @@ trait KarpMillerTree {
   
   def forwardCoveringWithTrace(initState: S, targetState: S): Option[TransfiniteTrace[S,T]] = {
     //TODO stop early
-    val tree = buildTree(initState)
+    val (_, tree) = buildTree(initState)
     tree.pathCovering(targetState) map toTrace
   }
 
   def forwardCovering(initState: S, targetState: S): Boolean = {
     //TODO replace be forwardCoveringWithTrace(initState, targetState).isDefined
-    val tree = buildTree(initState)
-    tree.covers(targetState)
+    val (cover, tree) = buildTree(initState)
+    //tree.covers(targetState)
+    cover(targetState)
   }
   
   def computeCover(initState: S) = {
-    val tree = buildTree(initState)
-    tree.extractCover
+    val (cover, tree) = buildTree(initState)
+    //tree.extractCover
+    cover
   }
 
 }
