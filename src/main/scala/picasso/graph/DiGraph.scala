@@ -289,6 +289,47 @@ extends Traceable[P#V,P#EL] {
     (table, vs)
   }
 
+  //needs a square array of variables:
+  //compatibility: same or higher nesting + ordering on the labels
+  //cstr:
+  // -sum per row is one (all things are mapped)
+  // -per column: dont'care of thing with lower nesting, at most one of the same nesting, none of higher nesting
+  // -edges: as implication (one mapping => forces (alternative) of other)
+  //         forall p, q, p mapped to q => that neighbors of p gets mapped to neighbors of q with appropriate label on the edge
+
+  /** computes morphisms from this to bigger.
+   * @param bigger
+   * @param injective tell whether multiple nodes can be mapped to a node of bigger
+   * @param partialMorphism a mapping that serves as stub
+   * TODO what about propagate more ?
+   */
+  protected def lazyMorphisms2[Q <: PB](bigger: G[Q], injective : Q#V => Boolean, partialMorphism: Map[P#V,Q#V] = Map.empty[P#V,Q#V])
+  (implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Iterator[Map[P#V,Q#V]] = {
+    def p_to_q(p: P#V, q: Q#V) = (p, q)
+    def compatible(p: P#V, q: Q#V): Boolean = sys.error("TODO")
+    def candidatesF(p: P#V): Seq[Q#V] = bigger.vertices.filter(compatible(p, _)).toSeq
+    def candidatesB(q: Q#V): Seq[P#V] = this.vertices.filter(compatible(_, q)).toSeq
+    //list of constraints of type \sum_q x_{pq} = 1, that guarantees that each node if mapped to another.
+    val fullMapping: Iterable[Iterable[(P#V,Q#V)]] = vertices.toSeq.map( p => candidatesF(p).map(q => p_to_q(p, q)))
+    //list of constraints of type \sum_q x_{pq} = 1, that guarantees that the mapping is injective (when needed).
+    val injectivity: Iterable[Iterable[(P#V,Q#V)]] = bigger.vertices.filter(injective).toSeq.map(q => candidatesB(q).map(p => p_to_q(p, q)))
+    //edges constraints: trigger => one of the alternative is true
+    val edgeCstrs1 = for (p <- vertices.toSeq; q <- candidatesF(p)) yield {
+      val trigger = p_to_q(p, q)
+      for ((el, xs) <- outEdges(p).toSeq;
+           x <- xs) yield {
+        (trigger, bigger(q, el).filter(compatible(x,_)).map(y => p_to_q(x,y)))
+      }
+    }
+    val edgeCstrs: Iterable[((P#V,Q#V), Iterable[(P#V,Q#V)])] = edgeCstrs1.flatten
+    //partialMorphism
+    val startCstr: Iterable[(P#V,Q#V)] = for ((p,q) <- partialMorphism) yield p_to_q(p, q)
+    sys.error("TODO send everything into a pseudo-boolean solver")
+  }
+
+  //args:
+  //smaller (this), bigger, ...
+
   type MorphState[Q <: PB] = (Map[P#V,Int], Map[Q#V,Int], IndexedSeq[P#V], IndexedSeq[Q#V], Array[BitSet])
 
   def lazyMorphisms[Q <: PB](bigger: G[Q], injective : Q#V => Boolean, propagateMore: (MorphState[Q], Int, Int) => Unit, partialMorphism: Map[P#V,Q#V] = Map.empty[P#V,Q#V])

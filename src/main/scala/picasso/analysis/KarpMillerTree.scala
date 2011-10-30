@@ -82,8 +82,8 @@ trait KarpMillerTree {
   def logIteration(tree: KMTree, current: KMTree, cover: DownwardClosedSet[S]) {
     val newTime = java.lang.System.currentTimeMillis
     if (newTime - time > 10000) {
-      Logger("Analysis", LogInfo, "KarpMillerTree: tree has size " + tree.size + ",\tcover has size " + cover.size + ",\t current branch depth " + current.ancestors.size)
-      Logger("Analysis", LogDebug, "KarpMillerTree: cover is " + cover)
+      Logger("Analysis", LogInfo, "KMTree size " + tree.size + ",\tcover has size " + cover.size + ",\t current branch depth " + current.ancestors.size)
+      Logger("Analysis", LogDebug, "Current cover is " + cover)
       time = newTime
     }
   }
@@ -112,8 +112,11 @@ trait KarpMillerTree {
         })
       }
     }
+    val startTime = java.lang.System.currentTimeMillis
     val cover = build(root, DownwardClosedSet.empty[S]) //discard the cover
-    Logger("Analysis", LogDebug, "KMTree: final tree is\n" + TreePrinter.print(root))
+    val endTime = java.lang.System.currentTimeMillis
+    Logger("Analysis", LogInfo, "KMTree computed in " + ((endTime - startTime)/1000F) + " sec.")
+    Logger("Analysis", LogDebug, "KMTree is\n" + TreePrinter.print(root))
     (cover, root)
   }
 

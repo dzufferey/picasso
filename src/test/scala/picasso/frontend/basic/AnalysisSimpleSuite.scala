@@ -23,8 +23,8 @@ class AnalysisSimpleSuite extends FunSuite {
 
   val files = List(
     "pi_akka_1.basic",
-    "pi_akka_2.basic",
-    "pi_akka_4.basic",
+    //"pi_akka_2.basic",
+    //"pi_akka_4.basic",
     "client-server.basic",
     "round_robin.basic"
   )
