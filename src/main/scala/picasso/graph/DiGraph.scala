@@ -289,16 +289,36 @@ extends Traceable[P#V,P#EL] {
     (table, vs)
   }
 
+  sealed abstract class Lit[A]
+  case class Pos[A](atom: A) extends Lit[A]
+  case class Neg[A](atom: A) extends Lit[A]
+  type Clause[A] = Seq[Lit[A]]
+
+  type MorphInfo[Q <: PB] = (
+    G[Q], //bigger
+    P#V => Seq[Q#V], //candidateF
+    Q#V => Seq[P#V] //candidatesB
+  )
+
   /** computes morphisms from this to bigger.
    * @param bigger
    * @param injective tell whether multiple nodes can be mapped to a node of bigger
+   * @param additionalCstr take the bigger graph and returns some additional constraints on the morphism
    * @param partialMorphism a mapping that serves as stub
-   * TODO what about propagate more ?
    */
-  protected def lazyMorphismsBySat[Q <: PB](bigger: G[Q], injective : Q#V => Boolean, compatibleMore: (P#V, Q#V) => Boolean, partialMorphism: Map[P#V,Q#V] = Map.empty[P#V,Q#V])
-  (implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Iterator[Map[P#V,Q#V]] = {
-    //TODO compatibleMore is too weak and we need some additional constraints:
-    //
+  protected def lazyMorphismsBySat[Q <: PB](
+    bigger: G[Q],
+    injective : Q#V => Boolean,
+    additionalCstr: MorphInfo[Q] => Iterable[Clause[(P#V,Q#V)]],
+    partialMorphism: Map[P#V,Q#V] = Map.empty[P#V,Q#V]
+  )(implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Iterator[Map[P#V,Q#V]] = {
+    ///////////////////////////////////////////////////
+    import org.sat4j.specs.ContradictionException
+    import org.sat4j.tools.ModelIterator
+    import org.sat4j.core.VecInt
+    import org.sat4j.minisat.SolverFactory
+    import org.sat4j.tools.ClausalCardinalitiesDecorator
+    ///////////////////////////////////////////////////
     val pairToInt = scala.collection.mutable.HashMap[(P#V,Q#V), Int]()
     val intToPair = scala.collection.mutable.HashMap[Int, (P#V,Q#V)]()
     var litCounter = 0
@@ -312,44 +332,47 @@ extends Traceable[P#V,P#EL] {
         litCounter
       }
     }
-    def compatible(p: P#V, q: Q#V): Boolean = {
-      lblOrd.lteq(labelOf(p), bigger.labelOf(q)) && compatibleMore(p, q)
+    def clauseConvert(c: Clause[(P#V, Q#V)]): VecInt = {
+      val asInt = c.map{
+        case Pos((p,q)) => p_to_q(p,q)
+        case Neg((p,q)) => -p_to_q(p,q)
+      }
+      new VecInt(asInt.toArray)
     }
+    ///////////////////////////////////////////////////
+    //compatible is too weak and we need some additional constraints:
+    def compatible(p: P#V, q: Q#V): Boolean = lblOrd.lteq(labelOf(p), bigger.labelOf(q))
     def candidatesF(p: P#V): Seq[Q#V] = bigger.vertices.filter(compatible(p, _)).toSeq
     def candidatesB(q: Q#V): Seq[P#V] = this.vertices.filter(compatible(_, q)).toSeq
     //list of constraints of type \sum_q x_{pq} = 1, that guarantees that each node if mapped to another.
-    val fullMapping: Iterable[Iterable[Int]] = vertices.toSeq.map( p => candidatesF(p).map(q => p_to_q(p, q)))
+    val fullMapping = vertices.toSeq.map( p => clauseConvert(candidatesF(p).map(q => Pos((p, q)))))
     //list of constraints of type \sum_q x_{pq} <= 1, that guarantees that the mapping is injective (when needed).
-    val injectivity: Iterable[Iterable[Int]] = bigger.vertices.filter(injective).toSeq.map(q => candidatesB(q).map(p => p_to_q(p, q))).filterNot(_.isEmpty)
+    val injectivity = bigger.vertices.filter(injective).toSeq.map(q => candidatesB(q).map(p => Pos((p, q)))).filterNot(_.isEmpty).map(clauseConvert)
     //edges constraints: trigger => one of the alternative is true
     val edgeCstrs1 = for (p <- vertices.toSeq; q <- candidatesF(p)) yield {
-      val trigger = p_to_q(p, q)
+      val trigger = Neg(p -> q)
       for ((el, xs) <- outEdges(p).toSeq;
            x <- xs) yield {
-        (trigger, bigger(q, el).filter(compatible(x,_)).map(y => p_to_q(x,y)).toArray)
+        clauseConvert(trigger +: bigger(q, el).filter(compatible(x,_)).map(y => Pos(x -> y)).toSeq)
       }
     }
-    val edgeCstrs: Seq[(Int, Array[Int])] = edgeCstrs1.flatten
+    val edgeCstrs = edgeCstrs1.flatten
     //partialMorphism
-    val startCstr: Iterable[Int] = for ((p,q) <- partialMorphism) yield p_to_q(p, q)
+    val startCstr = for ((p,q) <- partialMorphism) yield clauseConvert(Array(Pos(p, q)))
+    //additional constraints
+    val mi = (bigger, candidatesF(_), candidatesB(_))
+    val addCstr = additionalCstr(mi).map(clauseConvert)
     //Feed the constraints to SAT4J
-    import org.sat4j.specs.ContradictionException
-    import org.sat4j.tools.ModelIterator
-    import org.sat4j.core.VecInt
-    import org.sat4j.minisat.SolverFactory
-    import org.sat4j.tools.ClausalCardinalitiesDecorator
     val solver = new ModelIterator(SolverFactory.newDefault());
     solver.setTimeoutOnConflicts(solver.getTimeout())//HACK: avoid the creation of a timer
     solver.newVar(litCounter + 1)
     solver.setExpectedNumberOfClauses(fullMapping.size + injectivity.size + edgeCstrs.size + startCstr.size)
     try {
-      for (sumTo1 <- fullMapping) solver.addExactly(new VecInt(sumTo1.toArray), 1)
-      for (sumTo1 <- injectivity) solver.addAtMost(new VecInt(sumTo1.toArray), 1)
-      for ((trigger, possibilities) <- edgeCstrs) {
-        val vec = new VecInt((-trigger +: possibilities).toArray)
-        solver.addClause(vec)
-      }
-      for (lit <- startCstr) solver.addClause(new VecInt(Array(lit)))
+      for (sumTo1 <- fullMapping) solver.addExactly(sumTo1, 1)
+      for (atMost1 <- injectivity) solver.addAtMost(atMost1, 1)
+      for (clause <- edgeCstrs) solver.addClause(clause)
+      for (clause <- startCstr) solver.addClause(clause)
+      for (clause <- addCstr) solver.addClause(clause)
       //pack eveything into an iterator ...
       new Iterator[Map[P#V,Q#V]] {
         def hasNext = solver.isSatisfiable()
@@ -522,22 +545,19 @@ extends Traceable[P#V,P#EL] {
     }
   }
 
-  def morphisms[Q <: PB](bigger: G[Q], injective: Q#V => Boolean, comp: (P#V, Q#V) => Boolean)
+  def morphisms[Q <: PB](bigger: G[Q], injective: Q#V => Boolean, comp: MorphInfo[Q] => Iterable[Clause[(P#V,Q#V)]])
   (implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Set[Map[V,Q#V]] = 
     (lazyMorphismsBySat(bigger, injective, comp)(lblOrd, ev0, ev1)).foldLeft(Set.empty[Map[V,Q#V]])(_ + _)
-    //(lazyMorphisms(bigger, injective, propagate)(lblOrd, ev0, ev1)).foldLeft(Set.empty[Map[V,Q#V]])(_ + _)
 
-  def morphism[Q <: PB](bigger: G[Q], injective: Q#V => Boolean, comp: (P#V, Q#V) => Boolean)
+  def morphism[Q <: PB](bigger: G[Q], injective: Q#V => Boolean, comp: MorphInfo[Q] => Iterable[Clause[(P#V,Q#V)]])
   (implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Option[Map[V,Q#V]] = {
     val iter = lazyMorphismsBySat(bigger, injective, comp)(lblOrd, ev0, ev1)
-    //val iter = lazyMorphisms(bigger, injective, propagate)(lblOrd, ev0, ev1)
     if(iter.hasNext) Some(iter.next) else None
   }  
 
   def subgraphIsomorphism[Q <: PB](bigger: G[Q])
   (implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Option[scala.collection.Map[V,Q#V]] = 
-    morphism(bigger, (_ : Q#V) => true, (_:P#V,_:Q#V)  => true)(lblOrd, ev0, ev1)
-    //morphism(bigger, (_ : Q#V) => true, ((_: MorphState[Q],_ ,_)  => ()))(lblOrd, ev0, ev1)
+    morphism(bigger, (_ : Q#V) => true, (_:MorphInfo[Q]) => Nil)(lblOrd, ev0, ev1)
 
 
   def isSubgraphOf[Q <: PB](bigger: G[Q])

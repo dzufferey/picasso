@@ -6,8 +6,8 @@ import picasso.math.WellPartialOrdering._
 import picasso.graph._
 
 
-class DepthBoundedConf[P <: DBCT](edges: Map[P#V, Map[P#EL, Set[P#V]]], label: P#V => P#VL)
-extends GraphLike[DBCT,P,DepthBoundedConf](edges, label) {
+class DepthBoundedConf[P <: DBCT](_edges: Map[P#V, Map[P#EL, Set[P#V]]], label: P#V => P#VL)
+extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
 
   override def toString = toGraphviz("DBC")
 
@@ -48,13 +48,36 @@ extends GraphLike[DBCT,P,DepthBoundedConf](edges, label) {
 
   protected def compatibleMore(p: V, q: V) = p.depth <= q.depth
 
+  protected def additionalCstr(mi: MorphInfo[P]): Iterable[Clause[(V,V)]] = {
+    val (bigger, candidatesF, candidatesB) = mi
+    //(1) difference of depth (good for unit propagation)
+    val depthCstr = for(x <- vertices; y <- candidatesF(x) if (x.depth > y.depth)) yield Neg(x -> y)
+    //(2) stuff within the same nesting
+    val deltaDepth = for((x1, el, y1) <- edges;
+                         x2 <- candidatesF(x1) if (x1.depth <= x2.depth);
+                         y2 <- candidatesF(y1) if (y1.depth <= y2.depth)
+                        ) yield {
+      val d1 = y1.depth - x1.depth
+      val d2 = y2.depth - x2.depth
+      //assert that the difference is at least the same
+      if (d1 > 0) {
+        if (d2 >= d1) Seq[Clause[(V,V)]]() //Ok
+        else Seq(Seq(Neg(x1 -> x2), Neg(y1 -> y2))) //cannot be both true at the same time
+      } else if (d1 < 0) {
+        if (d2 <= d1) Seq[Clause[(V,V)]]() //Ok
+        else Seq(Seq(Neg(x1 -> x2), Neg(y1 -> y2))) //cannot be both true at the same time
+      } else { //d1 == 0
+        Seq[Clause[(V,V)]]() //ok
+      }
+    }
+    depthCstr ++ deltaDepth.flatten
+  }
+
   def morphisms(bigger: Self, partialMorph: Morphism = Map.empty[V,V])(implicit wpo: WellPartialOrdering[P#State]) : Iterator[Morphism] = 
-    lazyMorphismsBySat[P](bigger, _.depth == 0, compatibleMore, partialMorph)
-    //lazyMorphisms[P](bigger, _.depth == 0, ((ms,i,j) => propagate(ms,i,j)), partialMorph)
+    lazyMorphismsBySat[P](bigger, _.depth == 0, additionalCstr, partialMorph)
 
   def morphism(bigger: Self)(implicit wpo: WellPartialOrdering[P#State]) : Option[Morphism] = 
-    morphism[P](bigger, _.depth == 0, compatibleMore)
-    //morphism[P](bigger, _.depth == 0, ((ms,i,j) => propagate(ms,i,j)))
+    morphism[P](bigger, _.depth == 0, additionalCstr)
   
   def degree(v: V): Int = undirectedAdjacencyMap(v).size
 
@@ -140,7 +163,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](edges, label) {
       }
     }
 
-    val res = unfold(m, biggerAdj, edges)
+    val res = unfold(m, biggerAdj, adjacencyMap)
     (DepthBoundedConf[P](res._2), res._1)
   }
 
