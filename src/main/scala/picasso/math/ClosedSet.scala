@@ -9,8 +9,6 @@ import scala.collection.mutable.Builder
 trait ClosedSet[A] extends (A => Boolean) with Iterable[A] with ClosedSetLike[A, ClosedSet[A]] {
 }
 
-//TODO use the 
-
 //Is an immutable data structure.
 //use this as a basis for both upwardclosed and downwardclosed sets
 trait ClosedSetLike[A, +This <: ClosedSetLike[A, This] with ClosedSet[A]]

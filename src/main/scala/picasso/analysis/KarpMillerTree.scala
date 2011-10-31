@@ -100,10 +100,8 @@ trait KarpMillerTree {
       logIteration(root, current, cover)
       if (!cover(current())) {
         //TODO switching from parallel to seq and back is expensive ...
-        //However we need this the release the threads
-        //can we do better with 1 queue ?
         cover = cover + current()
-        val possible = transitions.par.filter(_ isDefinedAt current())
+        val possible = transitions.filter(_ isDefinedAt current())
         val successors = possible.flatMap( t => t(current()).map(t -> _))
         val nodes = successors.map { case (t, s) =>
           val acceleratedFrom = current.ancestorSmaller(s)

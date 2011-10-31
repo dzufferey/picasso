@@ -289,14 +289,6 @@ extends Traceable[P#V,P#EL] {
     (table, vs)
   }
 
-  //needs a square array of variables:
-  //compatibility: same or higher nesting + ordering on the labels
-  //cstr:
-  // -sum per row is one (all things are mapped)
-  // -per column: dont'care of thing with lower nesting, at most one of the same nesting, none of higher nesting
-  // -edges: as implication (one mapping => forces (alternative) of other)
-  //         forall p, q, p mapped to q => that neighbors of p gets mapped to neighbors of q with appropriate label on the edge
-
   /** computes morphisms from this to bigger.
    * @param bigger
    * @param injective tell whether multiple nodes can be mapped to a node of bigger
@@ -305,6 +297,8 @@ extends Traceable[P#V,P#EL] {
    */
   protected def lazyMorphismsBySat[Q <: PB](bigger: G[Q], injective : Q#V => Boolean, compatibleMore: (P#V, Q#V) => Boolean, partialMorphism: Map[P#V,Q#V] = Map.empty[P#V,Q#V])
   (implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Iterator[Map[P#V,Q#V]] = {
+    //TODO compatibleMore is too weak and we need some additional constraints:
+    //
     val pairToInt = scala.collection.mutable.HashMap[(P#V,Q#V), Int]()
     val intToPair = scala.collection.mutable.HashMap[Int, (P#V,Q#V)]()
     var litCounter = 0
@@ -345,6 +339,7 @@ extends Traceable[P#V,P#EL] {
     import org.sat4j.minisat.SolverFactory
     import org.sat4j.tools.ClausalCardinalitiesDecorator
     val solver = new ModelIterator(SolverFactory.newDefault());
+    solver.setTimeoutOnConflicts(solver.getTimeout())//HACK: avoid the creation of a timer
     solver.newVar(litCounter + 1)
     solver.setExpectedNumberOfClauses(fullMapping.size + injectivity.size + edgeCstrs.size + startCstr.size)
     try {
