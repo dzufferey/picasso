@@ -78,8 +78,10 @@ object Actors {
     val params2 = params map Expressions.id2ID
     val init = id + "_start" 
     val end = id + "_end"
-    val cfa = Automaton[GT.ELGT{type V = PC; type EL = picasso.ast.Process}](mkCfa(init, a.body, end), init, Set(end))
+    val edges = mkCfa(init, a.body, end)
+    val cfa = Automaton[GT.ELGT{type V = PC; type EL = picasso.ast.Process}](edges, init, Set(end))
     //TODO the whole thing might need types
+    //TODO compact edges that make nothing
     new AgentDefinition[PC](id, params2, cfa)
   }
 

@@ -27,7 +27,7 @@ class DepthBoundedProcess[P <: DBCT](trs: GenSeq[DepthBoundedTransition[P]])(imp
   }
   
   type T = DepthBoundedTransition[P]
-  val trs2 = trs.par
+  val trs2 = trs//.par
   def transitions = trs2
 
   def tryAcceleratePair(smaller: S, bigger: S): Option[S] = {

@@ -93,27 +93,26 @@ trait KarpMillerTree {
     //In Theory, a DFS should be the fastest way to saturate the system, so ...
     //On the side, maintains a (downward-closed) covering set to check for subsumption
     var cover = DownwardClosedSet.empty[S]
-    val stack = new java.util.concurrent.LinkedBlockingDeque[KMTree]
-    stack.addFirst(root)
+    val stack = scala.collection.mutable.Stack[KMTree](root)
     val startTime = java.lang.System.currentTimeMillis
-    while (stack.size > 0) {
-      val current = stack.takeFirst()
+    while (!stack.isEmpty) {
+      val current = stack.pop()
       logIteration(root, current, cover)
       if (!cover(current())) {
         //TODO switching from parallel to seq and back is expensive ...
         //However we need this the release the threads
         //can we do better with 1 queue ?
         cover = cover + current()
-        val possible = transitions.filter(_ isDefinedAt current())
-        val successors =  possible.map( t => {
-          val nonAccs = t(current())
-          val accs = nonAccs.map(s => {
-            val acceleratedFrom = current.ancestorSmaller(s)
-            val s2 = (s /: acceleratedFrom)( (bigger,smaller) => widening(smaller(), bigger))
-            val node = KMNode(current, t, s2, acceleratedFrom.toList)
-            current.addChildren(node)
-            stack.addFirst(node)
-          })
+        val possible = transitions.par.filter(_ isDefinedAt current())
+        val successors = possible.flatMap( t => t(current()).map(t -> _))
+        val nodes = successors.map { case (t, s) =>
+          val acceleratedFrom = current.ancestorSmaller(s)
+          val s2 = (s /: acceleratedFrom)( (bigger,smaller) => widening(smaller(), bigger))
+          KMNode(current, t, s2, acceleratedFrom.toList)
+        }
+        nodes.seq.foreach( n => {//do this sequentially to avoide data races
+          current.addChildren(n)
+          stack.push(n)
         })
       }
     }
