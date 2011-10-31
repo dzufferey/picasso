@@ -46,26 +46,29 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     //Logger("TEST", LogNotice, "mergeable: " + merge)
   }
 
-  protected def compatibleMore(p: V, q: V) = p.depth <= q.depth
-
   protected def additionalCstr(mi: MorphInfo[P]): Iterable[Clause[(V,V)]] = {
     val (bigger, candidatesF, candidatesB) = mi
     //(1) difference of depth (good for unit propagation)
-    val depthCstr = for(x <- vertices; y <- candidatesF(x) if (x.depth > y.depth)) yield Neg(x -> y)
+    val depthCstr: Iterable[Clause[(V,V)]] = for(x <- vertices.toSeq; y <- candidatesF(x) if (x.depth > y.depth)) yield {
+      val lit: Lit[(V,V)] = Neg(x -> y)
+      val cl: Clause[(V,V)] = Seq(lit)
+      cl
+    }
     //(2) stuff within the same nesting
-    val deltaDepth = for((x1, el, y1) <- edges;
-                         x2 <- candidatesF(x1) if (x1.depth <= x2.depth);
-                         y2 <- candidatesF(y1) if (y1.depth <= y2.depth)
-                        ) yield {
+    val deltaDepth: Iterable[Iterable[Clause[(V,V)]]] =
+      for((x1, el, y1) <- edges;
+          (x2:V) <- candidatesF(x1) if (x1.depth <= x2.depth);
+          (y2:V) <- candidatesF(y1) if (y1.depth <= y2.depth)
+         ) yield {
       val d1 = y1.depth - x1.depth
       val d2 = y2.depth - x2.depth
       //assert that the difference is at least the same
       if (d1 > 0) {
         if (d2 >= d1) Seq[Clause[(V,V)]]() //Ok
-        else Seq(Seq(Neg(x1 -> x2), Neg(y1 -> y2))) //cannot be both true at the same time
+        else Seq[Clause[(V,V)]](Seq(Neg(x1 -> x2), Neg(y1 -> y2))) //cannot be both true at the same time
       } else if (d1 < 0) {
         if (d2 <= d1) Seq[Clause[(V,V)]]() //Ok
-        else Seq(Seq(Neg(x1 -> x2), Neg(y1 -> y2))) //cannot be both true at the same time
+        else Seq[Clause[(V,V)]](Seq(Neg(x1 -> x2), Neg(y1 -> y2))) //cannot be both true at the same time
       } else { //d1 == 0
         Seq[Clause[(V,V)]]() //ok
       }

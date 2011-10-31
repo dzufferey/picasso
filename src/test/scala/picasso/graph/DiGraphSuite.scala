@@ -236,7 +236,7 @@ class DiGraphSuite extends FunSuite {
     //non-injective morphisms
     val dg10 = DiGraph.empty[UIGT] ++ (N(2)-->3) ++ (N(2)-->4)
     val dg11 = DiGraph.empty[UIGT] ++ (N(1)-->2)
-    val hom = dg10.morphism[UIGT](dg11, {x => x.value == 1}, ((_,_) => true))
+    val hom = dg10.morphism[UIGT](dg11, {x => x.value == 1}, (_ => Nil))
     assert(!hom.isEmpty)
     assert(hom.get.apply(2) == N(1))
     assert(hom.get.apply(3) == N(2))
