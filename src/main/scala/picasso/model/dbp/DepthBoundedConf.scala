@@ -46,11 +46,15 @@ extends GraphLike[DBCT,P,DepthBoundedConf](edges, label) {
     //Logger("TEST", LogNotice, "mergeable: " + merge)
   }
 
+  protected def compatibleMore(p: V, q: V) = p.depth <= q.depth
+
   def morphisms(bigger: Self, partialMorph: Morphism = Map.empty[V,V])(implicit wpo: WellPartialOrdering[P#State]) : Iterator[Morphism] = 
-    lazyMorphisms[P](bigger, _.depth == 0, ((ms,i,j) => propagate(ms,i,j)), partialMorph)
+    lazyMorphismsBySat[P](bigger, _.depth == 0, compatibleMore, partialMorph)
+    //lazyMorphisms[P](bigger, _.depth == 0, ((ms,i,j) => propagate(ms,i,j)), partialMorph)
 
   def morphism(bigger: Self)(implicit wpo: WellPartialOrdering[P#State]) : Option[Morphism] = 
-    morphism[P](bigger, _.depth == 0, ((ms,i,j) => propagate(ms,i,j)))
+    morphism[P](bigger, _.depth == 0, compatibleMore)
+    //morphism[P](bigger, _.depth == 0, ((ms,i,j) => propagate(ms,i,j)))
   
   def degree(v: V): Int = undirectedAdjacencyMap(v).size
 
