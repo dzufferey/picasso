@@ -92,28 +92,30 @@ trait KarpMillerTree {
     val root = KMRoot(initState)
     //In Theory, a DFS should be the fastest way to saturate the system, so ...
     //On the side, maintains a (downward-closed) covering set to check for subsumption
-    def build(current: KMTree, cover: DownwardClosedSet[S]): DownwardClosedSet[S] = {
+    var cover = DownwardClosedSet.empty[S]
+    val stack = scala.collection.mutable.Stack[KMTree](root)
+    val startTime = java.lang.System.currentTimeMillis
+    while (!stack.isEmpty) {
+      val current = stack.pop
       logIteration(root, current, cover)
-      if (cover(current())) {
-        cover //already subsumed
-      } else {
-        val newCover = cover + current()
+      if (!cover(current())) {
+        //TODO switching from parallel to seq and back is expensive ...
+        //However we need this the release the threads
+        //can we do better with 1 queue ?
+        cover = cover + current()
         val possible = transitions.filter(_ isDefinedAt current())
-        (newCover /: possible)((acc, t) => {
-          val cs = t(current()).toSeq.par.map( s => {
+        val successors =  possible.map( t => {
+          val nonAccs = t(current())
+          val accs = nonAccs.map(s => {
             val acceleratedFrom = current.ancestorSmaller(s)
             val s2 = (s /: acceleratedFrom)( (bigger,smaller) => widening(smaller(), bigger))
-            KMNode(current, t, s2, acceleratedFrom.toList)
-          })
-          (acc /: cs)( (acc2, c) => {
-            current.addChildren(c)
-            build(c, acc2)
+            val node = KMNode(current, t, s2, acceleratedFrom.toList)
+            current.addChildren(node)
+            stack.push(node)
           })
         })
       }
     }
-    val startTime = java.lang.System.currentTimeMillis
-    val cover = build(root, DownwardClosedSet.empty[S]) //discard the cover
     val endTime = java.lang.System.currentTimeMillis
     Logger("Analysis", LogInfo, "KMTree computed in " + ((endTime - startTime)/1000F) + " sec.")
     Logger("Analysis", LogDebug, "KMTree is\n" + TreePrinter.print(root))
