@@ -93,10 +93,11 @@ trait KarpMillerTree {
     //In Theory, a DFS should be the fastest way to saturate the system, so ...
     //On the side, maintains a (downward-closed) covering set to check for subsumption
     var cover = DownwardClosedSet.empty[S]
-    val stack = scala.collection.mutable.Stack[KMTree](root)
+    val stack = new java.util.concurrent.LinkedBlockingDeque[KMTree]
+    stack.addFirst(root)
     val startTime = java.lang.System.currentTimeMillis
-    while (!stack.isEmpty) {
-      val current = stack.pop
+    while (stack.size > 0) {
+      val current = stack.takeFirst()
       logIteration(root, current, cover)
       if (!cover(current())) {
         //TODO switching from parallel to seq and back is expensive ...
@@ -111,7 +112,7 @@ trait KarpMillerTree {
             val s2 = (s /: acceleratedFrom)( (bigger,smaller) => widening(smaller(), bigger))
             val node = KMNode(current, t, s2, acceleratedFrom.toList)
             current.addChildren(node)
-            stack.push(node)
+            stack.addFirst(node)
           })
         })
       }
