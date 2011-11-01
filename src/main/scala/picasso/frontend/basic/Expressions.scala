@@ -39,17 +39,17 @@ object Unit {
 
 object EmptySet {
   def apply() = Application("new-set", Nil)
-  def unapply(e: Expression): Option[Unit] = e match {
-    case Application("new-set", Nil) => Some()
-    case _ => None
+  def unapply(e: Expression): Boolean = e match {
+    case Application("new-set", Nil) => true
+    case _ => false
   }
 }
 
 object NewChannel {
   def apply() = Application("newChannel", Nil)
-  def unapply(e: Expression): Option[Unit] = e match {
-    case Application("newChannel", Nil) => Some()
-    case _ => None
+  def unapply(e: Expression): Boolean = e match {
+    case Application("newChannel", Nil) => true
+    case _ => false
   }
 }
 
@@ -75,7 +75,12 @@ object Expressions {
     case b @ Bool(_) => picasso.ast.Value[Boolean](Literals.bool2Lit(b))
     case s @ StringVal(_) => picasso.ast.Value[String](Literals.string2Lit(s))
   }
-  def app2App(a: Application): picasso.ast.Application = picasso.ast.Application(a.fct, a.args map exp2Exp)
+  def app2App(a: Application): picasso.ast.Application = a match {
+    case Create(c, args) => picasso.ast.Create(c, args map exp2Exp)
+    case NewChannel() => picasso.ast.NewChannel()
+    case EmptySet() => picasso.ast.EmptySet()
+    case _ => picasso.ast.Application(a.fct, a.args map exp2Exp)
+  }
   def tuple2Tuple(t: Tuple): picasso.ast.Tuple = picasso.ast.Tuple(t.values map exp2Exp)
   implicit def exp2Exp(e: Expression): picasso.ast.Expression = e match {
     case Any => any2Any
