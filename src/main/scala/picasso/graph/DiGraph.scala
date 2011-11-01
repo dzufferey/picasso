@@ -192,6 +192,11 @@ extends Traceable[P#V,P#EL] {
     companion[P](newMap, label)
   }
 
+  def filterNodes(fct: V => Boolean): Self = {
+    val toRemove = vertices.filterNot(fct)
+    this -- toRemove
+  }
+
   def outDegree(v: V): Map[EL, Int] = adjacencyMap(v).mapValues(_.size)
   def outDegreeAll: Map[V, Int] = adjacencyMap.map{case (v, m) => (v, m.values.foldLeft(0)( (acc,set) => acc + set.size )) }
 
@@ -312,6 +317,7 @@ extends Traceable[P#V,P#EL] {
     additionalCstr: MorphInfo[Q] => Iterable[Clause[(P#V,Q#V)]],
     partialMorphism: Map[P#V,Q#V] = Map.empty[P#V,Q#V]
   )(implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Iterator[Map[P#V,Q#V]] = {
+    Logger("graph", LogDebug, "Is\n"+this+"a subgraph of\n"+bigger)
     ///////////////////////////////////////////////////
     import org.sat4j.specs.ContradictionException
     import org.sat4j.tools.ModelIterator
@@ -363,24 +369,59 @@ extends Traceable[P#V,P#EL] {
     val mi = (bigger, candidatesF(_), candidatesB(_))
     val addCstr = additionalCstr(mi).map(clauseConvert)
     //Feed the constraints to SAT4J
-    val solver = new ModelIterator(SolverFactory.newDefault());
+    val solver = SolverFactory.newDefault();
     solver.setTimeoutOnConflicts(solver.getTimeout())//HACK: avoid the creation of a timer
     solver.newVar(litCounter + 1)
     solver.setExpectedNumberOfClauses(fullMapping.size + injectivity.size + edgeCstrs.size + startCstr.size)
     try {
+      Logger("graph", LogDebug, "SAT clause (fullMapping):\n" + fullMapping.mkString("  ","\n  ","\n") +
+                                "SAT clause (injectivity):\n" + injectivity.mkString("  ","\n  ","\n") +
+                                "SAT clause (edgeCstrs):\n" + edgeCstrs.mkString("  ","\n  ","\n") +
+                                "SAT clause (startCstr):\n" + startCstr.mkString("  ","\n  ","\n") +
+                                "SAT clause (additionalCstr):\n" + addCstr.mkString("  ","\n  ",""))
       for (sumTo1 <- fullMapping) solver.addExactly(sumTo1, 1)
       for (atMost1 <- injectivity) solver.addAtMost(atMost1, 1)
       for (clause <- edgeCstrs) solver.addClause(clause)
       for (clause <- startCstr) solver.addClause(clause)
       for (clause <- addCstr) solver.addClause(clause)
+      //val writer = new java.io.PrintWriter(Console.out)
+      //solver.printInfos(writer, "SAT4J I: ")
+      //writer.flush
+      //solver.setVerbose(true)
       //pack eveything into an iterator ...
       new Iterator[Map[P#V,Q#V]] {
-        def hasNext = solver.isSatisfiable()
-        def next() = {
-          val model = solver.model().filter(_ >= 0).map(intToPair(_))
+        var nextTmp: Option[Map[P#V,Q#V]] = None
+        var isFalse = false
+
+        private def extractModel = {
+          //val writer = new java.io.PrintWriter(Console.out)
+          //solver.printStat(writer, "SAT4J S: ")
+          //writer.flush
+          val intModel = solver.model().filter(_ >= 0)
+          Logger("graph", LogDebug, "SAT model:  " + intModel.mkString("",", ",""))
+          try { solver.addBlockingClause(new VecInt(intModel.map(x => -x)))
+          } catch { case (_: ContradictionException) => isFalse = true }
+          val model = intModel.map(intToPair(_))
           val mapping = model.toMap
           assert(mapping.keySet == vertices)//checks that the mapping is complete
-          mapping
+          nextTmp = Some(mapping)
+        }
+
+        def hasNext = nextTmp match {
+          case Some(_) => true
+          case None =>
+            if(!isFalse && solver.isSatisfiable()) {
+              extractModel; true
+            } else false
+        }
+
+        def next() = nextTmp match {
+          case Some(mapping) =>
+            nextTmp = None
+            mapping
+          case None =>
+            if (hasNext) next
+            else throw new java.util.NoSuchElementException("next on empty iterator")
         }
       }
     } catch { case e: ContradictionException =>
@@ -594,6 +635,8 @@ extends Traceable[P#V,P#EL] {
     val map4 = (map3 /: vertices)( (map, v) => if (! (map contains v)) map + (v -> Map.empty[EL,Set[V]]) else map)
     companion(map4, label)
   }
+  
+  def undirect: Self = this ++ this.reverse
 
   /** WARNING: this function finishes only if the set of labels returned by appendLabel is finite
    * @param appendLabel a function to compute the labels of the added edges
@@ -687,7 +730,7 @@ extends Traceable[P#V,P#EL] {
     scc.filter( cc => cc.forall( x => apply(x).forall(  y => cc.contains(y) )))
   }
   
-  /** Returns a decomposition of the automaton into simple pathes.
+  /** Returns a decomposition of the graphs into simple pathes.
    *  A simple spath is a path without loop. Furthermore, the decomposition
    *  is such that a state is either an extremity of possibly multiple pathes
    *  or within a single path.

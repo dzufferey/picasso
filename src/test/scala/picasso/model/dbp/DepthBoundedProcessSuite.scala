@@ -36,6 +36,8 @@ class DepthBoundedProcessSuite extends FunSuite {
   val b1 = b0++
   val c1 = c0++
   val c2 = c1++
+  val cc0 = mkC
+  val cc1 = cc0++
 
 /*
   test("testing polyhedra library") {
@@ -60,6 +62,18 @@ class DepthBoundedProcessSuite extends FunSuite {
     Parma_Polyhedra_Library.finalize_library
   }
 */
+  test("embedding with nesting") {
+    val conf1 = emp ++ (a0 --> b1) ++ (b1 --> c1) ++ (b1 --> cc1)
+    val morphs1 = (conf1 morphisms conf1).toSeq
+    assert(morphs1.length == 2, morphs1.mkString("Morphs\n","\n  ",""))
+    val conf2 = emp ++ (a0 --> b0) ++ (b0 --> c1) ++ (b0 --> cc1)
+    val morphs2 = (conf2 morphisms conf2).toSeq
+    assert(morphs2.length == 4, morphs2.mkString("Morphs\n","\n  ",""))
+    val morphs3 = (conf2 morphisms conf1).toSeq
+    assert(morphs3.length == 0, morphs3.mkString("Morphs\n","\n  ",""))
+    val morphs4 = (conf1 morphisms conf2).toSeq
+    assert(morphs4.length == 0, morphs4.mkString("Morphs\n","\n  ",""))
+  }
 
   test("undfolding") {
     def checkUnfold(c1: DepthBoundedConf[LocDBCT], c2: DepthBoundedConf[LocDBCT], c2_unfold: DepthBoundedConf[LocDBCT]) = {
@@ -115,7 +129,7 @@ class DepthBoundedProcessSuite extends FunSuite {
     assert(gold2 isSubgraphOf fold2)
 
     val b12 = b0++
-    val conf3 = emp ++ (b12 --> a0) ++ (b1 --> a0) ++ (c2 --> b12) ++ (mkC --> b1) ++ (mkC --> b1)
+    val conf3 = emp ++ (b12 --> a0) ++ (b1 --> a0) ++ (c2 --> b12) ++ ((mkC++) --> b1) ++ ((mkC++) --> b1)
     val fold3 = conf3.fold
     val gold3 = emp ++ (b1 --> a0) ++ (c2 --> b1)
           

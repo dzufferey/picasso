@@ -20,11 +20,12 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
   type UndirectedAdjacencyMap = Map[V, Set[V]]
 
   // use def instead of val if caching requires too much space
-  val undirectedAdjacencyMap = {
+  lazy val undirectedAdjacencyMap = {
     val out = adjacencyMap mapValues (_.foldLeft(Set.empty[V])((xs, e) => e._2 ++ xs))
     out.foldLeft(out)((acc, p) => p._2.foldLeft(acc)((acc, x) => acc + ((x, acc.getOrElse(x, Set.empty[V]) + p._1))))
   }
 
+  /*
   protected def propagate(ms: MorphState[P], i : Int, j : Int) = {
     val (tableSmaller, tableBigger, nodesSmaller, nodesBigger, compatible) = ms
     val v = nodesSmaller(i)
@@ -39,11 +40,26 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
         compatible.update(k, compatible(k) - j)
     }
 
-    
     //Logger("TEST", LogNotice, "common: " + common)
     //Logger("TEST", LogNotice, "v: " + v)
     //Logger("TEST", LogNotice, "u: " + u)
     //Logger("TEST", LogNotice, "mergeable: " + merge)
+  }
+  */
+  // use def instead of val if caching requires too much space
+  lazy val sameHeightCC: Map[V,Set[V]] = {
+    val undir = this.undirect
+    val maxDepth = vertices.map(_.depth).reduceLeft(math.max)
+    //Console.println("maxDepth = " + maxDepth)
+    val bindings = for (d <- 0 to maxDepth) yield {
+      val g = undir.filterNodes(_.depth == d)
+      val sccs = g.SCC
+      //Console.println("d = " + d + ", sccs = " + sccs + " g = " + g)
+      for (scc <- sccs; s <- scc) yield (s -> scc)
+    }
+    val map: Map[V,Set[V]] = bindings.flatten.toMap
+    assert(map.keySet == vertices, map.mkString("", ", ", ""))
+    map
   }
 
   protected def additionalCstr(mi: MorphInfo[P]): Iterable[Clause[(V,V)]] = {
@@ -54,7 +70,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
       val cl: Clause[(V,V)] = Seq(lit)
       cl
     }
-    //(2) stuff within the same nesting
+    //(2) preserve nesting difference
     val deltaDepth: Iterable[Iterable[Clause[(V,V)]]] =
       for((x1, el, y1) <- edges;
           (x2:V) <- candidatesF(x1) if (x1.depth <= x2.depth);
@@ -63,17 +79,35 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
       val d1 = y1.depth - x1.depth
       val d2 = y2.depth - x2.depth
       //assert that the difference is at least the same
-      if (d1 > 0) {
-        if (d2 >= d1) Seq[Clause[(V,V)]]() //Ok
-        else Seq[Clause[(V,V)]](Seq(Neg(x1 -> x2), Neg(y1 -> y2))) //cannot be both true at the same time
-      } else if (d1 < 0) {
-        if (d2 <= d1) Seq[Clause[(V,V)]]() //Ok
-        else Seq[Clause[(V,V)]](Seq(Neg(x1 -> x2), Neg(y1 -> y2))) //cannot be both true at the same time
-      } else { //d1 == 0
+      if ((d1 > 0 && d2 < d1) || (d1 < 0 && d2 > d1)) {
+        Seq[Clause[(V,V)]](Seq(Neg(x1 -> x2), Neg(y1 -> y2))) //cannot be both true at the same time
+      } else {
         Seq[Clause[(V,V)]]() //ok
       }
     }
-    depthCstr ++ deltaDepth.flatten
+    //(3) stuff within the same nesting
+    val depthInjective: Iterable[Iterable[Clause[(V,V)]]] =
+      //x1 to x2 => all connectedAtSameHeight to x2 becomes injective wrt all connectedAtSameHeight x2
+      //injective => not more than one true ...
+      for(x1 <- vertices.toSeq;// if (x1.depth > 0);
+          x2 <- candidatesF(x1) if (x2.depth > 0 && x1.depth <= x2.depth)
+         ) yield {
+      val trigger: Lit[(V,V)] = Neg(x1 -> x2)
+      val sh2 = (bigger.sameHeightCC(x2) - x2).toSeq
+      val sh1 = sameHeightCC(x1) - x1
+      val x1_x2_cstr: Iterable[Clause[(V,V)]] = sh2.flatMap(y2 => {
+        //we needs a set of constraints that says at most 1 of possible is true
+        //which means for all pairs of var one is false.
+        val possible = candidatesB(y2).filter(sh1 contains _)
+        for (i <- possible.indices; j <- i+1 until possible.size) yield {
+          (Seq(trigger, Neg(possible(i) -> y2), Neg(possible(j) -> y2)): Clause[(V,V)])
+        }
+      })
+      x1_x2_cstr
+    }
+    //Console.println(depthCstr.toString)
+    //Console.println(deltaDepth.flatten.toString)
+    depthCstr ++ deltaDepth.flatten ++ depthInjective.flatten
   }
 
   def morphisms(bigger: Self, partialMorph: Morphism = Map.empty[V,V])(implicit wpo: WellPartialOrdering[P#State]) : Iterator[Morphism] = 
