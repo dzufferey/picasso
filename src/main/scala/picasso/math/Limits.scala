@@ -2,6 +2,7 @@ package picasso.math
 
 import scala.collection.immutable.Set
 import picasso.graph.Trace
+import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger, Misc}
 
 //(W)ADL: (weak) adequate domain of limit.
 // how to define an ideal ?
@@ -78,7 +79,11 @@ trait WADL {
 
   def tryAcceleratePair(smaller: S, bigger: S): Option[S] //for acceleration a la Karp-miller
 
-  def widening(smaller: S, bigger: S): S = tryAcceleratePair(smaller, bigger).get
+  def widening(smaller: S, bigger: S): S = {
+    val opt = tryAcceleratePair(smaller, bigger)
+    if (opt.isDefined) opt.get
+    else Logger.logAndThrow("Limits", LogError, "widening not defined for " + smaller + " and " + bigger)
+  }
 
   //TODO this is correct only is a Karp-Miller kind of acceleraion of possible (i.e. Petri Nets).
   def accelerate(states: DownwardClosedSet[S], transitions: List[T]): DownwardClosedSet[S] = {
