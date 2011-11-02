@@ -59,7 +59,7 @@ extends Traceable[P#V,P#EL] {
 
   def edges = for ( (n1,map) <- adjacencyMap; (label, n2Set) <- map; n2 <- n2Set) yield (n1, label, n2)
   
-  def vertices: Set[V] = adjacencyMap.keysIterator.foldLeft(Set.empty[V])(_ + _)
+  lazy val vertices: Set[V] = adjacencyMap.keySet
 
   def nbrVertices = adjacencyMap.size
 
@@ -348,8 +348,9 @@ extends Traceable[P#V,P#EL] {
     ///////////////////////////////////////////////////
     //compatible is too weak and we need some additional constraints:
     def compatible(p: P#V, q: Q#V): Boolean = lblOrd.lteq(labelOf(p), bigger.labelOf(q))
-    def candidatesF(p: P#V): Seq[Q#V] = bigger.vertices.filter(compatible(p, _)).toSeq
-    def candidatesB(q: Q#V): Seq[P#V] = this.vertices.filter(compatible(_, q)).toSeq
+    //TODO make the candidate stuff faster ...
+    val candidatesF: Map[P#V, Seq[Q#V]] = this.vertices.map(p => p -> bigger.vertices.filter(compatible(p, _)).toSeq).toMap
+    val candidatesB: Map[Q#V, Seq[P#V]] = bigger.vertices.map(q => q -> this.vertices.filter(compatible(_, q)).toSeq).toMap
     //list of constraints of type \sum_q x_{pq} = 1, that guarantees that each node if mapped to another.
     val fullMapping = vertices.toSeq.map( p => clauseConvert(candidatesF(p).map(q => Pos((p, q)))))
     //list of constraints of type \sum_q x_{pq} <= 1, that guarantees that the mapping is injective (when needed).
