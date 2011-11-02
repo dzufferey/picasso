@@ -92,6 +92,8 @@ extends Transition[DepthBoundedConf[P]]
     val body = ((title :/: (inhib getOrElse empty):/: pre :/: post) /: mapEdges)(_ :/: _)
     prefix :: " " :: name2 :: " {" :: nest(4, body) :/: text("}")
   }
+
+  override def toString = Misc.docToString(toGraphviz("DBT"))
 }
 
 object DepthBoundedTransition {
