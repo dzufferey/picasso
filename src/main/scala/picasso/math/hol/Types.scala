@@ -107,7 +107,7 @@ object Collection {
     ct.isCollection = true
     ct
   }
-  def unapply(tpe: Type): Option[(String, Type)] = tpe match {
+  def unapply(tpe: ClassType): Option[(String, Type)] = tpe match {
     case ct @ ClassType(name, t :: Nil) if ct.isCollection => Some((name, t))
     case _ => None
   }
@@ -119,7 +119,7 @@ object ActorType {
     ct.isActor = true
     ct
   }
-  def unapply(tpe: Type): Option[(String, List[Type])] = tpe match {
+  def unapply(tpe: ClassType): Option[(String, List[Type])] = tpe match {
     case ct @ ClassType(a, b) if ct.isActor => Some((a,b))
     case _ => None
   }
@@ -131,7 +131,7 @@ object CaseType {
     ct.isCase = true
     ct
   }
-  def unapply(tpe: Type): Option[(String, List[Type])] = tpe match {
+  def unapply(tpe: ClassType): Option[(String, List[Type])] = tpe match {
     case ct @ ClassType(a, b) if ct.isCase => Some((a,b))
     case _ => None
   }
@@ -141,7 +141,7 @@ object CaseType {
 object Channel {
   //not really uninterpreted, but actually pretty much interpreted
   def apply() = UnInterpreted("name")
-  def unapply(tpe: Type): Boolean = tpe match {
+  def unapply(tpe: UnInterpreted): Boolean = tpe match {
     case UnInterpreted("name") => true
     case _ => false
   }

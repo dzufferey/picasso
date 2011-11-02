@@ -39,8 +39,6 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
   //this could also take care of the aliasing problems (generates the transition with and without aliases)
   //...
 
-  //TODO a way to automatically handle the scope issues
-
   //TODO when an actor creates another actor of the same kind -> name clash!!
   def makeStateFor(agt: AgentDefinition[PC], map: Context, controlState: PC, params: Seq[(ID, Expression)]): Seq[(DBC#V, DBCC, Context)] = {
     //complete the params: live values that are not defined ? (use Wildcards or Any or case split ?)
@@ -49,7 +47,7 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
     val mainNode = DBCN(controlState)
     val graph1 = emptyConf + mainNode
     val (graph2, map2) = ((graph1, map) /: undef)( (graphAndMap, id) => {
-      val ptsTo = unk
+      val ptsTo = unkForID(id)
       val mapNew = graphAndMap._2 + (id -> ptsTo) 
       val graphNew = graphAndMap._1 + (mainNode, id.id, ptsTo)
       (graphNew, mapNew)
@@ -116,6 +114,8 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
       true
   }
 
+  def unkForID(id: ID) = if (id.id.tpe == Channel()) DBCN_Name else unk
+
   ////////////////////////////
   // take care of the scope //
   ////////////////////////////
@@ -140,7 +140,7 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
     assert(coming subsetOf assigned)
     //for dying nodes: checks they are in A and not in B, + keep dangling node for references
     for (id <- dying) {
-      val node = context.getOrElse(id, unk)
+      val node = context.getOrElse(id, unkForID(id))
       gA = gA + (nA, id.id, node)
       if (isReference(id)) { //keep a dangling node
         gB = gB + node
@@ -163,9 +163,9 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
         }
       } else {//not accessed
         if (assigned contains id) {//gets a new value
+          val node = unkForID(id)
+          gA = gA + (nA, id.id, node)
           if (isReference(id)) { //keep a dangling node
-            val node = unk
-            gA = gA + (nA, id.id, node)
             gB = gB + node
           }
         }
@@ -223,7 +223,7 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
       }
       makeStateFor(agtDef, map, agtDef.cfa.initState, agtDef.params zip args)
     case id @ ID(v) =>
-      val node = map.getOrElse(id, unk)
+      val node = map.getOrElse(id, unkForID(id))
       Seq((node, emptyConf + node, map + (id -> node)))
     case ap @ Application(fct, args) =>
       if (isInterpreted(ap)) {
@@ -303,7 +303,7 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
       val after = DBCN(b)
       val trueAssigns = BooleanFunctions.assigns(true, e) map boolAssignToNode
       val trueTrs = for(assign <- trueAssigns) yield {
-        val (g1, g2, forward, backward) = checkScope(agt, a, b, before, emptyConf + before, after, emptyConf + after, emptyContext, Set.empty[ID])
+        val (g1, g2, forward, backward) = checkScope(agt, a, b, before, emptyConf + before, after, emptyConf + after, assign, Set.empty[ID])
         makeTrans( proc.toString, g1, g2, forward, backward, None)
       }
       val falseAssigns = BooleanFunctions.assigns(false, e) map boolAssignToNode
@@ -322,7 +322,7 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
       val after = DBCN(b)
       val trueAssigns = BooleanFunctions.assigns(true, e) map boolAssignToNode
       val trueTrs = for(assign <- trueAssigns) yield {
-        val (g1, g2, forward, backward) = checkScope(agt, a, b, before, emptyConf + before, after, emptyConf + after, emptyContext, Set.empty[ID])
+        val (g1, g2, forward, backward) = checkScope(agt, a, b, before, emptyConf + before, after, emptyConf + after, assign, Set.empty[ID])
         makeTrans( proc.toString, g1, g2, forward, backward, None)
       }
       trueTrs
@@ -369,7 +369,8 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
       val (coming, staying, dying) = compareScopes(agt, a, b)
       val before = DBCN(a)
       val after = DBCN(b)
-      val startContext = emptyContext + (dest -> unk)
+      assert(dest.id.tpe == Channel())
+      val startContext = emptyContext + (dest -> DBCN_Name)
       for ((contentN, contentG, contentC) <- graphOfExpr(content, startContext)) yield {
         val graphBe = emptyConf + (before, dest.id, startContext(dest))
         val graphAf = contentG + after + (contentN, msgDest, startContext(dest))
@@ -381,7 +382,8 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
       val (coming, staying, dying) = compareScopes(agt, a, b)
       val before = DBCN(a)
       val after = DBCN(b)
-      val startContext = emptyContext + (src -> unk)
+      assert(src.id.tpe == Channel())
+      val startContext = emptyContext + (src -> DBCN_Name)
       val (patN, patG, patC) = graphOfPattern(pat)
       val graphBe = patG + (before, src.id, startContext(src)) + (patN, msgDest, startContext(src))
       val graphAf = emptyConf + after ++ patC.toList.map{ case (id, n) => (after, id.id, n)}
