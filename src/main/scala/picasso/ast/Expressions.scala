@@ -84,7 +84,7 @@ object StringVal {
 
 object Unit {
   def apply() = Tuple(Nil)
-  def unapply(e: Expression): Boolean = e match {
+  def unapply(e: Tuple): Boolean = e match {
     case Tuple(Nil) => true
     case _ => false
   }
@@ -92,7 +92,7 @@ object Unit {
 
 object NewChannel {
   def apply() = Application("new-channel", Nil)
-  def unapply(e: Expression): Boolean = e match {
+  def unapply(e: Application): Boolean = e match {
     case Application("new-channel", Nil) => true
     case _ => false
   }
@@ -101,7 +101,7 @@ object NewChannel {
 object Create {
   //TODO what should be the type of Variable(name)
   def apply(name: String, args: List[Expression]) = Application("create", ID(Variable(name)) :: args)
-  def unapply(e: Expression): Option[(String, List[Expression])] = e match {
+  def unapply(e: Application): Option[(String, List[Expression])] = e match {
     case Application("create", ID(Variable(name)) :: args) => Some(name, args)
     case _ => None
   }
@@ -113,7 +113,7 @@ object Create {
 
 object EmptySet {
   def apply() = Application("set-new", Nil)
-  def unapply(e: Expression): Boolean = e match {
+  def unapply(e: Application): Boolean = e match {
     case Application("set-new", Nil) => true
     case _ => false
   }
@@ -121,7 +121,7 @@ object EmptySet {
 
 object SetIsEmpty {
   def apply(e: Expression) = Application("set-is-empty", List(e))
-  def unapply(e: Expression): Option[Expression] = e match {
+  def unapply(e: Application): Option[Expression] = e match {
     case Application("set-is-empty", List(e)) => Some(e)
     case _ => None
   }
@@ -129,7 +129,7 @@ object SetIsEmpty {
 
 object SetAdd {
   def apply(e1: Expression, e2: Expression) = Application("set-add", List(e1,e2))
-  def unapply(e: Expression): Option[(Expression,Expression)] = e match {
+  def unapply(e: Application): Option[(Expression,Expression)] = e match {
     case Application("set-add", List(e1,e2)) => Some((e1,e2))
     case _ => None
   }
@@ -137,7 +137,7 @@ object SetAdd {
 
 object SetMinus {
   def apply(e1: Expression, e2: Expression) = Application("set-minus", List(e1,e2))
-  def unapply(e: Expression): Option[(Expression,Expression)] = e match {
+  def unapply(e: Application): Option[(Expression,Expression)] = e match {
     case Application("set-minus", List(e1,e2)) => Some((e1,e2))
     case _ => None
   }
@@ -146,7 +146,7 @@ object SetMinus {
 //do not remove the chosen element from the set
 object SetChoose {
   def apply(e: Expression) = Application("set-choose", List(e))
-  def unapply(e: Expression): Option[Expression] = e match {
+  def unapply(e: Application): Option[Expression] = e match {
     case Application("set-choose", List(e)) => Some(e)
     case _ => None
   }
@@ -156,7 +156,7 @@ object SetChoose {
 //it is a combination of SetChoose + SetMinus
 object SetPick {
   def apply(e: Expression) = Application("set-pick", List(e))
-  def unapply(e: Expression): Option[Expression] = e match {
+  def unapply(e: Application): Option[Expression] = e match {
     case Application("set-pick", List(e)) => Some(e)
     case _ => None
   }

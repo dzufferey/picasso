@@ -220,7 +220,7 @@ trait PiCode {
         val a2 = a1 //thisify(clazz.symbol, a1)
         val a3 = unrollBlock(a2)
         val a4 = cleanAgent(a3) 
-        val a5 = compactAgent(a4)
+        val a5 = a4.compact
         exec.agent = a5
       }
       //val getters = methods.keys.filter(_.isGetter)
@@ -232,7 +232,7 @@ trait PiCode {
       //                                    methods(ctor),
       //                                    getters.map(methods(_)).toList,
       //                                    setters.map(methods(_)).toList)
-      dispatchTable.agent = compactAgent(cleanAgent(dispatchTable.agent))
+      dispatchTable.agent = cleanAgent(dispatchTable.agent).compact
     }
 
     def processMarkup: Unit = {

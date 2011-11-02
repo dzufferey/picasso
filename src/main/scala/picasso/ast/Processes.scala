@@ -38,7 +38,7 @@ case class Receive(src: Expression, pat: Pattern) extends Process {
 
 object Skip {
   def apply() = Expr(Unit())
-  def unapply(p: Process): Boolean = p match {
+  def unapply(p: Expr): Boolean = p match {
     case Expr(Unit()) => true
     case _ => false
   }
@@ -46,7 +46,7 @@ object Skip {
 
 object Zero {
   def apply() = Block(Nil)
-  def unapply(p: Process): Boolean = p match {
+  def unapply(p: Block): Boolean = p match {
     case Block(Nil) => true
     case _ => false
   }
@@ -54,7 +54,7 @@ object Zero {
 
 object Assume {
   def apply(e: Expression) = Expr(Application("assume", List(e)))
-  def unapply(p: Process): Option[Expression] = p match {
+  def unapply(p: Expr): Option[Expression] = p match {
     case Expr(Application("assume", List(e))) => Some(e)
     case _ => None
   }
@@ -62,7 +62,7 @@ object Assume {
 
 object Assert {
   def apply(e: Expression) = Expr(Application("assert", List(e)))
-  def unapply(p: Process): Option[Expression] = p match {
+  def unapply(p: Expr): Option[Expression] = p match {
     case Expr(Application("assert", List(e))) => Some(e)
     case _ => None
   }
@@ -71,7 +71,7 @@ object Assert {
 //this needs to be kept to explicitely reset something that is still live.
 object Havoc {
   def apply(ids: List[ID]) = Expr(Application("havoc", ids))
-  def unapply(p: Process): Option[List[ID]] = p match {
+  def unapply(p: Expr): Option[List[ID]] = p match {
     case Expr(Application("havoc", lst)) =>
       if (lst forall (_ match { case ID(_) => true case _ => false})) {
         val ids: List[ID] = lst map (_ match { case id @ ID(_) => id case _ => sys.error("should be unreachable!!")})

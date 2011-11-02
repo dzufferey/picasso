@@ -114,7 +114,6 @@ class Automaton[P <: GT.ELGT](edges: Map[P#V,Map[P#EL,Set[P#V]]], val initState:
   // -more general morphism: to also change the labeling (abstracting code into a model)
   // -...
 
-
   /** Removes states that cannot be transitively reached from init (i.e. can never be reached) */
   def removeUnreachableStates: Automaton[P] = {
     val reachable = this.transitiveClosure((a,b) => a)(initState) + initState

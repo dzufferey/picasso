@@ -89,5 +89,7 @@ object Expressions {
     case a @ Application(_,_) => app2App(a)
     case t @ Tuple(_) => tuple2Tuple(t)
   }
+  def exp2ExpSimplify(e: Expression): picasso.ast.Expression =
+    picasso.transform.BooleanFunctions.groundTermSimplification(exp2Exp(e))
 
 }

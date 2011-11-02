@@ -116,34 +116,7 @@ trait BooleanOperations {
       val n1 = DBCN(a)
       val n2 = DBCN(b)
       //performs some normalisation
-      val simplifyedValue = p.value match {
-        case Application("&&", args) =>
-          val args2 = args.filter{ case PValue(Bool(true)) => false; case _ => true}
-          if (args2.isEmpty) PValue(Bool(true))
-          else if (args2 exists { case PValue(Bool(false)) => true; case _ => false}) PValue(Bool(false))
-          else Application("&&", args2) 
-
-        case Application("||", args) => 
-          val args2 = args.filter{ case PValue(Bool(false)) => false; case _ => true}
-          if (args2.isEmpty) PValue(Bool(false))
-          else if (args2 exists { case PValue(Bool(true)) => true; case _ => false}) PValue(Bool(true))
-          else Application("||", args2) 
-        
-        case Application("^", List(PValue(Bool(b)),e2 @ ID(_))) => if (!b) e2 else Application("!", List(e2))
-        case Application("^", List(e1 @ ID(_),PValue(Bool(b)))) => if (!b) e1 else Application("!", List(e1))
-        case Application("^", List(PValue(Bool(b1)),PValue(Bool(b2)))) => PValue(Bool(b1 != b2))
-        
-        case Application("==", List(PValue(Bool(b)),e2 @ ID(_))) => if (b) e2 else Application("!", List(e2))
-        case Application("==", List(e1 @ ID(_),PValue(Bool(b)))) => if (b) e1 else Application("!", List(e1))
-        case Application("==", List(PValue(Bool(b1)),PValue(Bool(b2)))) => PValue(Bool(b1 == b2))
-        
-        case Application("!=", List(PValue(Bool(b)),e2 @ ID(_))) => if (!b) e2 else Application("!", List(e2))
-        case Application("!=", List(e1 @ ID(_),PValue(Bool(b)))) => if (!b) e1 else Application("!", List(e1))
-        case Application("!=", List(PValue(Bool(b1)),PValue(Bool(b2)))) => PValue(Bool(b1 != b2))
-        
-        case Application("!", List(PValue(Bool(b)))) => PValue(Bool(!b))
-        case other => other
-      }
+      val simplifyedValue = picasso.transform.BooleanFunctions.groundTermSimplification(p.value)
       val guards = simplifyedValue match {
         case Application("&&", args) => makeAndLHS(n1, thisNode, args.map{case id @ ID(_) => id; case _ => sys.error("not isBooleanFctNarrow")})
         case Application("||", args) => makeOrLHS(n1, thisNode, args.map{case id @ ID(_) => id; case _ => sys.error("not isBooleanFctNarrow")})

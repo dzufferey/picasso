@@ -621,7 +621,7 @@ extends Traceable[P#V,P#EL] {
   }
 
   def reverse: Self = {
-    val revEdges: Iterable[(P#V, P#EL, P#V)] =
+    val revEdges: Iterable[(V, EL, V)] =
       for ( (n1,map) <- adjacencyMap;
             (label, n2Set) <- map;
             n2 <- n2Set)
@@ -641,7 +641,7 @@ extends Traceable[P#V,P#EL] {
   /** WARNING: this function finishes only if the set of labels returned by appendLabel is finite
    * @param appendLabel a function to compute the labels of the added edges
    */
-  def transitiveClosure(appendLabel: (P#EL, P#EL) => P#EL): Self = {
+  def transitiveClosure(appendLabel: (EL, EL) => EL): Self = {
     //fixpoint algorithm
     val toAdd = new scala.collection.mutable.ListBuffer[(P#V, P#EL, P#V)]()
     for ( v1 <- vertices;
@@ -654,8 +654,19 @@ extends Traceable[P#V,P#EL] {
     else (this ++ toAdd).transitiveClosure(appendLabel)
   }
 
-  def reflexiveTransitiveClosure(appendLabel: (P#EL, P#EL) => P#EL, defaultLabel: P#EL): Self = {
+  def reflexiveTransitiveClosure(appendLabel: (EL, EL) => EL, defaultLabel: EL): Self = {
     (this.transitiveClosure(appendLabel) /: vertices)( (acc, v) => acc + ((v,defaultLabel,v)))
+  }
+
+  /** returns the set of nodes reachable starting from a node following any edge. */
+  def nodesReachableFrom(n: V): Set[V] = {
+    def process(from: V, seen: Set[V]): Set[V] = {
+      (seen /: this(from))( (acc, to) => {
+        if (acc(to)) acc
+        else process(to, acc + to)
+      })
+    }
+    process(n, Set.empty[V])
   }
 
 
@@ -668,7 +679,7 @@ extends Traceable[P#V,P#EL] {
     * @param cover covering test (_ \geq _)
     * @param defaultValue the initial abstract values
     */
-  def aiFixpoint[D](post: (D, P#EL) => D, join: (D, D) => D, cover: (D,D) => Boolean, defaultValue: V => D): Map[V, D] = {
+  def aiFixpoint[D](post: (D, EL) => D, join: (D, D) => D, cover: (D,D) => Boolean, defaultValue: V => D): Map[V, D] = {
     val fp1 = new scala.collection.mutable.HashMap[P#V, D]()
     val fp2 = new scala.collection.mutable.HashMap[P#V, D]()
     for (v <- vertices) fp2 += (v -> defaultValue(v)) //initialize fp2
@@ -686,7 +697,7 @@ extends Traceable[P#V,P#EL] {
     fp1.toMap
   }
   
-  def aiFixpointBackward[D](pre: (D, P#EL) => D, join: (D, D) => D, cover: (D,D) => Boolean, defaultValue: V => D): Map[V, D] =
+  def aiFixpointBackward[D](pre: (D, EL) => D, join: (D, D) => D, cover: (D,D) => Boolean, defaultValue: V => D): Map[V, D] =
     this.reverse.aiFixpoint(pre, join, cover, defaultValue)
 
   /** Strongly connected component decomposition */

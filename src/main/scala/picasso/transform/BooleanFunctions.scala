@@ -64,6 +64,40 @@ object BooleanFunctions {
   def assigns(result: Boolean, e: Expression): Seq[Map[ID,Boolean]] =
     assigns(result, Seq(Map.empty[ID,Boolean]), e)
   
-  //TODO how to integrate with the rest ??
+
+  def groundTermSimplificationOneLevel(e: Expression): Expression = e match {
+    case Application("&&", args) =>
+      val args2 = args.filter{ case Value(Bool(true)) => false; case _ => true}
+      if (args2.isEmpty) Value(Bool(true))
+      else if (args2 exists { case Value(Bool(false)) => true; case _ => false}) Value(Bool(false))
+      else Application("&&", args2) 
+
+    case Application("||", args) => 
+      val args2 = args.filter{ case Value(Bool(false)) => false; case _ => true}
+      if (args2.isEmpty) Value(Bool(false))
+      else if (args2 exists { case Value(Bool(true)) => true; case _ => false}) Value(Bool(true))
+      else Application("||", args2) 
+    
+    case Application("^", List(Value(Bool(b)),e2 @ ID(_))) => if (!b) e2 else Application("!", List(e2))
+    case Application("^", List(e1 @ ID(_),Value(Bool(b)))) => if (!b) e1 else Application("!", List(e1))
+    case Application("^", List(Value(Bool(b1)),Value(Bool(b2)))) => Value(Bool(b1 != b2))
+    
+    case Application("==", List(Value(Bool(b)),e2 @ ID(_))) => if (b) e2 else Application("!", List(e2))
+    case Application("==", List(e1 @ ID(_),Value(Bool(b)))) => if (b) e1 else Application("!", List(e1))
+    case Application("==", List(Value(Bool(b1)),Value(Bool(b2)))) => Value(Bool(b1 == b2))
+    
+    case Application("!=", List(Value(Bool(b)),e2 @ ID(_))) => if (!b) e2 else Application("!", List(e2))
+    case Application("!=", List(e1 @ ID(_),Value(Bool(b)))) => if (!b) e1 else Application("!", List(e1))
+    case Application("!=", List(Value(Bool(b1)),Value(Bool(b2)))) => Value(Bool(b1 != b2))
+    
+    case Application("!", List(Value(Bool(b)))) => Value(Bool(!b))
+    case other => other
+  }
+
+  def groundTermSimplification(e: Expression): Expression = e match {
+    case Application(fct, args) => groundTermSimplificationOneLevel(Application(fct, args map groundTermSimplification))
+    case Tuple(values) => Tuple(values map groundTermSimplification)
+    case other => groundTermSimplificationOneLevel(other)
+  }
 
 }

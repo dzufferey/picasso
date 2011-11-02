@@ -89,43 +89,6 @@ trait Supported {
     agt.morphFull[PC]((pc: PC) => pc, changeProcess)
   }
 
-  def canSkip(p: PProcess): Boolean = p match {
-    case Skip() | Expr(Any) | Expr(PValue(_)) |
-         Assert(PValue(Bool(true))) | Assume(PValue(Bool(true))) => true
-    //TODO what about assume(Any) ?
-    case _ => false
-  }
-
-  //TODO be more aggressive:
-  // -variable that are not live can be thrown away
-  // -variable that are always Any can be removed
-  // -expended variables can be removed
-
-  /** remove useless edge to get a smaller agent (merge nodes together) */
-  def compactAgent[PC](agt: AgentDefinition[PC]): AgentDefinition[PC] = {
-    //if canSkip, do not impact SCC,
-    //no other outgoing edge in src or not other ingoing edge in dest
-    val sccs = agt.cfa.SCC
-    val mapToSCC = Map[PC,Int](( sccs.zipWithIndex.flatMap( p => p._1.map((_, p._2))) ):_*)
-    val rev = agt.cfa.reverse
-    def canMerge(edge: (PC, PProcess, PC)): Boolean = {
-      val scc1 = mapToSCC.getOrElse(edge._1, -2) + 1 //so that there is no 0 index
-      val scc2 = mapToSCC.getOrElse(edge._3, -2) + 1
-      canSkip(edge._2) &&
-      (scc1 == scc2 || scc1 * scc2 < 0) &&
-      (agt.cfa(edge._1).size == 1 || rev(edge._3).size == 1)
-    }
-    //merging is removing edge + merging nodes (morph)
-    val edgesToRemove = agt.cfa.edges filter canMerge
-    val cfa2 = agt.cfa remEdges edgesToRemove
-    val toMergeEdges = edgesToRemove.flatMap{ case (a,_,b) => List((a,b),(b,a))}
-    val toMergeSCC = DiGraph[GT.ULGT{type V = PC}](toMergeEdges).SCC
-    val toMergeMorphism = Map[PC,PC](toMergeSCC.flatMap(scc => scc.toList.map(_ -> scc.head)):_*)
-    val cfa3 = cfa2.morph(toMergeMorphism)
-    new AgentDefinition(agt.id, agt.params, cfa3)
-  }
-
-
   ///////////////////////////////////////
   //  TODO move this to somewhere else //
   ///////////////////////////////////////

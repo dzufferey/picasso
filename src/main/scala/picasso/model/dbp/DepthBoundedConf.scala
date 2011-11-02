@@ -19,6 +19,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
   type Edges = Map[V, Map[EL, Set[V]]]
   type UndirectedAdjacencyMap = Map[V, Set[V]]
 
+
   // use def instead of val if caching requires too much space
   lazy val undirectedAdjacencyMap = {
     val out = adjacencyMap mapValues (_.foldLeft(Set.empty[V])((xs, e) => e._2 ++ xs))

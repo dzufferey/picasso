@@ -115,7 +115,7 @@ trait KarpMillerTree {
       }
     }
     val endTime = java.lang.System.currentTimeMillis
-    Logger("Analysis", LogInfo, "KMTree computed in " + ((endTime - startTime)/1000F) + " sec.")
+    Logger("Analysis", LogInfo, "KMTree computed in " + ((endTime - startTime)/1000F) + " sec (cover of size "+cover.size+").")
     Logger("Analysis", LogDebug, "KMTree is\n" + TreePrinter.print(root))
     (cover, root)
   }
