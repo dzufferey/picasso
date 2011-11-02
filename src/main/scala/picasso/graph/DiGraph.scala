@@ -348,7 +348,6 @@ extends Traceable[P#V,P#EL] {
     ///////////////////////////////////////////////////
     //compatible is too weak and we need some additional constraints:
     def compatible(p: P#V, q: Q#V): Boolean = lblOrd.lteq(labelOf(p), bigger.labelOf(q))
-    //TODO make the candidate stuff faster ...
     val candidatesF: Map[P#V, Seq[Q#V]] = this.vertices.map(p => p -> bigger.vertices.filter(compatible(p, _)).toSeq).toMap
     val candidatesB: Map[Q#V, Seq[P#V]] = bigger.vertices.map(q => q -> this.vertices.filter(compatible(_, q)).toSeq).toMap
     //list of constraints of type \sum_q x_{pq} = 1, that guarantees that each node if mapped to another.
