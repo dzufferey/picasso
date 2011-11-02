@@ -42,6 +42,9 @@ object Actors {
         val afterPattern = freshLoc(p)
         (init, picasso.ast.Receive(expr2, pat2), afterPattern) :: mkCfa(afterPattern, p, last)
       }
+      
+      case Zero() =>
+        List((init,picasso.ast.Zero(),last))
 
       case Block(stmts) =>
         //TODO Block(Nil) is Zero

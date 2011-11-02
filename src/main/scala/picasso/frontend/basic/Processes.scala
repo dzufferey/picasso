@@ -36,18 +36,25 @@ case class While(condition: Expression, body: Process) extends Process {
 case class ForEachGeneric(id: ID, set: Expression, yieldOpt: Option[(ID,ID)], body: Process) extends Process {
 }
 
-object Zero {
-  def apply() = Block(Nil)
-  def unapply(p: Process): Option[Unit] = p match {
-    case Block(Nil) => Some(())
-    case Receive(Nil) => Some(())
-    case Block(Receive(Nil) :: Nil) => Some(())
-    case _ => None
+object Skip {
+  def apply() = Expr(Unit())
+  def unapply(p: Expr): Boolean = p match {
+    case Expr(Unit()) => true
+    case _ => false
   }
 }
+
+object Zero {
+  def apply() = Block(Nil)
+  def unapply(p: Process): Boolean = p match {
+    case Block(Nil) | Receive(Nil) | Block(Receive(Nil) :: Nil) => true
+    case _ => false
+  }
+}
+
 object ForEach {
   def apply(id: ID, set: Expression, body: Process) = ForEachGeneric(id, set, None, body)
-  def unapply(p: Process): Option[(ID, Expression, Process)] = p match {
+  def unapply(p: ForEachGeneric): Option[(ID, Expression, Process)] = p match {
     case ForEachGeneric(id, set, None, body) => Some((id, set, body))
     case _ => None
   }
@@ -55,18 +62,9 @@ object ForEach {
 
 object ForEachYield {
   def apply(x: ID, setX: Expression, y: ID, setY: ID,  body: Process) = ForEachGeneric(x, setX, Some((y, setY)), body)
-  def unapply(p: Process): Option[(ID, Expression, ID, ID, Process)] = p match {
+  def unapply(p: ForEachGeneric): Option[(ID, Expression, ID, ID, Process)] = p match {
     case ForEachGeneric(id, setId, Some((y,sy)), body) => Some((id, setId, y, sy, body))
     case _ => None
   }
 }
 
-object Processes {
-
-  def easilyConvertible(p: Process): Boolean = p match {
-    case Affect(_,_) | Expr(_) | Send(_,_) => true
-    case Block(stmts) => stmts forall easilyConvertible
-    case _ => false
-  }
-
-}

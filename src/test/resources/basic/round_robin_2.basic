@@ -1,0 +1,44 @@
+Client(router)
+  begin
+    val self := newChannel();
+    router ! Work(self);
+    select case self ? Result() => ()
+  end
+
+Env(router)
+  while true do new Client(router)
+
+Router(self, w1, w2)
+  begin
+    select
+      case self ? Work(from) =>
+        begin
+          w1 ! Work(from);
+          new Router(self, w2,w1)
+        end
+      case self ? Broadcase(msg) =>
+        begin
+          w1 ! msg;
+          w2 ! msg;
+          new Router(self, w1, w2)
+        end
+      case self ? PoisonPill() =>
+        ()
+  end
+
+Worker(self)
+  begin
+    var continue := true;
+    while continue do
+      select
+        case self ? Work(from) =>
+          from ! Result()
+        case self ? PoisonPill() =>
+          continue := false
+  end
+
+initial
+  Env(r);
+  Router(r, w1, w2);
+  Worker(w1);
+  Worker(w2)

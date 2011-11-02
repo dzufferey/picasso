@@ -11,8 +11,10 @@ Client(server)
     val self := newChannel();
     while random() do
       begin
+        self ! Timeout();
         server ! Query(self);
         select
+          case self ? Timeout() => ()
           case self ? Reply() => ()
       end
   end

@@ -1,0 +1,54 @@
+ErrorLogger(self)
+  while true do
+    select
+      case self ? Exit(_) => ()
+
+Server(self, logger)
+  while true do
+    select
+      case self ? ChatServerMsg(sender) => sender ! ChatServerUpdate()
+      case self ? ChatServerAdd(sender) => sender ! ChatServerUpdate()
+      case self ? ChatServerPoll(sender) => sender ! ChatServerUpdate()
+
+Client(self, logger, server)
+  begin
+    val ask := newChannel();
+    new AskName(ask, logger);
+    ask ! AskQuestion(self);
+    select
+      case self ? Reply() => ()
+      case self ? _ => ();
+    server ! ChatServerAdd(self);
+    self ! Timer();
+    self ! UserInput();
+    while true do
+      select
+        case self ? ChatServerUpdate() => self ! PartialUpdateMsg()
+        case self ? PartialUpdateMsg() => ()
+        case self ? Timer() => server ! ChatServerPoll(self)
+        case self ? UserInput() =>
+          if random() then
+            server ! ChatServerMsg(self)
+          else
+            begin
+              logger ! Exit(self);
+              exit()
+            end
+  end
+
+AskName(self, logger)
+  select
+    case self ? AskQuestion(sender) =>
+      begin
+        sender ! Reply();
+        logger ! Exit(self);
+        exit()
+      end
+
+Env(server, logger)
+  while true do new Client(newChannel(), logger, server)
+
+initial
+  Env(s,l);
+  Server(s,l);
+  ErrorLogger(l)

@@ -1,0 +1,33 @@
+Ping(self, pong)
+  while true do
+    select
+      case self ? Start() =>
+        pong ! Ping(self)
+      case self ? SendPing() =>
+        pong ! Ping(self)
+      case self ? Pong() =>
+        if random() then
+          self ! SendPing()
+        else
+          begin
+            pong ! Stop();
+            exit()
+          end
+
+Pong(self)
+  while true do
+    select
+      case self ? Ping(sender) => sender ! Pong()
+      case self ? Stop() => exit()
+
+Main()
+  begin
+    val ping := newChannel();
+    val pong := newChannel();
+    new Ping(ping, pong);
+    new Pong(pong);
+    ping ! Start()
+  end
+
+initial
+  Main()

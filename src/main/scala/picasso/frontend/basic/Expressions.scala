@@ -31,15 +31,15 @@ case object Any extends Expression
 
 object Unit {
   def apply() = Tuple(Nil)
-  def unapply(e: Expression): Option[Unit] = e match {
-    case Tuple(Nil) => Some(())
-    case _ => None
+  def unapply(e: Tuple): Boolean = e match {
+    case Tuple(Nil) => true
+    case _ => false
   }
 }
 
 object EmptySet {
   def apply() = Application("new-set", Nil)
-  def unapply(e: Expression): Boolean = e match {
+  def unapply(e: Application): Boolean = e match {
     case Application("new-set", Nil) => true
     case _ => false
   }
@@ -47,7 +47,7 @@ object EmptySet {
 
 object NewChannel {
   def apply() = Application("newChannel", Nil)
-  def unapply(e: Expression): Boolean = e match {
+  def unapply(e: Application): Boolean = e match {
     case Application("newChannel", Nil) => true
     case _ => false
   }
@@ -55,7 +55,7 @@ object NewChannel {
 
 object Create {
   def apply(name: String, args: List[Expression]) = Application("create", ID(name) :: args)
-  def unapply(e: Expression): Option[(String, List[Expression])] = e match {
+  def unapply(e: Application): Option[(String, List[Expression])] = e match {
     case Application("create", ID(name) :: args) => Some(name, args)
     case _ => None
   }

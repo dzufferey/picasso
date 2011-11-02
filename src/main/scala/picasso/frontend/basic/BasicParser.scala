@@ -7,8 +7,8 @@ import scala.util.parsing.combinator.syntactical._
 import picasso.utils.IO
 
 object BasicParser extends StandardTokenParsers {
-  lexical.delimiters += (";", ",", "(", ")", "!", "?", "_", "=>", ":=")
-  lexical.reserved += ( "begin", "end", "var", "val", "new",
+  lexical.delimiters += (";", ",", "(", ")", "!", "?", "=>", ":=")
+  lexical.reserved += ( "begin", "end", "var", "val", "new", "_",
                         "if", "then", "else", "true", "false",
                         "while", "foreach", "do", "yield", "in",
                         "select", "case", "initial")
@@ -23,7 +23,8 @@ object BasicParser extends StandardTokenParsers {
     )
 
   def pattern: Parser[Pattern] = positioned(
-      literal                                       ^^ ( lit => PatternLit(lit) )
+      "_"                                           ^^^ Wildcard
+    | literal                                       ^^ ( lit => PatternLit(lit) )
     | "(" ~> repsep(pattern, ",") <~ ")"            ^^ ( lst => PatternTuple(lst) )
     | ident ~ opt("(" ~> repsep(pattern, ",") <~ ")")  ^^ { case id ~ Some(args) => Case(id, args)
                                                             case id ~ None => Ident(id) }
@@ -44,12 +45,14 @@ object BasicParser extends StandardTokenParsers {
     ("case" ~> expr) ~ ("?" ~> pattern) ~ ("=>" ~> proc) ^^ {case a ~ b ~ c => (a,b,c)}
 
   def proc: Parser[Process] = positioned(
-      "begin" ~> repsep(proc, ";") <~ "end"         ^^ ( stmts => Block(stmts))
+      "begin" ~> repsep(proc, ";") <~ "end"         ^^ ( stmts => if (stmts.isEmpty) Skip() else Block(stmts))
     | ("var" ~> ident) ~ (":=" ~> expr)             ^^ { case id ~ value => Declaration(ID(id), true, value) }
     | ("val" ~> ident) ~ (":=" ~> expr)             ^^ { case id ~ value => Declaration(ID(id), false, value) }
     | ident ~ (":=" ~> expr)                        ^^ { case id ~ value => Affect(ID(id), value) }
     | expr ~ ("!" ~> expr)                          ^^ { case dest ~ value => Send(dest, value) }
-    | expr                                          ^^ ( e => Expr(e) )
+    | expr                                          ^^ { case Application("exit", _) => Zero()
+                                                         case e => Expr(e)
+                                                       }
     | "select" ~> rep1(cases)                       ^^ ( cases => Receive(cases))
     | ("new" ~> ident ~ ("(" ~> repsep(expr, ",") <~ ")"))  ^^ {
                                                         case id ~ args => Expr(Create(id, args))

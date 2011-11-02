@@ -1,0 +1,25 @@
+Server(self)
+  while true do
+    select
+      case self ? AddClassLoaderURL(sender) => sender ! Thanks()
+      case self ? Message(sender) => sender ! Message(self)
+      case self ? Execute(sender, _) => sender ! Result()
+      case self ? Stop() => exit()
+
+Client(self, server)
+  begin
+    server ! AddClassLoaderURL(self);
+    select case self ? _ => ();
+    server ! Message(self);
+    select case self ? Message(_) => ();
+    val fct := _ ; 
+    server ! Execute(self, fct);
+    select case self ? _ => ()
+  end
+
+Env(server)
+  while true do new Client(newChannel(), server)
+
+initial
+  Env(s);
+  Server(s)
