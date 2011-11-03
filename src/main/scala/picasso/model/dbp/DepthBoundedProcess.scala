@@ -67,13 +67,19 @@ class DepthBoundedProcess[P <: DBCT](trs: GenSeq[DepthBoundedTransition[P]])(imp
   lazy val affinityMap: GenMap[(T,T), Int] = {
     val pairs = for (t1 <- transitions; t2 <- transitions) yield {
       //as produced: look at the nodes in t1.rhs that are not in t1.lhs (as a multiset)
-      val produced = (t1.rhs -- t1.hr.values -- t2.hk.keys).vertices
+      val same1 = t1.hr.filter{ case (a,b) => a.state == b.state }
+      val produced = (t1.rhs -- same1.values -- t2.hk.keys).vertices
       val producedLabels = MultiSet[P#State](produced.toSeq.map(_.state): _*)
       //as consummed: look at the nodes in t2.lhs that are not in t2.rhs (as a multiset)
-      val consummed = (t2.lhs -- t2.hk.values -- t2.hr.keys).vertices
+      val same2 = t2.hr.filter{ case (a,b) => a.state == b.state }
+      val consummed = (t2.lhs -- t2.hk.values -- same2.keys).vertices
       val consummedLabels = MultiSet[P#State](consummed.toSeq.map(_.state): _*)
       //then return the cardinality of the intersection of the two multisets
-      ((t1, t2), (producedLabels intersect consummedLabels).size)
+      val aff = (producedLabels intersect consummedLabels).size
+      //Console.println("affinity of " + t1 + " => " + t2 + " is " + aff)
+      //Console.println("producedLabels = " + producedLabels)
+      //Console.println("consummedLabels = " + consummedLabels)
+      ((t1, t2), aff)
     }
     pairs.toMap
   }

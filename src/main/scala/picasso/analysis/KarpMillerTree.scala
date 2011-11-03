@@ -88,6 +88,7 @@ trait KarpMillerTree {
     }
   }
 
+
   def buildTree(initState: S): (DownwardClosedSet[S], KMTree) = {
     val root = KMRoot(initState)
     //In Theory, a DFS should be the fastest way to saturate the system, so ...
@@ -104,6 +105,9 @@ trait KarpMillerTree {
         val possible = transitions.filter(_ isDefinedAt current())
         val successors = possible.flatMap( t => t(current()).map(t -> _))
         val nodes = successors.map { case (t, s) =>
+          //TODO that par needs to be smarter
+          //when the depth of the tree increases, it becomes very slow.
+          //I am wondering if I should do a periodic restart (keep the current cover, but drop the trees.)
           val acceleratedFrom = current.ancestorSmaller(s)
           val s2 = (acceleratedFrom :\ s)( (smaller,bigger) => widening(smaller(), bigger))
           KMNode(current, t, s2, acceleratedFrom.toList)
