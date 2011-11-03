@@ -20,8 +20,11 @@ trait KarpMillerTree {
 
     /** Checks whether a states is covered by some parent */
     def ancestorSmaller(s: S): Seq[KMTree] = {
-      ancestors.drop(1).par.filter(t => ordering.lt(t(), s)).seq
+      this.ancestorSmallerQuick(s, Set.empty[KMTree])
+      //ancestors.drop(1).par.filter(t => ordering.lt(t(), s)).seq
     }
+
+    def ancestorSmallerQuick(s: S, toInclude: Set[KMTree]): Seq[KMTree]
 
     /** inplace modification of the tree */
     def addChildren(tree: KMTree): Unit
@@ -48,6 +51,11 @@ trait KarpMillerTree {
     def apply() = state
     def covers(s: S) = ordering.lteq(s, state) || (children exists (_ covers s))
     def ancestors: Seq[KMTree] = Seq(this)
+    
+    def ancestorSmallerQuick(s: S, toInclude: Set[KMTree]): Seq[KMTree] = {
+      if (toInclude(this) || ordering.lt(state, s)) Seq(this)
+      else Seq[KMTree]()
+    }
   }
   
   case class KMNode(parent: KMTree, by: T, state: S, acceleratedFrom: List[KMTree]) extends KMTree {
@@ -59,6 +67,11 @@ trait KarpMillerTree {
     def apply() = state
     def covers(s: S) = ordering.lteq(s, state) || (children exists (_ covers s))
     def ancestors: Seq[KMTree] = this +: parent.ancestors
+    def ancestorSmallerQuick(s: S, toInclude: Set[KMTree]): Seq[KMTree] = {
+      if (toInclude(this)) this +: parent.ancestorSmallerQuick(s, toInclude ++ acceleratedFrom)
+      else if (ordering.lt(state, s)) this +: parent.ancestorSmallerQuick(s, toInclude)
+      else parent.ancestorSmallerQuick(s, toInclude)
+    }
   }
 
   object TreePrinter {
@@ -79,10 +92,15 @@ trait KarpMillerTree {
   }
 
   var time = java.lang.System.currentTimeMillis
+  var ticks = 0
   def logIteration(tree: KMTree, current: KMTree, cover: DownwardClosedSet[S]) {
+    ticks += 1
     val newTime = java.lang.System.currentTimeMillis
     if (newTime - time > 10000) {
-      Logger("Analysis", LogInfo, "KMTree size " + tree.size + ",\tcover has size " + cover.size + ",\t current branch depth " + current.ancestors.size)
+      Logger("Analysis", LogInfo, "KMTree size " + tree.size +
+                                  ",\tcover has size " + cover.size +
+                                  ",\t current branch depth " + current.ancestors.size +
+                                  ",\t ticks " + ticks)
       Logger("Analysis", LogDebug, "Current cover is " + cover)
       time = newTime
     }
@@ -92,27 +110,42 @@ trait KarpMillerTree {
   //when the depth of the tree increases, it becomes very slow.
   //I am wondering if I should do a periodic restart (keep the current cover, but drop the trees.)
 
+  protected def expBackoff[A](seq: Seq[A]): Seq[A] = {
+    //Console.println("expBackoff: " + seq.size)
+    var count = 2
+    val buffer = scala.collection.mutable.Buffer.empty[A]
+    var idx = 0
+    while (idx < seq.size) {
+      buffer += seq(idx)
+      idx += 1 + scala.util.Random.nextInt(count)
+      count = count * 2
+    }
+    buffer
+  }
+
+  protected def wideningPolicy(current: KMTree, t: T, s: S): KMNode = {
+    val acceleratedFrom = current.ancestorSmaller(s)
+    val reducedSeq = expBackoff(acceleratedFrom)
+    val s2 = (s /: reducedSeq)( (bigger, smaller) => widening(smaller(), bigger))
+    KMNode(current, t, s2, acceleratedFrom.toList)
+  }
+
   def buildTree(initState: S): (DownwardClosedSet[S], KMTree) = {
+    val startTime = java.lang.System.currentTimeMillis
     val root = KMRoot(initState)
     //In Theory, a DFS should be the fastest way to saturate the system, so ...
     //On the side, maintains a (downward-closed) covering set to check for subsumption
     var cover = DownwardClosedSet.empty[S]
     val stack = scala.collection.mutable.Stack[KMTree](root)
-    val startTime = java.lang.System.currentTimeMillis
     while (!stack.isEmpty) {
       val current = stack.pop()
       logIteration(root, current, cover)
       if (!cover(current())) {
-        //TODO switching from parallel to seq and back is expensive ...
         cover = cover + current()
-        val possible = transitions.filter(_ isDefinedAt current())
-        val successors = possible.flatMap( t => t(current()).map(t -> _))
-        val nodes = successors.map { case (t, s) =>
-          val acceleratedFrom = current.ancestorSmaller(s)
-          val s2 = (acceleratedFrom :\ s)( (smaller,bigger) => widening(smaller(), bigger))
-          KMNode(current, t, s2, acceleratedFrom.toList)
-        }
-        //do this sequentially to avoide data races + use library sorting
+        val possible = transitions.filter(_ isDefinedAt current()).par
+        val successors = possible.flatMap( t => t(current()).map(t -> _)).par
+        val nodes = successors.map { case (t, s) => wideningPolicy(current, t, s) }
+        //do this sequentially to avoid data races + use library sorting
         val sortedNodes = current match {
           case KMRoot(_) => nodes.seq
           case KMNode(_, by, _, acceleratedFrom) => 
