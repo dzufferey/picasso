@@ -143,6 +143,7 @@ trait KarpMillerTree {
         cover = cover + current()
         val possible = transitions.filter(_ isDefinedAt current()).par
         val successors = possible.flatMap( t => t(current()).map(t -> _)).par
+        //TODO at that point keep only the greatest successors
         val nodes = successors.map { case (t, s) => wideningPolicy(current, t, s) }
         //do this sequentially to avoid data races + use library sorting
         val sortedNodes = current match {
@@ -235,7 +236,10 @@ trait KarpMillerTree {
             cover = cover + current()
             val possible = transitions.filter(_ isDefinedAt current()).par
             val successors = possible.flatMap( t => t(current()).map(t -> _)).par
-            val nodes = successors.map { case (t, s) => wideningPolicy(current, t, s) }
+            //at that point keep only the greatest successors
+            val successors2 = DownwardClosedSet(successors.map(_._2).seq:_*).basis.toSeq
+            val successors3 = successors2.map(b => successors.find(_._2 == b).get).par
+            val nodes = successors3.map { case (t, s) => wideningPolicy(current, t, s) }
             //do this sequentially to avoid data races + use library sorting
             val sortedNodes = current match {
               case KMRoot(_) => nodes.seq
