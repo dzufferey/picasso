@@ -288,12 +288,6 @@ extends Traceable[P#V,P#EL] {
     companion(morphedMap, labels)
   }
 
-  protected def mkLookup: (Map[V,Int], IndexedSeq[V]) = {
-    val vs: IndexedSeq[V] = vertices.toIndexedSeq
-    val table: Map[V,Int] = (Map.empty[V,Int] /: vs.indices)( (table, i) => table + (vs(i) -> i))
-    (table, vs)
-  }
-
   sealed abstract class Lit[A]
   case class Pos[A](atom: A) extends Lit[A]
   case class Neg[A](atom: A) extends Lit[A]
@@ -346,8 +340,8 @@ extends Traceable[P#V,P#EL] {
     ///////////////////////////////////////////////////
     //compatible is too weak and we need some additional constraints:
     def compatible(p: P#V, q: Q#V): Boolean = lblOrd.lteq(labelOf(p), bigger.labelOf(q))
-    val candidatesF: Map[P#V, Seq[Q#V]] = this.vertices.map(p => p -> bigger.vertices.filter(compatible(p, _)).toSeq).toMap
-    val candidatesB: Map[Q#V, Seq[P#V]] = bigger.vertices.map(q => q -> this.vertices.filter(compatible(_, q)).toSeq).toMap
+    val candidatesF: Map[P#V, Seq[Q#V]] = this.vertices.map(p => p -> bigger.vertices.toSeq.filter(compatible(p, _))).toMap
+    val candidatesB: Map[Q#V, Seq[P#V]] = bigger.vertices.map(q => q -> this.vertices.toSeq.filter(compatible(_, q))).toMap
     //list of constraints of type \sum_q x_{pq} = 1, that guarantees that each node if mapped to another.
     val fullMapping = vertices.toSeq.map( p => clauseConvert(candidatesF(p).map(q => Pos((p, q)))))
     //list of constraints of type \sum_q x_{pq} <= 1, that guarantees that the mapping is injective (when needed).
@@ -431,6 +425,12 @@ extends Traceable[P#V,P#EL] {
   }
 
   /*
+  protected def mkLookup: (Map[V,Int], IndexedSeq[V]) = {
+    val vs: IndexedSeq[V] = vertices.toIndexedSeq
+    val table: Map[V,Int] = (Map.empty[V,Int] /: vs.indices)( (table, i) => table + (vs(i) -> i))
+    (table, vs)
+  }
+
   type MorphState[Q <: PB] = (Map[P#V,Int], Map[Q#V,Int], IndexedSeq[P#V], IndexedSeq[Q#V], Array[BitSet])
 
   def lazyMorphisms[Q <: PB](bigger: G[Q], injective : Q#V => Boolean, propagateMore: (MorphState[Q], Int, Int) => Unit, partialMorphism: Map[P#V,Q#V] = Map.empty[P#V,Q#V])
@@ -698,7 +698,7 @@ extends Traceable[P#V,P#EL] {
     this.reverse.aiFixpoint(pre, join, cover, defaultValue)
 
   /** Strongly connected component decomposition */
-  def SCC: List[Set[V]] = {
+  def SCC(all: Boolean): List[Set[V]] = {
     //tarjan's SCC algorithm
     var index = 0
     val stack = new scala.collection.mutable.Stack[V]()
@@ -735,8 +735,11 @@ extends Traceable[P#V,P#EL] {
       if (! indices.isDefinedAt(i))
         tarjan(i)
 
-    scc.filter( cc => cc.forall( x => apply(x).forall(  y => cc.contains(y) )))
+    scc.filter( cc => all || cc.forall( x => apply(x).exists(  y => cc.contains(y) )))
   }
+  def SCC: List[Set[V]] = SCC(false)
+  /** scc or single node from which you cannot escape */
+  def bottomSCC = SCC(true).filter(cc => cc.forall( x => apply(x).forall(  y => cc.contains(y) )))
   
   /** Returns a decomposition of the graphs into simple pathes.
    *  A simple spath is a path without loop. Furthermore, the decomposition

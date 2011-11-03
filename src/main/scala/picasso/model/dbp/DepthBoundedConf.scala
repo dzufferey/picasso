@@ -54,7 +54,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     //Console.println("maxDepth = " + maxDepth)
     val bindings = for (d <- 0 to maxDepth) yield {
       val g = undir.filterNodes(_.depth == d)
-      val sccs = g.SCC
+      val sccs = g.SCC(true)
       //Console.println("d = " + d + ", sccs = " + sccs + " g = " + g)
       for (scc <- sccs; s <- scc) yield (s -> scc)
     }
@@ -119,12 +119,14 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
   
   def degree(v: V): Int = undirectedAdjacencyMap(v).size
 
+  /*
   override protected def mkLookup: (Map[V,Int], IndexedSeq[V]) = {
     val sortFun = { (v: V, w: V) => v.label._2 > w.label._2 || (v.label._2 == w.label._2 && degree(v) > degree(w)) }
     val vs: IndexedSeq[V] = vertices.toIndexedSeq.sortWith(sortFun)
     val table: Map[V,Int] = (Map.empty[V,Int] /: vs.indices)( (table, i) => table + (vs(i) -> i))
     (table, vs)
   }
+  */
 
   def unfold(smaller: Self, m: Morphism): (Self, Morphism) = {
     

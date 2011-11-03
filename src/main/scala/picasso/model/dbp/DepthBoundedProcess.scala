@@ -68,7 +68,7 @@ class DepthBoundedProcess[P <: DBCT](trs: GenSeq[DepthBoundedTransition[P]])(imp
     val pairs = for (t1 <- transitions; t2 <- transitions) yield {
       //as produced: look at the nodes in t1.rhs that are not in t1.lhs (as a multiset)
       val same1 = t1.hr.filter{ case (a,b) => a.state == b.state }
-      val produced = (t1.rhs -- same1.values -- t2.hk.keys).vertices
+      val produced = (t1.rhs -- same1.values -- t1.hk.keys).vertices
       val producedLabels = MultiSet[P#State](produced.toSeq.map(_.state): _*)
       //as consummed: look at the nodes in t2.lhs that are not in t2.rhs (as a multiset)
       val same2 = t2.hr.filter{ case (a,b) => a.state == b.state }
@@ -81,6 +81,18 @@ class DepthBoundedProcess[P <: DBCT](trs: GenSeq[DepthBoundedTransition[P]])(imp
       //Console.println("consummedLabels = " + consummedLabels)
       ((t1, t2), aff)
     }
+    ////////////////////
+    //TODO here is a good idea to partition 
+    //val edges: Iterable[(T,T)] = pairs.filter(_._2 > 0).map(_._1).seq
+    //val trsGraph = DiGraph[GT.ULGT{type V = T}](edges)
+    //Console.println("|edges| = " + edges.size)
+    //Console.println("|graph| = " + trsGraph.vertices.size)
+    //val intGraph = trsGraph.morphFull[GT.ULGT{type V = Int}]((t => t.hashCode()), _ => (), _ => ())
+    //Console.println("graph = " + intGraph.toGraphviz("IG"))
+    //val sccs = intGraph.SCC
+    //Console.println("|scc| = " + sccs.size)
+    //Console.println("scc = \n" + sccs.mkString("","\n",""))
+    ////////////////////
     pairs.toMap
   }
   def transitionsAffinity(t1: T, t2: T): Int = affinityMap(t1 -> t2)
