@@ -17,7 +17,7 @@ object WellPartialOrdering {
   implicit def Tuple2[T1, T2](implicit ord1: WellPartialOrdering[T1], ord2: WellOrdering[T2]): WellPartialOrdering[(T1, T2)] = 
     new WellPartialOrdering[(T1, T2)]{
       def tryCompare(x: (T1, T2), y: (T1, T2)): Option[Int] = {
-	ord1.tryCompare(x._1, y._1) match {
+        ord1.tryCompare(x._1, y._1) match {
           case None => None
           case Some(v1) => {
             val v2 = ord2.compare(x._2, y._2) 
@@ -34,6 +34,9 @@ object WellPartialOrdering {
     new WellPartialOrdering[T] {
       def tryCompare(x: T, y: T): Option[Int] = x tryCompareTo y
       def lteq(x: T, y: T): Boolean = x <= y
+      override def lt(x: T, y: T): Boolean = x < y
+      override def gt(x: T, y: T): Boolean = x > y
+      override def equiv(x: T, y: T): Boolean = tryCompare(x,y) == Some(0)
     }
 
   /** trivial well-partial ordering on a finite type <code>T</code> */

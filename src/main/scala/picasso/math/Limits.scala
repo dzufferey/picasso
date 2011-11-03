@@ -106,8 +106,12 @@ trait WADL {
     t.triples forall ( t => t._3 subsetOf postCover(t._1, t._2))
   }
 
-  //TODO information for search heuristic and how to select which transition to explore first
+  def checkFixedPoint(cover: DownwardClosedSet[S]): Boolean = {
+    val post = postCover(cover)
+    post subsetOf cover
+  }
 
+  //TODO information for search heuristic and how to select which transition to explore first
   //how much stuff produced by t1 can be consummed by t2
   def transitionsAffinity(t1: T, t2: T): Int
 

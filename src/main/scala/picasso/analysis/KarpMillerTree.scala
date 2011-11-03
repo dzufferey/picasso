@@ -27,9 +27,9 @@ trait KarpMillerTree {
     def ancestorSmallerQuick(s: S, toInclude: Set[KMTree]): Seq[KMTree]
 
     /** inplace modification of the tree */
-    def addChildren(tree: KMTree): Unit
-
-    def children: List[KMTree]
+    protected var _children: List[KMNode] = Nil
+    def children = _children
+    def addChildren(c: KMNode) = _children = c :: _children
 
     def pathCovering(s: S): Option[List[KMTree]] = {
       if (ordering.lteq(s, this())) Some(List(this))
@@ -43,9 +43,6 @@ trait KarpMillerTree {
   }
 
   case class KMRoot(state: S) extends KMTree {
-    var _children: List[KMTree] = Nil
-    def children = _children
-    def addChildren(c: KMTree) = _children = c :: _children
     override def toString = "KMRoot("+state+")" 
 
     def apply() = state
@@ -59,10 +56,13 @@ trait KarpMillerTree {
   }
   
   case class KMNode(parent: KMTree, by: T, state: S, acceleratedFrom: List[KMTree]) extends KMTree {
-    var _children: List[KMTree] = Nil
-    def children = _children
-    def addChildren(c: KMTree) = _children = c :: _children
     override def toString = "KMNode("+state+")"
+
+    def replaceParent(np: KMTree): KMNode = {
+      val newThis = KMNode(np, by, state, acceleratedFrom)
+      for (c <- children) newThis.addChildren(c.replaceParent(newThis))
+      newThis
+    }
 
     def apply() = state
     def covers(s: S) = ordering.lteq(s, state) || (children exists (_ covers s))
@@ -91,12 +91,15 @@ trait KarpMillerTree {
 
   }
 
-  var time = java.lang.System.currentTimeMillis
-  var ticks = 0
-  def logIteration(tree: KMTree, current: KMTree, cover: DownwardClosedSet[S]) {
+
+  //logging part
+  final val logThresold = 10000
+  protected var time = java.lang.System.currentTimeMillis
+  protected var ticks = 0
+  protected def logIteration(tree: KMTree, current: KMTree, cover: DownwardClosedSet[S]) {
     ticks += 1
     val newTime = java.lang.System.currentTimeMillis
-    if (newTime - time > 10000) {
+    if (newTime - time > logThresold) {
       Logger("Analysis", LogInfo, "KMTree size " + tree.size +
                                   ",\tcover has size " + cover.size +
                                   ",\t current branch depth " + current.ancestors.size +
@@ -105,10 +108,6 @@ trait KarpMillerTree {
       time = newTime
     }
   }
-
-  //TODO smarter search policy
-  //when the depth of the tree increases, it becomes very slow.
-  //I am wondering if I should do a periodic restart (keep the current cover, but drop the trees.)
 
   protected def expBackoff[A](seq: Seq[A]): Seq[A] = {
     //Console.println("expBackoff: " + seq.size)
@@ -161,8 +160,115 @@ trait KarpMillerTree {
     val endTime = java.lang.System.currentTimeMillis
     Logger("Analysis", LogInfo, "KMTree computed in " + ((endTime - startTime)/1000F) + " sec (cover of size "+cover.size+").")
     Logger("Analysis", LogDebug, "KMTree is\n" + TreePrinter.print(root))
+    Logger("Analysis", LogInfo, "Checking fixed-point.")
+    if (checkFixedPoint(cover)) {
+      Logger("Analysis", LogInfo, "Fixed-point checked.")
+    } else {
+      Logger("Analysis", LogError, "Fixed-point checking failed.")
+    }
     (cover, root)
   }
+
+  //TODO smarter search policy
+  //when the depth of the tree increases, it becomes very slow.
+  //I am wondering if I should do a periodic restart (keep the current cover, but drop the trees.)
+
+  final val restartThresold = 300000
+  protected var sinceRestart = java.lang.System.currentTimeMillis
+  protected def start = sinceRestart = java.lang.System.currentTimeMillis
+  protected def checkRestart: Boolean = {
+    val newTime = java.lang.System.currentTimeMillis
+    if (newTime - sinceRestart > restartThresold) {
+      Logger("Analysis", LogInfo, "KMTree restarting.")
+      sinceRestart = newTime
+      true
+    } else {
+      false
+    }
+  }
+
+  //TODO the termination of this algorithm is not guarranteed (but should be better in practice)
+  //to get termination the restartThresold should be progressively increased
+  def buildTreeWithRestart(initState: S): (DownwardClosedSet[S], KMTree) = {
+    val startTime = java.lang.System.currentTimeMillis
+    val root = KMRoot(initState)
+    var cover = DownwardClosedSet.empty[S]
+    val stack = scala.collection.mutable.Stack[KMTree]()
+
+    def restart {
+      //fold over the tree and collect the parts to process:
+      val restartMap = scala.collection.mutable.HashMap[KMRoot, KMTree]()
+      val restartStub = scala.collection.mutable.Buffer[KMRoot]()
+      while (!stack.isEmpty) {
+        val current = stack.pop()
+        if (!cover(current())) {
+          current match {
+            case r @ KMRoot(_) => restartStub += r
+            case n @ KMNode(_, _, s, _) =>
+              val r = KMRoot(s)
+              restartStub += r
+              restartMap += (r -> n)
+          }
+        }
+      }
+      for (stub <- restartStub) {
+        //build from Root in restartStub
+        buildFromRoot(stub)
+        //glue back to the original tree
+        for (original <- restartMap.get(stub); c <- stub.children) {
+          original.addChildren(c.replaceParent(original))
+        }
+      }
+    }
+    def buildFromRoot(root: KMRoot) {
+      assert(stack.isEmpty)
+      stack.push(root)
+      start
+      while (!stack.isEmpty) {
+        if (checkRestart) {
+          restart
+        } else {
+          //like the normal buildTree
+          val current = stack.pop()
+          logIteration(root, current, cover)
+          if (!cover(current())) {
+            cover = cover + current()
+            val possible = transitions.filter(_ isDefinedAt current()).par
+            val successors = possible.flatMap( t => t(current()).map(t -> _)).par
+            val nodes = successors.map { case (t, s) => wideningPolicy(current, t, s) }
+            //do this sequentially to avoid data races + use library sorting
+            val sortedNodes = current match {
+              case KMRoot(_) => nodes.seq
+              case KMNode(_, by, _, acceleratedFrom) => 
+                val scoredNodes= nodes.map( n => n -> transitionsAffinity(by, n.by) )
+                scoredNodes.seq.sortWith( (n1, n2) => n1._2 > n2._2 ).map(_._1)  //TODO what about acceleration
+            }
+            sortedNodes.foreach( n => {
+              current.addChildren(n)
+              stack.push(n)
+            })
+          }
+        }
+      }
+    }
+    buildFromRoot(root)
+    val endTime = java.lang.System.currentTimeMillis
+    Logger("Analysis", LogInfo, "KMTree computed in " + ((endTime - startTime)/1000F) + " sec (cover of size "+cover.size+").")
+    Logger("Analysis", LogDebug, "KMTree is\n" + TreePrinter.print(root))
+    Logger("Analysis", LogInfo, "Checking fixed-point.")
+    if (checkFixedPoint(cover)) {
+      Logger("Analysis", LogInfo, "Fixed-point checked.")
+    } else {
+      Logger("Analysis", LogError, "Fixed-point checking failed.")
+    }
+    (cover, root)
+  }
+
+
+
+  ////////////////////////////////////////
+  // Getting a flat trace from the tree //
+  ////////////////////////////////////////
 
   private def toTrace(nodes: List[KMTree]): TransfiniteTrace[S,T] = {
     //TODO can the list have nested acceleration ? how to flatten them ?
@@ -202,19 +308,19 @@ trait KarpMillerTree {
   
   def forwardCoveringWithTrace(initState: S, targetState: S): Option[TransfiniteTrace[S,T]] = {
     //TODO stop early
-    val (_, tree) = buildTree(initState)
+    val (_, tree) = buildTreeWithRestart(initState)
     tree.pathCovering(targetState) map toTrace
   }
 
   def forwardCovering(initState: S, targetState: S): Boolean = {
     //TODO replace be forwardCoveringWithTrace(initState, targetState).isDefined
-    val (cover, tree) = buildTree(initState)
+    val (cover, tree) = buildTreeWithRestart(initState)
     //tree.covers(targetState)
     cover(targetState)
   }
   
   def computeCover(initState: S) = {
-    val (cover, tree) = buildTree(initState)
+    val (cover, tree) = buildTreeWithRestart(initState)
     //tree.extractCover
     cover
   }

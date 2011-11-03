@@ -295,5 +295,41 @@ object DepthBoundedConf extends GraphFactory[DBCT, DepthBoundedConf]{
               }
           } 
       }
+      override def < (that: DepthBoundedConf[P]): Boolean = {
+        if (c eq that) false else
+          c morphism that match {
+            case Some(_) => 
+              that morphism c match {
+                case Some(_) => false
+                case None => true
+              }
+            case None => false
+          } 
+      }
+      override def > (that: DepthBoundedConf[P]): Boolean = {
+        if (c eq that) false else
+          c morphism that match {
+            case Some(_) => false
+            case None => 
+              that morphism c match {
+                case Some(_) => true
+                case None => false
+              }
+          }
+      }
+      override def <= (that: DepthBoundedConf[P]): Boolean = {
+        if (c eq that) true else
+          c morphism that match {
+            case Some(_) => true
+            case None => false
+          } 
+      }
+      override def >= (that: DepthBoundedConf[P]): Boolean = {
+        if (c eq that) true else
+          that morphism c match {
+            case Some(_) => true
+            case None => false
+          }
+      }
     } 
 }
