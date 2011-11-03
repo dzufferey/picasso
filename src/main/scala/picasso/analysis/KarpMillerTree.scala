@@ -105,10 +105,17 @@ trait KarpMillerTree {
         val successors = possible.flatMap( t => t(current()).map(t -> _))
         val nodes = successors.map { case (t, s) =>
           val acceleratedFrom = current.ancestorSmaller(s)
-          val s2 = (s /: acceleratedFrom)( (bigger,smaller) => widening(smaller(), bigger))
+          val s2 = (acceleratedFrom :\ s)( (smaller,bigger) => widening(smaller(), bigger))
           KMNode(current, t, s2, acceleratedFrom.toList)
         }
-        nodes.seq.foreach( n => {//do this sequentially to avoide data races
+        //do this sequentially to avoide data races + use library sorting
+        val sortedNodes = current match {
+          case KMRoot(_) => nodes.seq
+          case KMNode(_, by, _, acceleratedFrom) => 
+            val scoredNodes= nodes.map( n => n -> transitionsAffinity(by, n.by) )
+            scoredNodes.seq.sortWith( (n1, n2) => n1._2 > n2._2 ).map(_._1)  //TODO what about acceleration
+        }
+        sortedNodes.foreach( n => {
           current.addChildren(n)
           stack.push(n)
         })

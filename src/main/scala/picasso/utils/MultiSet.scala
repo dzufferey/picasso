@@ -52,6 +52,12 @@ abstract class MultiSet[A] extends Iterable[A] {
     }
   }
 
+  def intersect(that: MultiSet[A]): MultiSet[A] = {
+    val commonKeys = toSet intersect that.toSet
+    val commonCards = commonKeys.toSeq.map(k => (k -> math.min(this(k), that(k))))
+    MultiSet*(commonCards:_*)
+  }
+
   def - (elem: A): MultiSet[A] = this -* ((elem, 1))
   
   def -* (kv: (A, Int)): MultiSet[A] = {

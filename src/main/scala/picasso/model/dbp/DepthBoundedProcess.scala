@@ -1,10 +1,10 @@
 package picasso.model.dbp
 
-import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger, Misc}
+import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger, Misc, MultiSet}
 import picasso.math._
 import picasso.math.WellPartialOrdering._
 import picasso.graph._
-import scala.collection.GenSeq
+import scala.collection.{GenSeq, GenIterable, GenMap}
 
 
 class DepthBoundedProcess[P <: DBCT](trs: GenSeq[DepthBoundedTransition[P]])(implicit wpoConf: WellPartialOrdering[DepthBoundedConf[P]], wpoState: WellPartialOrdering[P#State]) extends WSTS with WADL {
@@ -63,4 +63,19 @@ class DepthBoundedProcess[P <: DBCT](trs: GenSeq[DepthBoundedTransition[P]])(imp
       }
     }
   }
+  
+  lazy val affinityMap: GenMap[(T,T), Int] = {
+    val pairs = for (t1 <- transitions; t2 <- transitions) yield {
+      //as produced: look at the nodes in t1.rhs that are not in t1.lhs (as a multiset)
+      val produced = (t1.rhs -- t1.hr.values -- t2.hk.keys).vertices
+      val producedLabels = MultiSet[P#State](produced.toSeq.map(_.state): _*)
+      //as consummed: look at the nodes in t2.lhs that are not in t2.rhs (as a multiset)
+      val consummed = (t2.lhs -- t2.hk.values -- t2.hr.keys).vertices
+      val consummedLabels = MultiSet[P#State](consummed.toSeq.map(_.state): _*)
+      //then return the cardinality of the intersection of the two multisets
+      ((t1, t2), (producedLabels intersect consummedLabels).size)
+    }
+    pairs.toMap
+  }
+  def transitionsAffinity(t1: T, t2: T): Int = affinityMap(t1 -> t2)
 }

@@ -144,4 +144,19 @@ class PetriNet(trs: List[PNTransition]) extends WSTS with Pre with PredBasis wit
     DownwardClosedSet.fromParBasis(newBasis)
   }
 
+  lazy val affinityMap: Map[(T,T), Int] = {
+    val pairs = for (t1 <- transitions; t2 <- transitions) yield {
+      val size = (t1.minPNSize max t2.minPNSize) + 1
+      val score1 = Array.ofDim[Int](size)
+      val score2 = Array.ofDim[Int](size)
+      for ((idx, amount) <- t1.produce) score1(idx) = amount
+      for ((idx, amount) <- t2.consume) score2(idx) = amount
+      var total = 0
+      for(idx <- score1.indices) total += math.min(score1(idx),score2(idx))
+      ((t1, t2), total)
+    }
+    pairs.toMap
+  }
+  def transitionsAffinity(t1: T, t2: T): Int = affinityMap(t1 -> t2)
+
 }

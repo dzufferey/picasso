@@ -8,6 +8,13 @@ object Main {
   def main(args: Array[String]) {
     val r = analyse(args(0))
     r.makeConsoleReport
+    val woDir = (new java.io.File(args(0))).getName()
+    val woSuffix = {
+      val lastDot = woDir.lastIndexOf('.')
+      if (lastDot > 0) woDir.substring(0, lastDot)
+      else woDir
+    }
+    r.makeHtmlReport(woSuffix + "-report.html")
   }
 
   def analyse(fn: String) = {

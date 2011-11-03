@@ -329,14 +329,12 @@ extends Traceable[P#V,P#EL] {
     val intToPair = scala.collection.mutable.HashMap[Int, (P#V,Q#V)]()
     var litCounter = 0
     def p_to_q(p: P#V, q: Q#V) = {
-      if (pairToInt contains (p, q)) {
-        pairToInt((p,q))
-      } else {
+      val pair = (p, q)
+      pairToInt.getOrElseUpdate(pair, {
         litCounter += 1
-        pairToInt += ((p,q) -> litCounter)
-        intToPair += (litCounter -> (p,q))
+        intToPair += (litCounter -> pair)
         litCounter
-      }
+      })
     }
     def clauseConvert(c: Clause[(P#V, Q#V)]): VecInt = {
       val asInt = c.map{
@@ -432,9 +430,7 @@ extends Traceable[P#V,P#EL] {
     }
   }
 
-  //args:
-  //smaller (this), bigger, ...
-
+  /*
   type MorphState[Q <: PB] = (Map[P#V,Int], Map[Q#V,Int], IndexedSeq[P#V], IndexedSeq[Q#V], Array[BitSet])
 
   def lazyMorphisms[Q <: PB](bigger: G[Q], injective : Q#V => Boolean, propagateMore: (MorphState[Q], Int, Int) => Unit, partialMorphism: Map[P#V,Q#V] = Map.empty[P#V,Q#V])
@@ -585,6 +581,7 @@ extends Traceable[P#V,P#EL] {
       }
     }
   }
+  */
 
   def morphisms[Q <: PB](bigger: G[Q], injective: Q#V => Boolean, comp: MorphInfo[Q] => Iterable[Clause[(P#V,Q#V)]])
   (implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Set[Map[V,Q#V]] = 

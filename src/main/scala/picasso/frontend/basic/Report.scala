@@ -83,12 +83,9 @@ class Report(name: String) {
     for (i <- parsed.map(_._2)) buffer ++= "<pre>\n" + i + "\n</pre>\n"
     
     buffer ++= "<h2>CFA</h2>\n"
-    for (as <- agents) {
-      buffer ++= "<ul>\n"
-      for (a <- as) {
-        buffer ++= "<li>" + graphvizToSvg(Misc.docToString(a.toGraphviz("agent", "digraph", "agt"))) + "\n"
-      }
-      buffer ++= "</ul>\n"
+    for (as <- agents; a <- as) {
+      buffer ++= "<p>" + a.id + a.params.mkString("(",", ",")") +"</p>" + "\n"
+      buffer ++= graphvizToSvg(Misc.docToString(a.toGraphviz("agent", "digraph", "agt"))) + "\n"
     }
     
     buffer ++= "<h2>Graph rewriting rules</h2>\n"
@@ -98,15 +95,12 @@ class Report(name: String) {
       buffer ++= graphvizToSvg(Misc.docToString(t.toGraphviz("trs"))) + "\n"
     }
     buffer ++= "<h3>Initial Configuration</h3>\n"
-    for (i <- initConf) buffer ++= i.toGraphviz("init") + "\n"
+    for (i <- initConf) buffer ++= graphvizToSvg(i.toGraphviz("init")) + "\n"
 
     buffer ++= "<h2>Cover</h2>\n"
-    for (cs <- cover) {
-      buffer ++= "<ul>\n"
-      for (c <- cs) {
-        buffer ++= "<li>" + graphvizToSvg(c.toGraphviz("cover")) + "\n"
-      }
-      buffer ++= "</ul>\n"
+    for (cs <- cover; (c, i) <- cs.zipWithIndex) {
+      buffer ++= "<p>("+i+")</p>" + "\n"
+      buffer ++= graphvizToSvg(c.toGraphviz("cover")) + "\n"
     }
     
     for (e <- error) {
