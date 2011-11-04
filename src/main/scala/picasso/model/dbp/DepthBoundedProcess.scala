@@ -31,6 +31,16 @@ class DepthBoundedProcess[P <: DBCT](trs: GenSeq[DepthBoundedTransition[P]])(imp
   def transitions = trs2
 
   def tryAcceleratePair(smaller: S, bigger: S): Option[S] = {
+    //go over all the morphisms ...
+    val ms = (smaller morphisms bigger).toSeq
+    val seeds = ms.map(m => bigger.vertices -- m.values)
+    val widenend = (bigger /: seeds)( (acc, seed) => {
+      val w = bigger widen seed
+      if (ordering.lt(acc, w)) w else acc
+    })
+    if (ms.isEmpty) None
+    else Some(widenend.fold)
+    /*
     smaller morphism bigger match {
       case None => None
       case Some(m) => {
@@ -62,6 +72,7 @@ class DepthBoundedProcess[P <: DBCT](trs: GenSeq[DepthBoundedTransition[P]])(imp
         */
       }
     }
+    */
   }
   
   lazy val affinityMap: GenMap[(T,T), Int] = {

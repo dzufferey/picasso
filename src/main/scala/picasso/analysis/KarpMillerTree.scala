@@ -222,6 +222,7 @@ trait KarpMillerTree {
       }
     }
     def buildFromRoot(root: KMRoot) {
+      Logger("Analysis", LogNotice, "starting from " + root())
       assert(stack.isEmpty)
       stack.push(root)
       start
