@@ -6,6 +6,7 @@ import picasso.frontend.basic.typer._
 object Main {
 
   def main(args: Array[String]) {
+    Logger.setMinPriority(LogInfo)
     val r = analyse(args(0))
     r.makeConsoleReport
     val woDir = (new java.io.File(args(0))).getName()

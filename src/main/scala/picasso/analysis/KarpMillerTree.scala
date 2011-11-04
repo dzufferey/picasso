@@ -159,7 +159,7 @@ trait KarpMillerTree {
       }
     }
     val endTime = java.lang.System.currentTimeMillis
-    Logger("Analysis", LogInfo, "KMTree computed in " + ((endTime - startTime)/1000F) + " sec (cover of size "+cover.size+").")
+    Logger("Analysis", LogInfo, "KMTree computed in " + ((endTime - startTime)/1000F) + " sec (cover of size "+cover.size+", K-M tree of size " + root.size + ").")
     Logger("Analysis", LogDebug, "KMTree is\n" + TreePrinter.print(root))
     Logger("Analysis", LogInfo, "Checking fixed-point.")
     if (checkFixedPoint(cover)) {
@@ -222,7 +222,7 @@ trait KarpMillerTree {
       }
     }
     def buildFromRoot(root: KMRoot) {
-      Logger("Analysis", LogNotice, "starting from " + root())
+      Logger("Analysis", LogDebug, "starting from " + root())
       assert(stack.isEmpty)
       stack.push(root)
       start
@@ -258,7 +258,7 @@ trait KarpMillerTree {
     }
     buildFromRoot(root)
     val endTime = java.lang.System.currentTimeMillis
-    Logger("Analysis", LogInfo, "KMTree computed in " + ((endTime - startTime)/1000F) + " sec (cover of size "+cover.size+").")
+    Logger("Analysis", LogInfo, "KMTree computed in " + ((endTime - startTime)/1000F) + " sec (cover of size "+cover.size+", K-M tree of size " + root.size + ").")
     Logger("Analysis", LogDebug, "KMTree is\n" + TreePrinter.print(root))
     Logger("Analysis", LogInfo, "Checking fixed-point.")
     if (checkFixedPoint(cover)) {

@@ -196,6 +196,7 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
     case PatternLit(literal) =>
       val node = DBCN(literal)
       (node, emptyConf + node, emptyContext)
+    //TODO bug: this will always consume the node matched by the WC
     case Wildcard =>
       val node = unk
       (node, emptyConf + node, emptyContext)

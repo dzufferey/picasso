@@ -3,7 +3,12 @@ Server(self)
     select
       case self ? AddClassLoaderURL(sender) => sender ! Thanks()
       case self ? Message(sender) => sender ! Message(self)
-      case self ? Execute(sender, _) => sender ! Result()
+      case self ? Execute(sender, Fct(f)) =>
+        begin
+          f ! Apply(self);
+          select case self ? res => 
+            sender ! res
+        end
       case self ? Stop() => exit()
 
 Client(self, server)
@@ -12,10 +17,12 @@ Client(self, server)
     select case self ? _ => ();
     server ! Message(self);
     select case self ? Message(s) => ();
-    val fct := _ ; 
-    server ! Execute(self, fct);
+    server ! Execute(self, Fct(newChannel()));
     select case self ? _ => ()
   end
+
+Fct(self)
+  select case self ? Apply(return) => return ! Result()
 
 Env(server)
   while true do new Client(newChannel(), server)
