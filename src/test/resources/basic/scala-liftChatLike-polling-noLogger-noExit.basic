@@ -1,0 +1,44 @@
+Server(self)
+  while true do
+    select
+      case self ? ChatServerMsg(sender) => sender ! ChatServerUpdate()
+      case self ? ChatServerAdd(sender) => sender ! ChatServerUpdate()
+      case self ? ChatServerPoll(sender) => sender ! ChatServerUpdate()
+
+Client(self, server)
+  begin
+    val ask := newChannel();
+    new AskName(ask);
+    ask ! AskQuestion(self);
+    select
+      case self ? Reply() => ()
+      case self ? _ => ();
+    server ! ChatServerAdd(self);
+    self ! Timer();
+    self ! UserInput();
+    while true do
+      select
+        case self ? ChatServerUpdate() => self ! PartialUpdateMsg()
+        case self ? PartialUpdateMsg() => ()
+        case self ? Timer() =>
+          begin
+            server ! ChatServerPoll(self);
+            self ! Timer()
+          end
+        case self ? UserInput() =>
+          begin
+            server ! ChatServerMsg(self);
+            self ! UserInput()
+          end
+  end
+
+AskName(self)
+  select
+    case self ? AskQuestion(sender) => sender ! Reply()
+
+Env(server)
+  while true do new Client(newChannel(), server)
+
+initial
+  Env(s);
+  Server(s)

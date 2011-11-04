@@ -28,10 +28,10 @@ case class Receive(cases: List[(Expression,Pattern,Process)]) extends Process {
   }
 }
 case class ITE(condition: Expression, caseTrue: Process, caseFalse: Process) extends Process {
-  override def toString = "if ("+condition+") then\n" + Misc.indent("  ", caseTrue.toString) + "\nelse\n" + Misc.indent("  ", caseFalse.toString)
+  override def toString = "if "+condition+" then\n" + Misc.indent("  ", caseTrue.toString) + "\nelse\n" + Misc.indent("  ", caseFalse.toString)
 }
 case class While(condition: Expression, body: Process) extends Process {
-  override def toString = "while ("+condition+")\n"+ Misc.indent("  ", body.toString)
+  override def toString = "while "+condition+" do\n"+ Misc.indent("  ", body.toString)
 }
 case class ForEachGeneric(id: ID, set: Expression, yieldOpt: Option[(ID,ID)], body: Process) extends Process {
 }
