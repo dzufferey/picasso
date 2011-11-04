@@ -36,10 +36,14 @@ class DepthBoundedProcess[P <: DBCT](trs: GenSeq[DepthBoundedTransition[P]])(imp
     val seeds = ms.map(m => bigger.vertices -- m.values)
     val widenend = (bigger /: seeds)( (acc, seed) => {
       val w = bigger widen seed
-      if (ordering.lt(acc, w)) w else acc
-    })
+      if (ordering.gt(acc, w)) acc else w
+    }).fold
+    //println("Acceleration:")
+    //print(smaller.toGraphviz("smaller"))
+    //print(bigger.toGraphviz("bigger"))
+    //print(widenend.toGraphviz("widenend"))
     if (ms.isEmpty) None
-    else Some(widenend.fold)
+    else Some(widenend)
     /*
     smaller morphism bigger match {
       case None => None

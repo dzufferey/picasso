@@ -17,6 +17,7 @@ class ParserSuite extends FunSuite {
       "pi_akka_4.basic",
       "scala-ping-pong.basic",
       "scala-genericComputeServer.basic",
+      "scala-liftChatLike-polling-noLogger.basic",
       "scala-liftChatLike-polling.basic"
     )
     for (f <- files) {

@@ -28,6 +28,7 @@ class AnalysisSimpleSuite extends FunSuite {
     "client-server-with-TO.basic",
     "scala-ping-pong.basic",
     "scala-genericComputeServer.basic",
+    "scala-liftChatLike-polling-noLogger.basic",
     "scala-liftChatLike-polling.basic",
     "round_robin_2.basic",
     "round_robin_4.basic"

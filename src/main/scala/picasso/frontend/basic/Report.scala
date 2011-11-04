@@ -54,8 +54,8 @@ class Report(name: String) {
     for (e <- error) Console.println("ERROR:\n\n" + e)
   }
 
-  def graphvizToSvg(dot: String): String = {
-    SysCmd.execWithInputAndGetOutput(Array("dot", "-Tsvg"), Nil, dot) match {
+  def graphvizToSvg(dot: String, program: String = "dot"): String = {
+    SysCmd.execWithInputAndGetOutput(Array(program, "-Tsvg"), Nil, dot) match {
       case Left(bytes) => new String(bytes)
       case Right(err) =>
         Logger("basic", LogWarning, "error running dot (code: "+err+").")
@@ -95,12 +95,12 @@ class Report(name: String) {
       buffer ++= graphvizToSvg(Misc.docToString(t.toGraphviz("trs"))) + "\n"
     }
     buffer ++= "<h3>Initial Configuration</h3>\n"
-    for (i <- initConf) buffer ++= graphvizToSvg(i.toGraphviz("init")) + "\n"
+    for (i <- initConf) buffer ++= graphvizToSvg(i.toGraphviz("init"), "fdp") + "\n"
 
     buffer ++= "<h2>Cover</h2>\n"
     for (cs <- cover; (c, i) <- cs.zipWithIndex) {
       buffer ++= "<p>("+i+")</p>" + "\n"
-      buffer ++= graphvizToSvg(c.toGraphviz("cover")) + "\n"
+      buffer ++= graphvizToSvg(c.toGraphviz("cover"), "fdp") + "\n"
     }
     
     for (e <- error) {
