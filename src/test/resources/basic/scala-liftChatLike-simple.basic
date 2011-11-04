@@ -1,0 +1,27 @@
+Server(self)
+  while true do
+    select
+      case self ? ChatServerMsg(sender) => sender ! ChatServerUpdate()
+      case self ? ChatServerAdd(sender) => sender ! ChatServerUpdate()
+      case self ? ChatServerPoll(sender) => sender ! ChatServerUpdate()
+
+Client(self, server)
+  begin
+    server ! ChatServerAdd(self);
+    while true do
+      begin
+        self ! Timer();
+        self ! UserInput();
+        select
+          case self ? ChatServerUpdate() => ()
+          case self ? Timer() => server ! ChatServerPoll(self)
+          case self ? UserInput() => server ! ChatServerMsg(self)
+      end
+  end
+
+Env(server)
+  while true do new Client(newChannel(), server)
+
+initial
+  Env(s);
+  Server(s)
