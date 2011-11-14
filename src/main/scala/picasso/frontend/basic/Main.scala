@@ -1,26 +1,37 @@
 package picasso.frontend.basic
 
-import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger}
+import picasso.utils._
 import picasso.frontend.basic.typer._
 
 object Main {
 
   def main(args: Array[String]) {
-    Logger.setMinPriority(LogInfo)
-    val r = analyse(args(0))
-    r.makeConsoleReport
+    Args(args.toList) //process the cmdline args
+    val report = Args.input match {
+      case Some(fn) => analyse(fn, IO.readTextFile(fn))
+      case None =>
+        val read = new scala.collection.mutable.StringBuilder
+        var line = Console.in.readLine
+        while (line != null) {
+          read ++= line
+          read ++= "\n"
+          line = Console.in.readLine
+        }
+        analyse("stdin", read.toString)
+    }
+    report.makeConsoleReport
     val woDir = (new java.io.File(args(0))).getName()
     val woSuffix = {
       val lastDot = woDir.lastIndexOf('.')
       if (lastDot > 0) woDir.substring(0, lastDot)
       else woDir
     }
-    r.makeHtmlReport(woSuffix + "-report.html")
+    report.makeHtmlReport(woSuffix + "-report.html")
   }
 
-  def analyse(fn: String) = {
+  def analyse(fn: String, content: String) = {
     val report = new Report(fn)
-    val pr = BasicParser.parseFile(fn)
+    val pr = BasicParser(content)
     if (pr.successful) {
       val (actors, init) = pr.get
       report.setParsed((actors, init))
