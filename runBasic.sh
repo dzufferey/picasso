@@ -7,6 +7,8 @@ cp="$HOME/.sbt/boot/$scala_version/lib/*:$BASEDIR/target/${scala_version}/classe
 #normal version
 exec java -cp ${cp} picasso.frontend.basic.Main $*
 
-#-Xprof for profilnig
+#for profiling
 #exec java -Xprof -cp ${cp} picasso.frontend.basic.Main $*
+#exec java -Xrunhprof:cpu=times   -cp ${cp} picasso.frontend.basic.Main $*
+#exec java -Xrunhprof:cpu=samples -cp ${cp} picasso.frontend.basic.Main $*
 
