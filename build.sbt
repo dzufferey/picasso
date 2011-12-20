@@ -12,6 +12,8 @@ libraryDependencies ++=  Seq(
     //"org.sat4j" % "org.sat4j.core" % "2.3.1"
 )
 
+mainClass in (Compile, packageBin) := Some("picasso.frontend.basic.Main")
+
 scalacOptions ++= Seq("-unchecked", "-deprecation")
 
 parallelExecution in Test := false
