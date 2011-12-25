@@ -318,7 +318,16 @@ object Typer {
         val bodyCstr = processPo(body)
         ConjCstr(List(SingleCstr(condition.tpe, BoolT), condCstr, bodyCstr))
       case ForEachGeneric(id, set, yieldOpt, body) =>
-        sys.error("TODO") //TODO
+        val (param1, coll1) = Definitions.freshCollT
+        val coll1Cstr = ConjCstr(List(SingleCstr(id.tpe, param1),
+                                      SingleCstr(set.tpe, coll1)))
+        val bodyCstr = processPo(body)
+        val coll2Cstr = for ((y,ys) <- yieldOpt) yield {
+          val (param2, coll2) = Definitions.freshCollT
+          ConjCstr(List(SingleCstr(y.tpe, param2),
+                        SingleCstr(ys.tpe, coll2)))
+        }
+        ConjCstr(List(coll1Cstr,bodyCstr) ++ coll2Cstr)
     }
     def processPa(pat: Pattern): TypeConstraints = pat match {
       case PatternLit(_) | Wildcard => TrivialCstr
@@ -370,7 +379,7 @@ object Typer {
                 }
                 val returnCstr = SingleCstr(returnT, returnType)
                 val argsCstrs = argsType zip argsTypes map { case (a,b) => SingleCstr(a,b) }
-                //Console.println(a + " -> " + argsCstrs + " -> " + returnCstr)
+                //Console.println(ap + " -> " + argsCstrs + " -> " + returnCstr)
                 ConjCstr(returnCstr :: argsCstrs)
               })
               ConjCstr(argsCstr ::: List(DisjCstr(cases)))

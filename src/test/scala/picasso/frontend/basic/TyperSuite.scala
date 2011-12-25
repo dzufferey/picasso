@@ -1,6 +1,7 @@
 package picasso.frontend.basic
 
 import org.scalatest._
+import picasso.utils._
 
 class TyperSuite extends FunSuite {
   
@@ -19,13 +20,22 @@ class TyperSuite extends FunSuite {
       "scala-genericComputeServer.basic",
       "scala-liftChatLike-polling-noLogger-noExit.basic",
       "scala-liftChatLike-polling-noLogger.basic",
-      "scala-liftChatLike-polling.basic"
+      "scala-liftChatLike-polling.basic",
+      "collection_typing.basic"
     )
-    for (f <- files) {
-      val result = BasicParser.parseFile(testDir + f)
-      assert(result.successful)
-      val typed = typer.Typer(result.get._1)
-      assert(typed.success, typed.toString)
+
+    val previousLog = Logger.getMinPriority
+    Logger.setMinPriority(LogInfo)
+    try {
+      for (f <- files) {
+        val result = BasicParser.parseFile(testDir + f)
+        assert(result.successful, result)
+        val typed = typer.Typer(result.get._1)
+        assert(typed.success, typed.toString)
+        //Console.println(typed.toString)
+      }
+    } finally {
+      Logger.setMinPriority(previousLog)
     }
   }
 

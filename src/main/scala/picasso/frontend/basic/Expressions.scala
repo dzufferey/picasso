@@ -37,14 +37,6 @@ object Unit {
   }
 }
 
-object EmptySet {
-  def apply() = Application("new-set", Nil)
-  def unapply(e: Application): Boolean = e match {
-    case Application("new-set", Nil) => true
-    case _ => false
-  }
-}
-
 object NewChannel {
   def apply() = Application("newChannel", Nil)
   def unapply(e: Application): Boolean = e match {
@@ -57,6 +49,59 @@ object Create {
   def apply(name: String, args: List[Expression]) = Application("create", ID(name) :: args)
   def unapply(e: Application): Option[(String, List[Expression])] = e match {
     case Application("create", ID(name) :: args) => Some(name, args)
+    case _ => None
+  }
+}
+
+//collections
+
+object EmptySet {
+  def apply() = Application("newBag", Nil)
+  def unapply(e: Application): Boolean = e match {
+    case Application("newBag", Nil) => true
+    case _ => false
+  }
+}
+
+object SetIsEmpty {
+  def apply(e: Expression) = Application("isEmpty", List(e))
+  def unapply(e: Application): Option[Expression] = e match {
+    case Application("isEmpty", List(e)) => Some(e)
+    case _ => None
+  }
+}
+
+object SetAdd {
+  def apply(e1: Expression, e2: Expression) = Application("add", List(e1,e2))
+  def unapply(e: Application): Option[(Expression,Expression)] = e match {
+    case Application("SetAdd", List(e1,e2)) => Some((e1,e2))
+    case _ => None
+  }
+}
+
+object SetMinus {
+  def apply(e1: Expression, e2: Expression) = Application("remove", List(e1,e2))
+  def unapply(e: Application): Option[(Expression,Expression)] = e match {
+    case Application("remove", List(e1,e2)) => Some((e1,e2))
+    case _ => None
+  }
+}
+
+//do not remove the chosen element from the set
+object SetChoose {
+  def apply(e: Expression) = Application("choose", List(e))
+  def unapply(e: Application): Option[Expression] = e match {
+    case Application("choose", List(e)) => Some(e)
+    case _ => None
+  }
+}
+
+//do remove the chosen element from the set (this operation is not side-effect free)
+//it is a combination of SetChoose + SetMinus
+object SetPick {
+  def apply(e: Expression) = Application("pick", List(e))
+  def unapply(e: Application): Option[Expression] = e match {
+    case Application("pick", List(e)) => Some(e)
     case _ => None
   }
 }
@@ -79,6 +124,11 @@ object Expressions {
     case Create(c, args) => picasso.ast.Create(c, args map exp2Exp)
     case NewChannel() => picasso.ast.NewChannel()
     case EmptySet() => picasso.ast.EmptySet()
+    case SetIsEmpty(e) => picasso.ast.SetIsEmpty(exp2Exp(e))
+    case SetAdd(e1,e2) => picasso.ast.SetAdd(exp2Exp(e1),exp2Exp(e2))
+    case SetMinus(e1,e2) => picasso.ast.SetMinus(exp2Exp(e1),exp2Exp(e2))
+    case SetChoose(e) => picasso.ast.SetChoose(exp2Exp(e))
+    case SetPick(e) => picasso.ast.SetPick(exp2Exp(e))
     case _ => picasso.ast.Application(a.fct, a.args map exp2Exp)
   }
   def tuple2Tuple(t: Tuple): picasso.ast.Tuple = picasso.ast.Tuple(t.values map exp2Exp)

@@ -12,7 +12,7 @@ class AnalysisSimpleSuite extends FunSuite {
     Logger.setMinPriority(LogInfo)
     Logger.disallow("graph")
     try {
-      val report = Main.analyse(testDir + fn)
+      val report = Main.analyse(testDir + fn, IO.readTextFile(testDir + fn))
       true
     } finally {
       Logger.setMinPriority(previousLog)

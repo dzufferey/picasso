@@ -21,6 +21,12 @@ object Type {
     TypeVariable("_" + cnt)
   }
 
+  def freshParams(tpe: Type): (Map[TypeVariable,TypeVariable], Type) = {
+    var oldParams = tpe.freeParameters
+    var subst: Map[TypeVariable,TypeVariable] = (for (t <- oldParams.toSeq) yield (t, freshTypeVar)).toMap
+    (subst, tpe alpha subst)
+  }
+
 }
 
 case object Bool extends Type {
@@ -99,7 +105,16 @@ case class ClassType( name: String, tparams: List[Type]) extends Type {
 
 //TODO accessor for tuples
 
-//TODO Unit and Nothing types ?
+//TODO Nothing types ?
+
+object UnitT {
+  private val instance = FiniteValues(List( () ))
+  def apply(): FiniteValues[Unit] = instance
+  def unapply(tpe: FiniteValues[Unit]) = tpe match {
+    case FiniteValues(List( () )) => true
+    case _ => false
+  }
+}
 
 object Collection {
   def apply(name: String, t: Type): Type = {

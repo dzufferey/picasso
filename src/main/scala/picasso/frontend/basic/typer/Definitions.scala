@@ -71,9 +71,16 @@ object Definitions {
   def printAllDefinitions = for(d <- definitions) Console.println(d)
 
   val a = TypeVariable("A") //a sample type param
+  val collT = ClassType("Bag", List(a))
+  def freshCollT = {
+    val fresh = Type.freshTypeVar
+    (fresh, collT.alpha(Map( a -> fresh )))
+  }
 
   //channel
   val newChannel = newDefinition("newChannel", Function(Nil, Channel()))
+  val assertDef = newDefinition("assert", BoolT ~> UnitT())
+  val assumeDef = newDefinition("assume", BoolT ~> UnitT())
 
   //boolean
   val and = newDefinition("&&", BoolT ~> BoolT ~> BoolT)
@@ -84,6 +91,12 @@ object Definitions {
   val neq = newDefinition("!=", a ~> a ~> BoolT)
   val random = newDefinition("random", Function(Nil, BoolT))
 
-  //TODO collection
+  //collection
+  val CollectionNew     = newDefinition("newBag", Function(Nil, collT))
+  val CollectionIsEmpty = newDefinition("isEmpty", collT ~> BoolT)
+  val CollectionAdd     = newDefinition("add",  collT ~> a ~> UnitT() )
+  val CollectionMinus   = newDefinition("remove", collT ~> a ~> UnitT() )
+  val CollectionChoose  = newDefinition("choose", collT ~> a)
+  val CollectionPick    = newDefinition("pick", collT ~> a)
 
 }

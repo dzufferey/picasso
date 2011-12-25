@@ -1,0 +1,16 @@
+Main()
+  begin
+    val coll := newBag();
+    add(coll, newChannel());
+    add(coll, newChannel());
+    foreach x in coll do
+      begin
+        x ! Msg();
+        y := random()
+      end yield y in coll2;
+    val some := choose(coll2);
+    assert(some)
+  end
+
+initial
+  Main()

@@ -33,6 +33,8 @@ case class ITE(condition: Expression, caseTrue: Process, caseFalse: Process) ext
 case class While(condition: Expression, body: Process) extends Process {
   override def toString = "while "+condition+" do\n"+ Misc.indent("  ", body.toString)
 }
+//foreach VAR in COLLECTION do BODY
+//foreach VAR1 in COLLECTION1 do BODY yield VAR2 in COLLECTION2
 case class ForEachGeneric(id: ID, set: Expression, yieldOpt: Option[(ID,ID)], body: Process) extends Process {
 }
 
