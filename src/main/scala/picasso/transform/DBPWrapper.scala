@@ -183,6 +183,14 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
   ////////////////////////////
   ////////////////////////////
 
+  //TODO this part should be modified to allows collection and boolean value to coexists (i.e. assert(isEmpty(bag)) )
+  //The trick before was to unroll, thus split the complec stuff in many simpler steps.
+  //However, for performance reason, we would like to keep the transitions as compact as possible.
+  //One reason it might be tricky, is that collection operation add inhibitory graphs ...
+  //boolean part: valuation (points to with T/F) -> result
+  //coolection part: something/nothing (points to _ as normal or inhibitory)
+
+
   /** The precondition graph that a pattern matches + mapping of bindings'id to graph node.
    * @returns (main node, graph, binding \mapsto node) */
   def graphOfPattern(e: Pattern): (DBC#V, DBCC, Context) = e match {

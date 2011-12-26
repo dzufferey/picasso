@@ -91,10 +91,14 @@ object Typer {
         case Some(subst) =>
           Logger("Typer", LogDebug, "typing solution is " + subst)
           putTypes(a2.get, subst)
-        case None => TypingFailure("cannot solve: " + eqs2)
+          a2
+        case None =>
+          Logger("Typer", LogWarning, "typing failed")
+          TypingFailure("cannot solve: " + eqs2)
       }
+    } else {
+      a2
     }
-    a2
   }
 
   def assignSymbolsToVars(a: Actor) {
@@ -417,7 +421,7 @@ object Typer {
     case TrivialCstr => List(Map.empty[TypeVariable, Type])
     case SingleCstr(t1, t2) => unify(t1, t2).toList
     case ConjCstr(lst) =>
-      //TODO adapt to List
+      //TODO bug: None == Nil => can succeed even though some sub part failed ...
       (List(Map.empty[TypeVariable, Type]) /: lst)( (acc, cstr) => acc.flatMap( subst => {
         val cstr2 = cstr(subst)
         solveConstraints(cstr2).map( subst2 => mergeSubst(subst, subst2) )

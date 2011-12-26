@@ -28,6 +28,7 @@ class TyperSuite extends FunSuite {
     Logger.setMinPriority(LogInfo)
     try {
       for (f <- files) {
+        //Console.println("Typing: " + f)
         val result = BasicParser.parseFile(testDir + f)
         assert(result.successful, result)
         val typed = typer.Typer(result.get._1)
