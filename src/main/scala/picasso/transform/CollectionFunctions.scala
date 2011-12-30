@@ -11,13 +11,14 @@ import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, Log
 object CollectionFunctions {
 
   //TODO
-  def isBooleanInterpreted(e: Expression): Boolean = e match {
+  def isCollectionInterpreted(e: Expression): Boolean = e match {
     case EmptySet() => true
     case SetIsEmpty(_) => true
     case SetAdd(_,_) => true
     case SetMinus(_, _) => true
     case SetChoose(_) => true
     case SetPick(_) => true
+    case SetCopy(_) => true
     case _ => false
   }
 

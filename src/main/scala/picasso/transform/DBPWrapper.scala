@@ -183,12 +183,19 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
   ////////////////////////////
   ////////////////////////////
 
-  //TODO this part should be modified to allows collection and boolean value to coexists (i.e. assert(isEmpty(bag)) )
-  //The trick before was to unroll, thus split the complec stuff in many simpler steps.
-  //However, for performance reason, we would like to keep the transitions as compact as possible.
-  //One reason it might be tricky, is that collection operation add inhibitory graphs ...
-  //boolean part: valuation (points to with T/F) -> result
-  //coolection part: something/nothing (points to _ as normal or inhibitory)
+  /**************************
+  TODO this part should be modified to allows collection and boolean value to coexists (i.e. assert(isEmpty(bag)) )
+  The trick before was to unroll, thus split the complec stuff in many simpler steps.
+  However, for performance reason, we would like to keep the transitions as compact as possible.
+  One reason it might be tricky, is that collection operation add inhibitory graphs ...
+  boolean part: valuation (points to with T/F) -> result
+  coolection part: something/nothing (points to _ as normal or inhibitory)
+  
+  A datastructure for interpreted stuff.
+  a type PointsTo: Boolean + _ + Nothing + DBC#V + InCollection + NotInCollection
+  a function that returns a boolean value must return: true -> Seq[Map[ID,PointsTo]], false -> Seq[Map[ID,PointsTo]]
+  a function that deals with collection must return: Seq[Map[ID,PointsTo]] (that is all ?)
+  **************************/
 
 
   /** The precondition graph that a pattern matches + mapping of bindings'id to graph node.

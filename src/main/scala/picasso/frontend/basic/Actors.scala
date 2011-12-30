@@ -75,8 +75,15 @@ object Actors {
         val falseGuard = picasso.ast.Assume(condFalse)
         ((init, trueGuard, loopBody)) :: ((init,falseGuard,last)) :: mkCfa( loopBody, body, init)
 
-      case ForEachGeneric(id /*String*/, set /*Expression*/, yieldOpt /*Option[(String,String)]*/, body) =>
-        sys.error("TODO: ForEachGeneric")
+      case ForEachGeneric(id, set , yieldOpt /*Option[(ID,ID)]*/, body) =>
+        assert(yieldOpt.isEmpty, "\"for yield\" is not yet supported.")
+        val iterator = Expressions.id2ID(ID("_PICASSO_iterator") setType set.tpe)
+        val pre = freshLoc(set)
+        val warmup = (init, picasso.ast.Affect(iterator, picasso.ast.SetCopy(Expressions.exp2ExpSimplify(set))), pre)
+        val looping = freshLoc(body)
+        val enteringLoop = (pre, picasso.ast.Affect(Expressions.id2ID(id), picasso.ast.SetPick(iterator)), looping)
+        val exitingLoop = (pre, picasso.ast.Assume(picasso.ast.SetIsEmpty(iterator)), last)
+        warmup :: enteringLoop :: exitingLoop :: mkCfa(looping, body, pre)
 
     }
     val params2 = params map Expressions.id2ID

@@ -162,4 +162,13 @@ object SetPick {
   }
 }
 
+object SetCopy {
+  def apply(e1: Expression) = Application("set-copy", List(e1))
+  def unapply(e: Application): Option[Expression] = e match {
+    case Application("set-copy", List(e)) => Some(e)
+    case _ => None
+  }
+}
+
+
 //TODO more extractors 
