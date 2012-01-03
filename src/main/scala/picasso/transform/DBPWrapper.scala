@@ -31,14 +31,41 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
   //expressions that are supposed to translate as graph: literal, variables(ref), patterns, alg-datatypes, ...
   //things that reflect change in the graphs: Assert/Assume, Havoc, Affect, Send, Receive
 
+  //TODO all that stuff can move to DefDBP (if it is general enough)
+
   type Context = Map[ID, DBC#V] //when making a transition: keep track of the node created for an ID
   def emptyContext = Map.empty[ID, DBC#V]
 
-  //TODO should have an inermediate language of graph constraints ?
-  //this can then be used to generate the real transition graph.
-  //this could also take care of the aliasing problems (generates the transition with and without aliases)
-  //...
+  /**************************
+  TODO this part should be modified to allows collection and boolean value to coexists (i.e. assert(isEmpty(bag)) )
+  The trick before was to unroll, thus split the complec stuff in many simpler steps.
+  However, for performance reason, we would like to keep the transitions as compact as possible.
+  One reason it might be tricky, is that collection operation add inhibitory graphs ...
+  boolean part: valuation (points to with T/F) -> result
+  coolection part: something/nothing (points to _ as normal or inhibitory)
+  **************************/
+  sealed abstract class PointsTo(id: ID)
+  case class PtsToBoolValue(id: ID, value: Boolean) extends PointsTo(id)
+  case class PtsToName(id: ID) extends PointsTo(id) //pts to a pi-calculus name
+  case class PtsToCollection(id: ID) extends PointsTo(id) //the intermediary node used to model the collection
+  case class PtsToSpecial(id: ID, what: String) extends PointsTo(id) //a specially name node
+  case class PtsToWildCard(id: ID, tpe: HType) extends PointsTo(id) //keep the type to generate more credible aliasing (if we do aliasing)
+  case class PtsToPath(id: ID, to: PointsTo) extends PointsTo(id)
+  case class PtsToNot(id: ID, to: PointsTo) extends PointsTo(id) //for inhibitory stuff.
+  //case class PtsToPC(id: ID, pc: PC) extends PointsTo(id) //the control state node (not really this, since this will be used for OO programming)
+  //This actually is a set of constraints that represent some graph (set of graphs)
+  //this is still rough and should combine easily with bool/collection reasoning
+  //e.g. for boolean we should be able to interact with it as a Map[ID,Boolean]
+  //We need something to encapsulate that thing to provide a simple view on it
+  //It should support something like adding thing with a "boolean structure", i.e. some case splitting.
+  //basic strategy it to accumulate a set of constraint and then at the end, compile them to transitions 
+  //a "transition helper" for lack of better name is like a context on steroid:
+  // -> does it need to be passed around ? yes or no ?
+  // -> how to deal with the before/after/common part ? (PC, update, ...)
+  // -> dependencies between constraints and case splitting ?
+  // -> by-value vs by-reference (for wildcards)
 
+  
   //TODO when an actor creates another actor of the same kind -> name clash!!
   def makeStateFor(agt: AgentDefinition[PC], map: Context, controlState: PC, params: Seq[(ID, Expression)]): Seq[(DBC#V, DBCC, Context)] = {
     //complete the params: live values that are not defined ? (use Wildcards or Any or case split ?)
@@ -182,21 +209,6 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
   ////////////////////////////
   ////////////////////////////
   ////////////////////////////
-
-  /**************************
-  TODO this part should be modified to allows collection and boolean value to coexists (i.e. assert(isEmpty(bag)) )
-  The trick before was to unroll, thus split the complec stuff in many simpler steps.
-  However, for performance reason, we would like to keep the transitions as compact as possible.
-  One reason it might be tricky, is that collection operation add inhibitory graphs ...
-  boolean part: valuation (points to with T/F) -> result
-  coolection part: something/nothing (points to _ as normal or inhibitory)
-  
-  A datastructure for interpreted stuff.
-  a type PointsTo: Boolean + _ + Nothing + DBC#V + InCollection + NotInCollection
-  a function that returns a boolean value must return: true -> Seq[Map[ID,PointsTo]], false -> Seq[Map[ID,PointsTo]]
-  a function that deals with collection must return: Seq[Map[ID,PointsTo]] (that is all ?)
-  **************************/
-
 
   /** The precondition graph that a pattern matches + mapping of bindings'id to graph node.
    * @returns (main node, graph, binding \mapsto node) */
