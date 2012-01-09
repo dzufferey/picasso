@@ -109,6 +109,11 @@ trait DefDBP {
     assert(g2WC forall (m2p contains _))
     DepthBoundedTransition[DBC](id, g1, g2, m1p, m2p, forbidden)(ordering)
   }
+  
+  def makeTrans(partial: PartialDBT): DBT = {
+    val (id, g1, g2, m1, m2, forbidden) = partial
+    makeTrans(id, g1, g2, m1, m2, forbidden)
+  }
 
   def checkTransition(tr: DBT): DBT = {
     makeTrans(tr.id, tr.lhs, tr.rhs, tr.hr, tr.hk, tr.inh)

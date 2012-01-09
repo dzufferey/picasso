@@ -59,11 +59,90 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
   //We need something to encapsulate that thing to provide a simple view on it
   //It should support something like adding thing with a "boolean structure", i.e. some case splitting.
   //basic strategy it to accumulate a set of constraint and then at the end, compile them to transitions 
+
   //a "transition helper" for lack of better name is like a context on steroid:
   // -> does it need to be passed around ? yes or no ?
   // -> how to deal with the before/after/common part ? (PC, update, ...)
   // -> dependencies between constraints and case splitting ?
   // -> by-value vs by-reference (for wildcards)
+  
+  class TransitionHelper {
+
+    //TODO remember the PCs
+    protected val prePCs = scala.collection.mutable.HashSet[PC]()
+    protected val postPCs = scala.collection.mutable.HashSet[PC]()
+    protected val pairedPCs = scala.collection.mutable.Buffer[(PC,PC)]()
+
+    protected var activePre: Option[PC] = None;
+    protected var activePost: Option[PC] = None;
+
+    //we want multiple PC to cohabit => allows for transition that involve multiple actors
+
+    def addPCs(pre: PC, post: PC) = {       //for actors that make steps
+      prePCs += pre
+      postPCs += post
+      pairedPCs += (pre -> post)
+    }
+    def creates(post: PC) = {               //for actors that are created
+      postPCs += post
+    }
+    def dies(pre: PC) = {                   //for actors that finish
+      prePCs += pre
+    }
+    def unchanged(pc: PC) = addPCs(pc, pc)  //for an actor that does not take a step
+    
+    def activePrePC(pc: PC) = {
+      assert(prePCs(pc))
+      activePre = Some(pc)
+    }
+    def activePostPC(pc: PC) = {
+      assert(postPCs(pc))
+      activePost = Some(pc)
+    }
+    def activePCs(pre: PC, post: PC) = {
+      assert(prePCs(pre) && postPCs(post) && pairedPCs.contains(pre -> post))
+      activePre = Some(pre)
+      activePost = Some(post)
+    }
+
+    //use the active actor as reference process
+    def addPreImplicit(constraints: PointsTo*) = {
+      if (activePre.isEmpty) sys.error("forgot to specify the PC (addPreImplicit)")
+      addPre(activePre.get, constraints:_*)
+    }
+    def addPostImplicit(constraints: PointsTo*) = {
+      if (activePost.isEmpty) sys.error("forgot to specify the PC (addPostImplicit)")
+      addPost(activePost.get, constraints:_*)
+    }
+    def addImplicit(preCstr: Seq[PointsTo], postCstr: Seq[PointsTo]) = {
+      if (activePre.isEmpty || activePost.isEmpty) sys.error("forgot to specify the PCs (addImplicit)")
+      val pre = activePre.get
+      val post = activePost.get
+      assert(pairedPCs.contains(pre -> post))
+      add(pre, preCstr, post, postCstr)
+    }
+    
+    def addPre(pc: PC, constraints: PointsTo*) = addPreAlternatives(Seq((pc, constraints.toSeq)))
+    def addPost(pc: PC, constraints: PointsTo*) = addPostAlternatives(Seq((pc, constraints.toSeq)))
+    def add(pre: PC, preCstr: Seq[PointsTo], post: PC, postCstr: Seq[PointsTo]) = addAlternatives((Seq(pre -> preCstr), Seq(post -> postCstr)))
+
+    //TODO dependencies between constraints and case splitting ? (related to the statefulness of the TransitionHelper)
+    def addPreAlternatives(alternatives: Seq[(PC,Seq[PointsTo])]): Unit = {
+      sys.error("TODO")
+    }
+    
+    def addPostAlternatives(alternatives: Seq[(PC,Seq[PointsTo])]): Unit = {
+      sys.error("TODO")
+    }
+
+    def addAlternatives(alternatives: (Seq[(PC,Seq[PointsTo])], Seq[(PC,Seq[PointsTo])])* ): Unit = {
+      sys.error("TODO")
+    }
+
+    def compile: Seq[PartialDBT] = {
+      sys.error("TODO")
+    }
+  }
 
   
   //TODO when an actor creates another actor of the same kind -> name clash!!
