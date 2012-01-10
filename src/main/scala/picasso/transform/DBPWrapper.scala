@@ -65,10 +65,10 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
   // -> how to deal with the before/after/common part ? (PC, update, ...)
   // -> dependencies between constraints and case splitting ?
   // -> by-value vs by-reference (for wildcards)
-  
+
   class TransitionHelper {
 
-    //TODO remember the PCs
+    //to remember the PCs
     protected val prePCs = scala.collection.mutable.HashSet[PC]()
     protected val postPCs = scala.collection.mutable.HashSet[PC]()
     protected val pairedPCs = scala.collection.mutable.Buffer[(PC,PC)]()
@@ -126,22 +126,49 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
     def addPost(pc: PC, constraints: PointsTo*) = addPostAlternatives(Seq((pc, constraints.toSeq)))
     def add(pre: PC, preCstr: Seq[PointsTo], post: PC, postCstr: Seq[PointsTo]) = addAlternatives((Seq(pre -> preCstr), Seq(post -> postCstr)))
 
-    //TODO dependencies between constraints and case splitting ? (related to the statefulness of the TransitionHelper)
+    ////////////////////////////////
+    //XXXXXXXXXXXXXXXXXXXXXXXXXXXX//
+    ////////////////////////////////
+
+    private sealed abstract class Constraints
+    private case class Literal(pre: Boolean, pc: PC, cstr: PointsTo) extends Constraints
+    private case class Conjunction(seq: Seq[Constraints]) extends Constraints
+    private case class Disjunction(seq: Seq[Constraints]) extends Constraints
+
+    private val constraints = scala.collection.mutable.Buffer[Constraints]()
+
     def addPreAlternatives(alternatives: Seq[(PC,Seq[PointsTo])]): Unit = {
-      sys.error("TODO")
+      val parts = for ((pc, pts) <- alternatives) yield {
+        Conjunction(pts.map(pt => Literal(true, pc, pt)))
+      }
+      constraints += Disjunction(parts)
     }
     
     def addPostAlternatives(alternatives: Seq[(PC,Seq[PointsTo])]): Unit = {
-      sys.error("TODO")
+      val parts = for ((pc, pts) <- alternatives) yield {
+        Conjunction(pts.map(pt => Literal(false, pc, pt)))
+      }
+      constraints += Disjunction(parts)
     }
 
     def addAlternatives(alternatives: (Seq[(PC,Seq[PointsTo])], Seq[(PC,Seq[PointsTo])])* ): Unit = {
-      sys.error("TODO")
+      val parts = for ((pre, post) <- alternatives) yield {
+        val preLits = for ((pc, pts) <- pre; pt <- pts) yield Literal(true, pc, pt)
+        val postLits = for ((pc, pts) <- post; pt <- pts) yield Literal(false, pc, pt)
+        Conjunction(preLits ++ postLits)
+      }
+      constraints += Disjunction(parts)
     }
 
+    //TODO How to solve the constraints to generate a PartialDBT ?
     def compile: Seq[PartialDBT] = {
       sys.error("TODO")
     }
+    
+    ////////////////////////////////
+    //XXXXXXXXXXXXXXXXXXXXXXXXXXXX//
+    ////////////////////////////////
+
   }
 
   
