@@ -43,12 +43,16 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
   One reason it might be tricky, is that collection operation add inhibitory graphs ...
   boolean part: valuation (points to with T/F) -> result
   coolection part: something/nothing (points to _ as normal or inhibitory)
+  TODO issue: which direction path goes ?
+    how to express an object in a collection,
+    the member of an obj in a collection ?
+  This come from the fact that there is this implicit PC. with indirection this is not valid anymore (can be another node, not a PC)
   **************************/
   sealed abstract class PointsTo(id: ID)
   case class PtsToBoolValue(id: ID, value: Boolean) extends PointsTo(id)
   case class PtsToName(id: ID) extends PointsTo(id) //pts to a pi-calculus name
   case class PtsToCollection(id: ID) extends PointsTo(id) //the intermediary node used to model the collection
-  case class PtsToSpecial(id: ID, what: String) extends PointsTo(id) //a specially name node
+  case class PtsToSpecial(id: ID, what: String) extends PointsTo(id) //a specially named node
   case class PtsToWildCard(id: ID, tpe: HType) extends PointsTo(id) //keep the type to generate more credible aliasing (if we do aliasing)
   case class PtsToPath(id: ID, to: PointsTo) extends PointsTo(id)
   case class PtsToNot(id: ID, to: PointsTo) extends PointsTo(id) //for inhibitory stuff.
@@ -159,6 +163,34 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
       }
       constraints += Disjunction(parts)
     }
+    
+    private def dnf(cstr: Constraints): Constraints = {
+      def process(e: Constraints): Seq[Seq[Constraints]] = e match {
+        case Conjunction(args) =>
+          val subDnfs = args map process
+          subDnfs.reduceLeft( (acc, disj) => disj.flatMap( conj => acc.map(conj2 => conj ++ conj2) ))
+        case Disjunction(args) => args flatMap process
+        case other => List(List(other))
+      }
+      Disjunction(process(cstr) map (x => Conjunction(x)))
+    }
+
+    private def compatibe(p1: Literal, p2: Literal): Boolean = {
+      if (p1.pre ^ p2.pre) {
+        false //p1 and p2 are not refering to the same time period
+      } else {
+        sys.error("TODO")
+        /*
+          case PtsToBoolValue(id, value)
+          case PtsToName(id) //pts to a pi-calculus name
+          case PtsToCollection(id) //the intermediary node used to model the collection
+          case PtsToSpecial(id, what) extends PointsTo(id) //a specially named node
+          case PtsToWildCard(id, tpe) //keep the type to generate more credible aliasing
+          case PtsToPath(id, to)
+          case PtsToNot(id, to) //for inhibitory stuff.
+        */
+      }
+    }
 
     //TODO How to solve the constraints to generate a PartialDBT ?
     //The simplest thing should be to:
@@ -172,9 +204,14 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
       
       //(1) DNF:
       //the "constrains" buffer is a big conjunction of disj of conj ...
-      //(2) Aliasing:
-      //(3) filter the unsat
-      //(4) turn into PartialDBT
+      val disj = dnf(Conjunction(constraints))
+
+      //(2) Aliasing: PointsTo that are of compatible types may be merged ?
+      
+      //(3) Filter the unsat
+      
+      //(4) Turn into PartialDBT
+      
       sys.error("TODO")
     }
     

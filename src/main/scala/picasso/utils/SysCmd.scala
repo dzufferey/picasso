@@ -20,6 +20,8 @@ object SysCmd {
   }
 
   //exec: send data to child, get result from output, returns it.
+  //TODO read from both output and error (needs to create 2 Thread ?)
+  //TODO add an option for timeout
   //TODO harden that part!!
   def execWithInputAndGetOutput(cmds: Array[String], addToEnv: Iterable[(String,String)], input: Array[Byte]): Either[Array[Byte], Int] = {
     val buffer = Array.ofDim[Byte](10 * 1024 * 1024)
