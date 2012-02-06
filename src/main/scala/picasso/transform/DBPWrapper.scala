@@ -161,7 +161,20 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
     }
 
     //TODO How to solve the constraints to generate a PartialDBT ?
+    //The simplest thing should be to:
+    //(1) put the constraints in DNF
+    //(2) [optional] generate all the aliasing of nodes
+    //(3) filter the one without solutions
+    //(4) turn the constrains into graphs
     def compile: Seq[PartialDBT] = {
+      //what happens with the pre/post thing ?
+      //The literal indicate whether a constraint is about the pre or post state.
+      
+      //(1) DNF:
+      //the "constrains" buffer is a big conjunction of disj of conj ...
+      //(2) Aliasing:
+      //(3) filter the unsat
+      //(4) turn into PartialDBT
       sys.error("TODO")
     }
     
