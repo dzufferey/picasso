@@ -3,7 +3,7 @@ package picasso.transform
 import picasso.ast._
 import picasso.model.dbp._
 import picasso.math._
-import picasso.math.hol.{Type => HType, ClassType => HClassType, Application => HApplication, Bool => HBool, String => HString, Int => HInt, Wildcard => HWildcard, Binding => HBinding, _}
+import picasso.math.hol.{Type => HType, ClassType => HClassType, Application => HApplication, Bool => HBool, String => HString, Int => HInt, Wildcard => HWildcard, Binding => HBinding, Collection => HCollection, _}
 import picasso.graph._
 import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger, Misc}
 
@@ -43,19 +43,39 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
   One reason it might be tricky, is that collection operation add inhibitory graphs ...
   boolean part: valuation (points to with T/F) -> result
   coolection part: something/nothing (points to _ as normal or inhibitory)
-  TODO issue: which direction path goes ?
-    how to express an object in a collection,
-    the member of an obj in a collection ?
-  This come from the fact that there is this implicit PC. with indirection this is not valid anymore (can be another node, not a PC)
   **************************/
-  sealed abstract class PointsTo(id: ID)
-  case class PtsToBoolValue(id: ID, value: Boolean) extends PointsTo(id)
-  case class PtsToName(id: ID) extends PointsTo(id) //pts to a pi-calculus name
-  case class PtsToCollection(id: ID) extends PointsTo(id) //the intermediary node used to model the collection
-  case class PtsToSpecial(id: ID, what: String) extends PointsTo(id) //a specially named node
-  case class PtsToWildCard(id: ID, tpe: HType) extends PointsTo(id) //keep the type to generate more credible aliasing (if we do aliasing)
-  case class PtsToPath(id: ID, to: PointsTo) extends PointsTo(id)
-  case class PtsToNot(id: ID, to: PointsTo) extends PointsTo(id) //for inhibitory stuff.
+  object PointsToNode {
+    var counter = 0
+    def fresh = {
+      counter = counter + 1
+      counter
+    }
+  }
+  sealed abstract class PointsToNode {
+    var uid = PointsToNode.fresh 
+    //TODO way of unifying i.e. getting a copy with a different uid and then assign it to whatever is needed
+  }
+  sealed abstract class PointsToRelation
+  case class PtsPCNode(pc: PC) extends PointsToNode
+  case class PtsBoolValue(value: Boolean) extends PointsToNode
+  case class PtsName() extends PointsToNode
+  case class PtsNamed(name: String) extends PointsToNode
+  case class PtsCollection() extends PointsToNode
+  case class PtsWildCard(tpe: HType) extends PointsToNode
+  case class PtsMember(owner: PointsToNode, id: ID, owned: PointsToNode) extends PointsToRelation
+  case class PtsTrivial(node: PointsToNode) extends PointsToRelation
+  case class PtsNot(subGraph: Seq[PointsToRelation]) extends PointsToRelation
+
+  //simpler: the PC is implicit.
+  sealed abstract class PointsTo
+  case class PtsToBoolValue(id: ID, value: Boolean) extends PointsTo
+  case class PtsToName(id: ID) extends PointsTo //pts to a pi-calculus name
+  case class PtsToCollection(id: ID) extends PointsTo //the intermediary node used to model the collection
+  case class PtsInCollection(id: ID) extends PointsTo //the name of the collection 
+  case class PtsToSpecial(id: ID, what: String) extends PointsTo //a specially named node
+  case class PtsToWildCard(id: ID, tpe: HType) extends PointsTo //keep the type to generate more credible aliasing (if we do aliasing)
+  case class PtsToPath(id: ID, to: PointsTo) extends PointsTo
+  case class PtsToNot(to: PointsTo) extends PointsTo //for inhibitory stuff.
   //case class PtsToPC(id: ID, pc: PC) extends PointsTo(id) //the control state node (not really this, since this will be used for OO programming)
   //This actually is a set of constraints that represent some graph (set of graphs)
   //this is still rough and should combine easily with bool/collection reasoning
@@ -64,8 +84,8 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
   //It should support something like adding thing with a "boolean structure", i.e. some case splitting.
   //basic strategy it to accumulate a set of constraint and then at the end, compile them to transitions 
 
-  //a "transition helper" for lack of better name is like a context on steroid:
-  // -> does it need to be passed around ? yes or no ?
+  //a "transition helper" for lack of better name is like the Context above, but on steroid:
+  // -> does it need to be passed around ? no, it is mutable
   // -> how to deal with the before/after/common part ? (PC, update, ...)
   // -> dependencies between constraints and case splitting ?
   // -> by-value vs by-reference (for wildcards)
@@ -135,30 +155,53 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
     ////////////////////////////////
 
     private sealed abstract class Constraints
-    private case class Literal(pre: Boolean, pc: PC, cstr: PointsTo) extends Constraints
+    private case class Literal(pre: Boolean, cstr: PointsToRelation) extends Constraints
     private case class Conjunction(seq: Seq[Constraints]) extends Constraints
     private case class Disjunction(seq: Seq[Constraints]) extends Constraints
 
     private val constraints = scala.collection.mutable.Buffer[Constraints]()
 
+    private def ptsToRel(from: PointsToNode, cstr: PointsTo): Seq[PointsToRelation] = cstr match {
+      case PtsToBoolValue(id, value) => Seq(PtsMember(from, id, PtsBoolValue(value)))
+      case PtsToName(id) => Seq(PtsMember(from, id, PtsName()))
+      case PtsToCollection(id) => Seq(PtsMember(from, id, PtsCollection()))
+      case PtsInCollection(id) =>
+        val coll = PtsCollection()
+        val tpe = id.id.tpe match {
+          case HCollection(_, collTpe) => collTpe
+          case err => Logger.logAndThrow("DBPWrapper", LogWarning, "not a collection type: "+err)
+        }
+        Seq(PtsMember(from, id, coll), PtsMember(coll, ID(Variable("inCollection") setType tpe), PtsWildCard(tpe)))
+      case PtsToSpecial(id, what) => Seq(PtsMember(from, id, PtsNamed(what)))
+      case PtsToWildCard(id, tpe) => Seq(PtsMember(from, id, PtsWildCard(tpe)))
+      case PtsToPath(id, to) =>
+        val middleNode = PtsWildCard(id.id.tpe)
+        PtsMember(from, id, middleNode) +: ptsToRel(middleNode, to)
+      case PtsToNot(to) => Seq(PtsNot(ptsToRel(from, to)))
+    }
+
+    private def ptsToRel(pc: PC, cstr: PointsTo): Seq[PointsToRelation] = ptsToRel(PtsPCNode(pc), cstr)
+
     def addPreAlternatives(alternatives: Seq[(PC,Seq[PointsTo])]): Unit = {
       val parts = for ((pc, pts) <- alternatives) yield {
-        Conjunction(pts.map(pt => Literal(true, pc, pt)))
+        val preLits = for (pt <- pts; c <- ptsToRel(pc, pt)) yield Literal(true, c)
+        Conjunction(preLits)
       }
       constraints += Disjunction(parts)
     }
     
     def addPostAlternatives(alternatives: Seq[(PC,Seq[PointsTo])]): Unit = {
       val parts = for ((pc, pts) <- alternatives) yield {
-        Conjunction(pts.map(pt => Literal(false, pc, pt)))
+        val postLits = for (pt <- pts; c <- ptsToRel(pc, pt)) yield Literal(false, c)
+        Conjunction(postLits)
       }
       constraints += Disjunction(parts)
     }
 
     def addAlternatives(alternatives: (Seq[(PC,Seq[PointsTo])], Seq[(PC,Seq[PointsTo])])* ): Unit = {
       val parts = for ((pre, post) <- alternatives) yield {
-        val preLits = for ((pc, pts) <- pre; pt <- pts) yield Literal(true, pc, pt)
-        val postLits = for ((pc, pts) <- post; pt <- pts) yield Literal(false, pc, pt)
+        val preLits = for ((pc, pts) <- pre; pt <- pts; c <- ptsToRel(pc, pt)) yield Literal(true, c)
+        val postLits = for ((pc, pts) <- post; pt <- pts; c <- ptsToRel(pc, pt)) yield Literal(false, c)
         Conjunction(preLits ++ postLits)
       }
       constraints += Disjunction(parts)
@@ -180,15 +223,6 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
         false //p1 and p2 are not refering to the same time period
       } else {
         sys.error("TODO")
-        /*
-          case PtsToBoolValue(id, value)
-          case PtsToName(id) //pts to a pi-calculus name
-          case PtsToCollection(id) //the intermediary node used to model the collection
-          case PtsToSpecial(id, what) extends PointsTo(id) //a specially named node
-          case PtsToWildCard(id, tpe) //keep the type to generate more credible aliasing
-          case PtsToPath(id, to)
-          case PtsToNot(id, to) //for inhibitory stuff.
-        */
       }
     }
 
