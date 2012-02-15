@@ -60,4 +60,8 @@ class DBPGraphsSuite extends FunSuite {
     computeCover("gsm.dbp")
   }
   
+  test("simple example non-blocking") {
+    computeCover("simple_non_blocking.dbp")
+  }
+  
 }

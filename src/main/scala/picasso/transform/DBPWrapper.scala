@@ -5,7 +5,7 @@ import picasso.model.dbp._
 import picasso.math._
 import picasso.math.hol.{Type => HType, ClassType => HClassType, Application => HApplication, Bool => HBool, String => HString, Int => HInt, Wildcard => HWildcard, Binding => HBinding, Collection => HCollection, _}
 import picasso.graph._
-import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger, Misc}
+import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger, Misc, UnionFind}
 
 //TODO from AgentDefinition (a set of them) to a set of transition for DBP
 //TODO from an initial state to a graph
@@ -45,26 +45,78 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
   coolection part: something/nothing (points to _ as normal or inhibitory)
   **************************/
   object PointsToNode {
-    var counter = 0
-    def fresh = {
-      counter = counter + 1
-      counter
-    }
+    private val counter = new java.util.concurrent.atomic.AtomicInteger()
+    def fresh = counter.incrementAndGet
   }
   sealed abstract class PointsToNode {
     var uid = PointsToNode.fresh 
+    def setUID(i: Int): this.type = {
+      uid = i
+      this
+    }
     //TODO way of unifying i.e. getting a copy with a different uid and then assign it to whatever is needed
+    def alias(aliases: Map[Int, Int]): PointsToNode
   }
-  sealed abstract class PointsToRelation
-  case class PtsPCNode(pc: PC) extends PointsToNode
-  case class PtsBoolValue(value: Boolean) extends PointsToNode
-  case class PtsName() extends PointsToNode
-  case class PtsNamed(name: String) extends PointsToNode
-  case class PtsCollection() extends PointsToNode
-  case class PtsWildCard(tpe: HType) extends PointsToNode
-  case class PtsMember(owner: PointsToNode, id: ID, owned: PointsToNode) extends PointsToRelation
-  case class PtsTrivial(node: PointsToNode) extends PointsToRelation
-  case class PtsNot(subGraph: Seq[PointsToRelation]) extends PointsToRelation
+  case class PtsPCNode(pc: PC) extends PointsToNode {
+    def alias(aliases: Map[Int, Int]) = {
+      if (aliases contains uid) {
+        PtsPCNode(pc) setUID aliases(uid)
+      } else this
+    }
+  }
+  case class PtsBoolValue(value: Boolean) extends PointsToNode {
+    def alias(aliases: Map[Int, Int]) = {
+      if (aliases contains uid) {
+        PtsBoolValue(value) setUID aliases(uid)
+      } else this
+    }
+  }
+  case class PtsName() extends PointsToNode {
+    def alias(aliases: Map[Int, Int]) = {
+      if (aliases contains uid) {
+        PtsName() setUID aliases(uid)
+      } else this
+    }
+  }
+  case class PtsNamed(name: String) extends PointsToNode {
+    def alias(aliases: Map[Int, Int]) = {
+      if (aliases contains uid) {
+        PtsNamed(name) setUID aliases(uid)
+      } else this
+    }
+  }
+  case class PtsCollection(tpe: HType) extends PointsToNode {
+    def alias(aliases: Map[Int, Int]) = {
+      if (aliases contains uid) {
+        PtsCollection(tpe) setUID aliases(uid)
+      } else this
+    }
+  }
+  case class PtsWildCard(tpe: HType) extends PointsToNode {
+    def alias(aliases: Map[Int, Int]) = {
+      if (aliases contains uid) {
+        PtsWildCard(tpe) setUID aliases(uid)
+      } else this
+    }
+  }
+  sealed abstract class PointsToRelation {
+    def alias(aliases: Map[Int, Int]): PointsToRelation
+  }
+  case class PtsMember(owner: PointsToNode, id: ID, owned: PointsToNode) extends PointsToRelation {
+    def alias(aliases: Map[Int, Int]) = {
+      PtsMember(owner.alias(aliases), id, owned.alias(aliases))
+    }
+  }
+  case class PtsTrivial(node: PointsToNode) extends PointsToRelation {
+    def alias(aliases: Map[Int, Int]) = {
+      PtsTrivial(node.alias(aliases))
+    }
+  }
+  case class PtsNot(subGraph: Seq[PointsToRelation]) extends PointsToRelation {
+    def alias(aliases: Map[Int, Int]) = {
+      PtsNot(subGraph.map(_.alias(aliases)))
+    }
+  }
 
   //simpler: the PC is implicit.
   sealed abstract class PointsTo
@@ -93,6 +145,7 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
   class TransitionHelper {
 
     //to remember the PCs
+    //TODO what if there is multiple time the same PC in a transition ?
     protected val prePCs = scala.collection.mutable.HashSet[PC]()
     protected val postPCs = scala.collection.mutable.HashSet[PC]()
     protected val pairedPCs = scala.collection.mutable.Buffer[(PC,PC)]()
@@ -159,18 +212,24 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
     private case class Conjunction(seq: Seq[Constraints]) extends Constraints
     private case class Disjunction(seq: Seq[Constraints]) extends Constraints
 
+    //TODO do not forget about pairedPCs
+
     private val constraints = scala.collection.mutable.Buffer[Constraints]()
 
     private def ptsToRel(from: PointsToNode, cstr: PointsTo): Seq[PointsToRelation] = cstr match {
       case PtsToBoolValue(id, value) => Seq(PtsMember(from, id, PtsBoolValue(value)))
       case PtsToName(id) => Seq(PtsMember(from, id, PtsName()))
-      case PtsToCollection(id) => Seq(PtsMember(from, id, PtsCollection()))
+      case PtsToCollection(id) =>
+        id.id.tpe match {
+          case HCollection(_, _) => Seq(PtsMember(from, id, PtsCollection(id.id.tpe)))
+          case err => Logger.logAndThrow("DBPWrapper", LogWarning, "not a collection type: "+err)
+        }
       case PtsInCollection(id) =>
-        val coll = PtsCollection()
         val tpe = id.id.tpe match {
           case HCollection(_, collTpe) => collTpe
           case err => Logger.logAndThrow("DBPWrapper", LogWarning, "not a collection type: "+err)
         }
+        val coll = PtsCollection(id.id.tpe)
         Seq(PtsMember(from, id, coll), PtsMember(coll, ID(Variable("inCollection") setType tpe), PtsWildCard(tpe)))
       case PtsToSpecial(id, what) => Seq(PtsMember(from, id, PtsNamed(what)))
       case PtsToWildCard(id, tpe) => Seq(PtsMember(from, id, PtsWildCard(tpe)))
@@ -180,7 +239,9 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
       case PtsToNot(to) => Seq(PtsNot(ptsToRel(from, to)))
     }
 
-    private def ptsToRel(pc: PC, cstr: PointsTo): Seq[PointsToRelation] = ptsToRel(PtsPCNode(pc), cstr)
+    private def ptsToRel(pc: PC, cstr: PointsTo): Seq[PointsToRelation] = {
+      ptsToRel(PtsPCNode(pc), cstr)
+    }
 
     def addPreAlternatives(alternatives: Seq[(PC,Seq[PointsTo])]): Unit = {
       val parts = for ((pc, pts) <- alternatives) yield {
@@ -218,33 +279,96 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
       Disjunction(process(cstr) map (x => Conjunction(x)))
     }
 
-    private def compatibe(p1: Literal, p2: Literal): Boolean = {
-      if (p1.pre ^ p2.pre) {
-        false //p1 and p2 are not refering to the same time period
-      } else {
-        sys.error("TODO")
+    private def collectNodes(rel: PointsToRelation): Seq[PointsToNode] = rel match {
+      case PtsMember(owner, _, owned) => Seq(owner, owned)
+      case PtsTrivial(node) => Seq(node)
+      case PtsNot(subGraph) => subGraph flatMap collectNodes
+    }
+
+    private def collectNodesCstr(cstr: Constraints): (Seq[PointsToNode], Seq[PointsToNode]) = {
+        cstr match {
+          case Conjunction(seq) => 
+            val (pre, post) = seq.map(collectNodesCstr).unzip
+            (pre.flatten, post.flatten)
+          case Disjunction(seq) =>
+            val (pre, post) = seq.map(collectNodesCstr).unzip
+            (pre.flatten, post.flatten)
+          case Literal(pre, pts) =>
+            if (pre) ( collectNodes(pts), Seq[PointsToNode]() )
+            else ( Seq[PointsToNode](), collectNodes(pts) )
+        }
+    }
+
+    private def compatibleNodes(n1: PointsToNode, n2: PointsToNode): Boolean = (n1, n2) match {
+      case (PtsPCNode(p1), PtsPCNode(p2)) => p1 == p2
+      case (PtsBoolValue(_), PtsBoolValue(_)) => false //no aliasing of value, of of ref
+      case (PtsName(), PtsName()) => true
+      case (PtsNamed(n1), PtsNamed(n2)) => n1 == n2
+      case (PtsCollection(tpe1), PtsCollection(tpe2)) => tpe1 == tpe2 //collection types are strict ?
+      case (PtsWildCard(tpe1), PtsWildCard(tpe2)) => HType.nonEmptyIntersection(tpe1, tpe2)
+      case (_, _) => false
+    }
+
+    /** list of equivalence classes, where an equivalence class has one representative and many members. */
+    type Aliasing = Seq[(Int, Iterable[Int])]
+
+    private def makeSubAliasing(eqClass: Seq[PointsToNode]): Seq[Aliasing] = {
+      val partitions: Seq[(Seq[PointsToNode], Seq[PointsToNode])] = Misc.allPartitions(eqClass)
+      for( (left, right) <- partitions if !left.isEmpty;
+           aliases <- makeSubAliasing(right) ) yield {
+        val repr = left.head
+        val leftEqCl = (repr.uid, left.map(_.uid))
+        leftEqCl +: aliases
       }
+    }
+
+    private def makeAliasings(nodes: Seq[PointsToNode]): Seq[Aliasing] = {
+      //first get all the PCs and do eager merging on them
+      var (pcs, rest) = nodes partition { case PtsPCNode(_) => true; case _ => false }
+      var pcSet = pcs.groupBy( x => x ).map{ case (k, v) => (k.uid, v.map(_.uid)) }
+      //then look at the other nodes and enumerate the mergable sets
+      //for the rest we can build a compatibility graph, get the SCC
+      //the problem is that the process is not monotonic ...
+      val compatibility = new UnionFind[PointsToNode]()
+      for (x <- rest) compatibility += x
+      for (x <- rest; y <- rest if compatibleNodes(x, y)) compatibility.union(x, y)
+      var eagerlyMergedRest = compatibility.getEqClasses.map(_._2.toSeq)
+      var allPossible = eagerlyMergedRest.map(makeSubAliasing).toSeq
+      var product = Misc.cartesianProduct(allPossible)
+      product.map(_.flatten)
     }
 
     //TODO How to solve the constraints to generate a PartialDBT ?
     //The simplest thing should be to:
     //(1) put the constraints in DNF
-    //(2) [optional] generate all the aliasing of nodes
+    //(2) generate all the aliasing of nodes (mandatory and eager for PCs, optional for the rest)
     //(3) filter the one without solutions
     //(4) turn the constrains into graphs
     def compile: Seq[PartialDBT] = {
       //what happens with the pre/post thing ?
       //The literal indicate whether a constraint is about the pre or post state.
       
+      //what can make a set of constraints unsat ?
+      //-incompatible node (i.e. affect only concrete values true != false)
+      //-nesting of Not
+      //-otherwise should be ok ? (assumes the type system to be guarantee preservation)
+
       //(1) DNF:
       //the "constrains" buffer is a big conjunction of disj of conj ...
       val disj = dnf(Conjunction(constraints))
 
       //(2) Aliasing: PointsTo that are of compatible types may be merged ?
+      //The simplest idea is to collect all the nodes in the constraints check what can be aliased with what
+      val (preNodes, postNodes) = collectNodesCstr(disj)
+      val preAliasing = makeAliasings(preNodes)
+      val postAliasing = makeAliasings(postNodes)
+      //TODO then inject that into the dnf (larger dnf)
       
       //(3) Filter the unsat
       
       //(4) Turn into PartialDBT
+
+      //(5) simplify (remove duplicates)
       
       sys.error("TODO")
     }

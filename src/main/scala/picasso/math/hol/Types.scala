@@ -27,6 +27,27 @@ object Type {
     (subst, tpe alpha subst)
   }
 
+  /** Are there some object which are in the intersection of the two types ?
+   *  This is not exact but a good first approximation.
+   *  To make thing better we should keep some information about the subtyping of ClassTypes.
+   */
+  def nonEmptyIntersection(tp1: Type, tp2: Type): Boolean = (tp1, tp2) match {
+    case (Bool, Bool) | (Int, Int) | (String, String)
+      |  (Wildcard, _) | (_, Wildcard) | (_, TypeVariable(_))
+      |  (TypeVariable(_), _) => true
+    case (Product(lst1), Product(lst2)) => (lst1 zip lst2) forall { case (t1, t2) => nonEmptyIntersection(t1, t2) }
+    case (Function(a1, r1), Function(a2, r2)) =>
+      nonEmptyIntersection(r1,r2) && 
+      ((a1 zip a2) forall { case (t1, t2) => nonEmptyIntersection(t1, t2) })
+    case (FiniteValues(lst1), FiniteValues(lst2)) => lst1 exists (lst2 contains _)
+    case (UnInterpreted(n1), UnInterpreted(n2)) => n1 == n2
+    case (c1 @ ClassType(n1, a1), c2 @ ClassType(n2, a2)) =>
+      c1.isActor == c2.isActor && c1.isCollection == c2.isCollection &&
+      c1.isCase == c2.isCase && c1.isModule == c2.isModule &&
+      ((a1 zip a2) forall { case (t1, t2) => nonEmptyIntersection(t1, t2) })
+    case (_, _) => false
+  }
+
 }
 
 case object Bool extends Type {

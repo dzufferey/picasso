@@ -38,8 +38,8 @@ trait SimpleForward {
   private def mkTrace(init: S, trs: List[TransfiniteWord[T]], target: S): TransfiniteTrace[S,T] = {
     //dropping-keeping transitions one-by-one is exponential so need to be sightly smarter.
     //TODO be smarter latter for the moment build still build a search tree.
-    var counter = -1
-    def getID = { counter = counter + 1; counter }
+    val counter = new java.util.concurrent.atomic.AtomicInteger()
+    def getID = counter.incrementAndGet
 
     val backTrace = new HashMap[Int,(TransfiniteWord[T],Int)]
     val sets = new HashMap[Int,DownwardClosedSet[S]] //put only sets with one basis element

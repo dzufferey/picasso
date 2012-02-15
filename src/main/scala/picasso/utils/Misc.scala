@@ -28,4 +28,27 @@ object Misc {
     prefix + builder
   }
 
+  //TODO test
+  def allSubLists[A](lst: Seq[A]): Seq[Seq[A]] = lst.headOption match {
+    case Some(e) =>
+      var sub = allSubLists(lst.tail)
+      sub.map( xs => e +: xs ) ++ sub
+    case None => Seq(lst)
+  }
+
+  def allPartitions[A](lst: Seq[A]): Seq[(Seq[A],Seq[A])] = lst.headOption match {
+    case Some(e) =>
+      allPartitions(lst.tail).flatMap{ case (left, right) => 
+        Seq( (e +: left) -> right, left -> ( e +: right) )
+      }
+    case None => Seq(lst -> lst)
+  }
+
+  //TODO test
+  //Cartesian product from many dimensions, but with homogeneous type.
+  def cartesianProduct[A](domains: Seq[Seq[A]]): Seq[Seq[A]] = domains.headOption match {
+    case Some(lst) => for (xs <- cartesianProduct(domains.tail); x <- lst) yield x +: xs
+    case None => domains
+  }
+
 }
