@@ -1,4 +1,4 @@
-package picasso.frontend
+package picasso.frontend.dbpGraph
 
 import org.scalatest._
 import picasso.utils._
@@ -11,25 +11,14 @@ class DBPGraphsSuite extends FunSuite {
   val allowedLevel = LogDebug
   val disallowed = List("graph")
 
-  //TODO use KM tree
   def computeCover(fileName: String) {
     val previousLog = Logger.getMinPriority
     Logger.setMinPriority(allowedLevel)
     for(what <- disallowed) Logger.disallow(what)
     try  {
-      val file = IO.readTextFile(testDir + fileName)
-      DBPGraphParser(file) match {
-        case Some((init, trs, traget)) =>
-          val process = new DepthBoundedProcess(trs)
-          Logger("DBPGraphsSuite", logLevel, Misc.docToString(process.toGraphviz("DBPGraph")) )
-          val coverKM = DBPGraphs.computeCoverKM(init, trs)
-          Logger("DBPGraphsSuite", logLevel, "coverKM: " + coverKM)
-          //val coverSF = DBPGraphs.computeCoverSF(init, trs)
-          //Logger("DBPGraphsSuite", logLevel, "coverSF: " + coverSF)
-          //assert(coverKM == coverSF)
-        case None =>
-          Logger.logAndThrow("DBPGraphsSuite", LogError, "parsing of '" + file + "' failed")
-      }
+      val args = Array.ofDim[String](1)
+      args(0) = testDir + fileName
+      Main.main(args)
     } finally {
       Logger.setMinPriority(previousLog)
       for(what <- disallowed) Logger.allow(what)
@@ -64,4 +53,8 @@ class DBPGraphsSuite extends FunSuite {
     computeCover("simple_non_blocking.dbp")
   }
   
+  test("simple example non-blocking 2") {
+    computeCover("simple_non_blocking_2.dbp")
+  }
+
 }

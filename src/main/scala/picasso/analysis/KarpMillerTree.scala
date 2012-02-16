@@ -76,7 +76,7 @@ trait KarpMillerTree {
 
   object TreePrinter {
 
-    def add(s: StringBuilder, t: KMTree, indent: Int): Unit = {
+    private def add(s: StringBuilder, t: KMTree, indent: Int): Unit = {
       s append ((0 until indent) map ( _ => " ")).mkString("","","")
       s append t
       s append "\n"
@@ -87,6 +87,28 @@ trait KarpMillerTree {
       val string = new StringBuilder()
       add(string, t, 0)
       string.toString
+    }
+
+    //TODO print as graphviz ..
+    def toGraphviz(t: KMTree): scala.text.Document = {
+      import scala.text.Document._
+      /*
+      var x = 0
+      val docOfTrs = trs map ( t => {
+        x = x + 1
+        t.toGraphviz("transition_"+x, "subgraph")
+      })
+      val oneDoc = docOfTrs.reduceRight(_ :/: _)
+      "digraph" :: " " :: name :: " {" :: nest(4, empty :/: oneDoc) :/: text("}")
+      */
+      sys.error("TODO")
+    }
+
+    def printGraphviz(t: KMTree) = {
+      //TODO digraph declaration
+      //TODO print subgraphs
+      //TODO print edges between clusters
+      sys.error("TODO")
     }
 
   }
@@ -233,14 +255,18 @@ trait KarpMillerTree {
           //like the normal buildTree
           val current = stack.pop()
           logIteration(root, current, cover)
+          //Logger("Analysis", LogInfo, "processing\n" + current())
           if (!cover(current())) {
             cover = cover + current()
             val possible = transitions.filter(_ isDefinedAt current()).par
+            //Logger("Analysis", LogInfo, "#possible transitions: " + possible.size)
             val successors = possible.flatMap( t => t(current()).map(t -> _)).par
+            //Logger("Analysis", LogInfo, "#successors: " + successors.size)
             //at that point keep only the greatest successors
             val successors2 = DownwardClosedSet(successors.map(_._2).seq:_*).basis.toSeq
             val successors3 = successors2.map(b => successors.find(_._2 == b).get).par
             val nodes = successors3.map { case (t, s) => wideningPolicy(current, t, s) }
+            //val nodes = successors.map { case (t, s) => wideningPolicy(current, t, s) }
             //do this sequentially to avoid data races + use library sorting
             val sortedNodes = current match {
               case KMRoot(_) => nodes.seq

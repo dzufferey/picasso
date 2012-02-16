@@ -1,33 +1,37 @@
-package picasso.frontend
+package picasso.frontend.dbpGraph
 
+import DBPGraphs._
 import picasso.model.dbp._
 import picasso.math._
 import picasso.utils._
-import picasso.frontend.DBPGraphs._
 import scala.util.parsing.combinator._
 import scala.util.parsing.combinator.lexical._
 import scala.util.parsing.combinator.token._
 import scala.util.parsing.combinator.syntactical._
 
 object DBPGraphParser extends StandardTokenParsers {
-  lexical.delimiters += ("[", "]", ",", "(", ")", "==>", "<==", "->")
+  lexical.delimiters += ("[", "]", ",", "(", ")", "==>", "<==", "->", "*")
   lexical.reserved += ("transition", "init", "target", "node", "pre", "post", "_")
 
-  private def nodeInGraph(node: Node, graph: DepthBoundedConf[DBCGraph]): DBCGraph#V = {
-    val n = graph.vertices.find( n => n.state._1 == node._1 ).getOrElse(Thread(node))
-    assert(n.state._2 == node._2)
+  private def nodeInGraph(node: DBCGraph#V, graph: DepthBoundedConf[DBCGraph]): DBCGraph#V = {
+    val n = graph.vertices.find( n => n.state._1 == node.state._1 ).getOrElse(node)
+    assert(n.state._2 == node.state._2 && n.depth == node.depth)
     n
   }
   private def nodeInGraph(node: NodeId, graph: DepthBoundedConf[DBCGraph]): DBCGraph#V = {
     graph.vertices.find( n => n.state._1 == node ).get
   }
 
-  def node: Parser[DBCGraph#State] = 
+  def node1: Parser[Node] = 
     ( ("(" ~> ident <~ ",") <~ "_" <~ ")"    ^^ { case id => new Node(id, None) }
     | ("(" ~> ident <~ ",") ~ ident <~ ")"   ^^ { case id ~ label => new Node(id, Some(label)) }
     )
 
-  def edge: Parser[(DBCGraph#State, DBCGraph#EL, DBCGraph#State)] =
+  def node: Parser[DBCGraph#V] = 
+    ( node1 ~ rep("*")                        ^^ { case node ~ depth => Thread(node, depth.length) }
+    )
+
+  def edge: Parser[(DBCGraph#V, DBCGraph#EL, DBCGraph#V)] =
     ( node ~ ("->" ~> node) ~ opt("[" ~> (ident | numericLit) <~ "]")  ^^ { case n1 ~ n2 ~ label => (n1, label getOrElse "", n2) }
     )
 
@@ -61,8 +65,6 @@ object DBPGraphParser extends StandardTokenParsers {
       None
     }
   }
-
-  //TODO run the analysis ?
 
 }
 

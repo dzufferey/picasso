@@ -1,4 +1,4 @@
-package picasso.frontend
+package picasso.frontend.dbpGraph
 
 import picasso.model.dbp._
 import picasso.math._

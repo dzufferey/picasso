@@ -9,15 +9,7 @@ object Main {
     Args(args.toList) //process the cmdline args
     val report = Args.input match {
       case Some(fn) => analyse(fn, IO.readTextFile(fn))
-      case None =>
-        val read = new scala.collection.mutable.StringBuilder
-        var line = Console.in.readLine
-        while (line != null) {
-          read ++= line
-          read ++= "\n"
-          line = Console.in.readLine
-        }
-        analyse("stdin", read.toString)
+      case None => analyse("stdin", IO.readStdin)
     }
     report.makeConsoleReport
     val woDir = (new java.io.File(args(0))).getName()

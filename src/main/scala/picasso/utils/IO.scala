@@ -49,4 +49,15 @@ object IO {
     builder.toString
   }
 
+  def readStdin: String = {
+    val read = new scala.collection.mutable.StringBuilder
+    var line = scala.Console.in.readLine
+    while (line != null) {
+      read ++= line
+      read ++= "\n"
+      line = scala.Console.in.readLine
+    }
+    read.toString
+  }
+
 }
