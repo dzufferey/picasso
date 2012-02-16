@@ -37,7 +37,7 @@ object DBPGraphs {
     }
     def lteq(x: DBCGraph#State, y: DBCGraph#State): Boolean = tryCompare(x, y).map(_ < 1).getOrElse(false)
   }
-
+  
   def computeCoverKM(init: DepthBoundedConf[DBCGraph], transitions: List[DepthBoundedTransition[DBCGraph]]): DownwardClosedSet[DepthBoundedConf[DBCGraph]] = {
     val process = new DepthBoundedProcess[DBCGraph](transitions) with KarpMillerTree
     process.computeCover(init)

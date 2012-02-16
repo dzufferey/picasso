@@ -1,7 +1,7 @@
 package picasso.analysis
 
 import picasso.math._
-import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger}
+import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger, Misc}
 
 trait KarpMillerTree {
   self : WSTS with WADL =>
@@ -89,26 +89,41 @@ trait KarpMillerTree {
       string.toString
     }
 
-    //TODO print as graphviz ..
-    def toGraphviz(t: KMTree): scala.text.Document = {
-      import scala.text.Document._
-      /*
-      var x = 0
-      val docOfTrs = trs map ( t => {
-        x = x + 1
-        t.toGraphviz("transition_"+x, "subgraph")
-      })
-      val oneDoc = docOfTrs.reduceRight(_ :/: _)
-      "digraph" :: " " :: name :: " {" :: nest(4, empty :/: oneDoc) :/: text("}")
-      */
-      sys.error("TODO")
+    /* arg 1: the tree
+     * arg 2: the graph ID (starting by cluster_)
+     * arg 3: the prefix
+     * returns a subgraph
+     */
+    type TreeToGV = (KMTree, String, String) => scala.text.Document
+
+    private def giveIDs(t: KMTree, prefix: String): Map[KMTree, String] = {
+      var children = t.children.zipWithIndex.map{ case (c, i) =>
+        giveIDs(c, prefix + "_" + i)
+      }
+      (Map[KMTree, String]() /: children)(_ ++ _) + (t -> prefix)
     }
 
-    def printGraphviz(t: KMTree) = {
-      //TODO digraph declaration
-      //TODO print subgraphs
-      //TODO print edges between clusters
-      sys.error("TODO")
+    private def makeEdges(t: KMTree, directory: Map[KMTree, String]): Seq[(String, String)] = {
+      val myId = directory(t)
+      t.children.flatMap( c => (myId, directory(c)) +: makeEdges(c, directory))
+    }
+
+    def toGraphviz(t: KMTree, nodeToGraph: TreeToGV): scala.text.Document = {
+      import scala.text.Document._
+      //step 1: assigns ids to the nodes in the tree
+      val withIDs = giveIDs(t, "cluster")
+      //step 2: make the subgraphs
+      val gv = for ( (tree, id) <- withIDs) yield nodeToGraph(tree, id, id + "__")
+      val oneDocG = gv.reduceRight(_ :/: _)
+      //step 3: the edges between clusters
+      val edges = makeEdges(t, withIDs).map{ case (a, b) => a :: " -> " :: b :: text(";") }
+      val oneDocE = edges.foldRight(empty: scala.text.Document)(_ :/: _)
+      //setp 4: the whole graph
+      "digraph KMTree {" :/: nest(4, empty :/: oneDocG :/: oneDocE) :/: text("}")
+    }
+
+    def printGraphviz(t: KMTree, nodeToGraph: TreeToGV) = {
+      Misc.docToString(toGraphviz(t, nodeToGraph))
     }
 
   }
@@ -349,9 +364,13 @@ trait KarpMillerTree {
     //tree.covers(targetState)
     cover(targetState)
   }
+
+  def computeTree(initState: S) = {
+    buildTreeWithRestart(initState)
+  }
   
   def computeCover(initState: S) = {
-    val (cover, tree) = buildTreeWithRestart(initState)
+    val (cover, tree) = computeTree(initState)
     //tree.extractCover
     cover
   }
