@@ -6,10 +6,10 @@ import picasso.frontend.basic.typer._
 object Main {
 
   def main(args: Array[String]) {
-    Args(args.toList) //process the cmdline args
-    val report = Args.input match {
-      case Some(fn) => analyse(fn, IO.readTextFile(fn))
-      case None => analyse("stdin", IO.readStdin)
+    Config(args.toList) //process the cmdline args
+    val report = Config.input match {
+      case fn :: _ => analyse(fn, IO.readTextFile(fn))
+      case Nil => analyse("stdin", IO.readStdin)
     }
     report.makeConsoleReport
     val woDir = (new java.io.File(args(0))).getName()
