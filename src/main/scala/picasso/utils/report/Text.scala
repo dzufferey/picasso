@@ -2,7 +2,7 @@ package picasso.utils.report
 
 class Text(title: String) extends Item(title) {
 
-  def toText(writer: java.io.Writer) = sys.error("TODO")
-  def toHtml(writer: java.io.Writer) = sys.error("TODO")
+  def toText(writer: java.io.BufferedWriter) = sys.error("TODO")
+  def toHtml(writer: java.io.BufferedWriter) = sys.error("TODO")
 
 }

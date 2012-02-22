@@ -2,13 +2,13 @@ package picasso.utils.report
 
   //TODO structure a Report for both console and html output
 
-abstract class Item(title: String) {
+abstract class Item(val title: String) {
   protected val created = new java.util.Date()
 
-  def toText(writer: java.io.Writer)
-  def toHtml(writer: java.io.Writer)
+  def children: Seq[Item] = Nil
 
-  //TODO TOC generation ?
+  def toText(writer: java.io.BufferedWriter)
+  def toHtml(writer: java.io.BufferedWriter)
 
 }
 
