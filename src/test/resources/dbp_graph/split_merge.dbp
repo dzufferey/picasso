@@ -1,0 +1,71 @@
+init
+  node (m, master1)
+
+transition "new worker" 
+pre
+  node (m, master1)
+post
+  (w, worker) -> (m, master1) [M]
+  (m, master1) -> (w, worker) [idle]
+==>
+  m -> m
+<==
+
+transition "create mode to send mode"
+pre
+  node (m, master1)
+post
+  node (m, master2)
+==>
+  m -> m
+<==
+
+transition "send job" 
+pre
+  (m, master2) -> (w, worker) [idle]
+post
+  (m, master2) -> (w, worker_working) [working]
+==>
+  m -> m
+  w -> w
+<==
+
+transition "worker done" 
+pre
+  node (w, worker_working)
+post
+  node (w, worker_done)
+==>
+  w -> w
+<==
+
+transition "send mode to gather mode"
+pre
+  node (m, master2)
+post
+  node (m, master3)
+==>
+  m -> m
+<==
+no
+  (m, master2) -> (w, _) [idle]
+
+transition "gather result" 
+pre
+  (m, master3) -> (w, worker_done) [working]
+post
+  node (m, master3) 
+==>
+  m -> m
+<==
+
+transition "done" 
+pre
+  node (m, master3)
+post
+  node (m, master4) 
+==>
+  m -> m
+<==
+no
+  (m, master3) -> (w, _) [working]

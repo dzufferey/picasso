@@ -11,7 +11,7 @@ import scala.util.parsing.combinator.syntactical._
 
 object DBPGraphParser extends StandardTokenParsers {
   lexical.delimiters += ("[", "]", ",", "(", ")", "==>", "<==", "->", "*")
-  lexical.reserved += ("transition", "init", "target", "node", "pre", "post", "_")
+  lexical.reserved += ("transition", "init", "target", "node", "pre", "post", "no", "_")
 
   private def nodeInGraph(node: DBCGraph#V, graph: DepthBoundedConf[DBCGraph]): DBCGraph#V = {
     val n = graph.vertices.find( n => n.state._1 == node.state._1 ).getOrElse(node)
@@ -45,11 +45,11 @@ object DBPGraphParser extends StandardTokenParsers {
     rep(ident ~ ("->" ~> ident))  ^^ ( lst => (Map[NodeId, NodeId]() /: lst)( (acc, p) => p match { case id1 ~ id2 => acc + (id1 -> id2) } ) )
 
   def transition : Parser[DepthBoundedTransition[DBCGraph]] =
-    ("transition" ~> stringLit) ~ ("pre" ~> graph) ~ ("post" ~> graph) ~ ("==>" ~> mapping) ~ ("<==" ~> mapping) ^^ {
-      case id ~ lhs ~ rhs ~ forward ~ backward =>
+    ("transition" ~> stringLit) ~ ("pre" ~> graph) ~ ("post" ~> graph) ~ ("==>" ~> mapping) ~ ("<==" ~> mapping) ~ opt("no" ~> graph) ^^ {
+      case id ~ lhs ~ rhs ~ forward ~ backward ~ inhibitory =>
         val hr = forward.map{ case (k,v) => (nodeInGraph(k, lhs), nodeInGraph(v, rhs))}
         val hk = backward.map{ case (k,v) => (nodeInGraph(k, rhs), nodeInGraph(v, lhs))}
-        DepthBoundedTransition[DBCGraph](id, lhs, rhs, hr, hk, None)
+        DepthBoundedTransition[DBCGraph](id, lhs, rhs, hr, hk, inhibitory)
     }
 
   def system: Parser[(DepthBoundedConf[DBCGraph], List[DepthBoundedTransition[DBCGraph]], Option[DepthBoundedConf[DBCGraph]])] =
