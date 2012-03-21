@@ -60,3 +60,7 @@ From discussion with Rodrigo Rodrigez:
 -Yahoo ZooKeeper (finite number of server sync using Paxos, with an infinite number of clients around that makes requests)
 From discussion with Maurice Herlihy:
 -algorithm about finding (mobile) data in a tree-like structure (spannig tree where processes points to root + root has a path to data)
+
+Misc
+====
+After discussion with Tomas Vojnar -> instead of doing acceleration on sequences of states, can we do it in a single state (find repeated elements and collapse)
