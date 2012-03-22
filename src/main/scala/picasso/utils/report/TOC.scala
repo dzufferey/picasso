@@ -4,6 +4,9 @@ class TocEntry(val item: Item, val children: Seq[TocEntry]) {
 
   def this(item: Item) = this(item, item.children.map(new TocEntry(_)))
 
+  //put the to reference in the child
+  item.setToc(this)
+
   private var pathToRoot: Seq[Int] = Nil
   def setPath(toHere: Seq[Int]) {
     pathToRoot = toHere
@@ -19,7 +22,8 @@ class TocEntry(val item: Item, val children: Seq[TocEntry]) {
   
   def toHtml(writer: java.io.BufferedWriter) {
     writer.write("<li>")
-    writer.write("<a href=\"#"+ref+"\"> <span>"+number+"</span> <span>"+item.title+"</span> </a>")
+    val escapedTitle = org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(item.title)
+    writer.write("<a href=\"#"+ref+"\"> <span>"+number+"</span> <span>"+escapedTitle+"</span> </a>")
     if( !children.isEmpty) {
       writer.newLine
       writer.write("<ul>"); writer.newLine
@@ -27,6 +31,19 @@ class TocEntry(val item: Item, val children: Seq[TocEntry]) {
       writer.write("</ul>"); writer.newLine
     }
     writer.write("</li>"); writer.newLine
+  }
+
+  def getTitleWithRef = {
+    val titleLevel = pathToRoot.length match {
+      case 0 => "h1"
+      case 1 => "h2"
+      case 2 => "h3"
+      case 3 => "h4"
+      case 4 => "h5"
+      case 5 => "h6"
+    }
+    val escapedTitle = org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(item.title)
+    "<a name=\""+ref+"\"> <"+titleLevel+">"+escapedTitle+"</"+titleLevel+"> </a>"
   }
 
 }

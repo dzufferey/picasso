@@ -9,7 +9,9 @@ class Report(title: String) extends List(title) {
     writer.write("<html>"); writer.newLine
     writer.write("<head>"); writer.newLine
     writer.write("    <meta charset=\"utf-8\">"); writer.newLine
-    writer.write("    <title>Analysis report for "+title+"</title>"); writer.newLine
+    val escapedTitle = org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(title)
+    writer.write("    <title>Analysis report for "+escapedTitle+"</title>"); writer.newLine
+    writer.write(Style.CSS); writer.newLine
     writer.write("</head>"); writer.newLine
     writer.write("<body>"); writer.newLine
   }
@@ -19,19 +21,28 @@ class Report(title: String) extends List(title) {
     writer.write("</html>"); writer.newLine
   }
 
-  def htmlTOC(writer: BufferedWriter) {
-    val toc = new TOC(this)
-    toc.toHtml(writer)
-  }
   
   def makeConsoleReport {
     val writer = new BufferedWriter(new PrintWriter(Console.out))
     toText(writer)
     writer.flush
   }
+
+  override def toHtml(writer: BufferedWriter) {
+    printHtmlTitle(writer)
+    toc.toHtml(writer)
+    toHtmlInner(writer)
+  }
+
+  override def toHtmlInner(writer: BufferedWriter) {
+    for (c <- children) {
+      c.toHtml(writer)
+    }
+  }
   
   def makeHtmlReport(fileName: String) = {
     val fileOut = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName)))
+    val toc = new TOC(this)
     htmlHeader(fileOut)
     toHtml(fileOut)
     htmlFooter(fileOut)

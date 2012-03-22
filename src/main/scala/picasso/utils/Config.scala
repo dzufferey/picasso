@@ -21,10 +21,13 @@ object Config {
     case LogInfo     => LogNotice
     case LogDebug    => LogInfo
   }
+
+  var report = false
   
   val pf: PartialFunction[List[String], List[String]] = {
     case "-v" :: tail => Logger.setMinPriority(moreVerbose(Logger.getMinPriority)) ; tail
     case "-q" :: tail => Logger.setMinPriority(lessVerbose(Logger.getMinPriority)) ; tail
+    case "-r" :: tail => report = true ; tail
     case arg :: tail => input = arg :: input; tail
   }
 

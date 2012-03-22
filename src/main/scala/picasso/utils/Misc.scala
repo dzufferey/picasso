@@ -10,7 +10,25 @@ object Misc {
       writer.close
       buffer.toString
   }
-
+  
+  def graphvizToSvgDot(dot: String): String = {
+    SysCmd.execWithInputAndGetOutput(Array("dot", "-Tsvg"), Nil, dot) match {
+      case Left(bytes) => new String(bytes)
+      case Right(err) =>
+        Logger("basic", LogWarning, "error running dot (code: "+err+").")
+        "<pre>\n" + dot + "\n</pre>"
+    }
+  }
+  
+  def graphvizToSvgFdp(dot: String): String = {
+    SysCmd.execWithInputAndGetOutput(Array("fdp", "-Tsvg", "-GK=1"), Nil, dot) match {
+      case Left(bytes) => new String(bytes)
+      case Right(err) =>
+        Logger("basic", LogWarning, "error running fdp (code: "+err+").")
+        "<pre>\n" + dot + "\n</pre>"
+    }
+  }
+  
   def quote(str: String) =  "\"" + str.replaceAll("\"", "\\\\\"") + "\""
 
   def quoteIfFancy(str: String) = if (str matches ".*(\"|\\$|#).*") quote(str) else str

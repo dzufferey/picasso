@@ -6,7 +6,7 @@ import picasso.ast._
 
 class Report(name: String) {
 
-  //TODO timestamps
+  //TODO replace by the report in utils
 
   protected var parsed: Option[(Iterable[Actor], Expression)] = None
   def setParsed(p: (Iterable[Actor], Expression)) = {
@@ -54,15 +54,6 @@ class Report(name: String) {
     for (e <- error) Console.println("ERROR:\n\n" + e)
   }
 
-  def graphvizToSvg(dot: String, program: String = "dot"): String = {
-    SysCmd.execWithInputAndGetOutput(Array(program, "-Tsvg"), Nil, dot) match {
-      case Left(bytes) => new String(bytes)
-      case Right(err) =>
-        Logger("basic", LogWarning, "error running dot (code: "+err+").")
-        "<pre>\n" + dot + "\n</pre>"
-    }
-  }
-  
   def makeHtmlReport(fileName: String) = {
     val buffer = new scala.collection.mutable.StringBuilder(100 * 1024)
     buffer ++= "<!DOCTYPE HTML>\n"
@@ -85,22 +76,22 @@ class Report(name: String) {
     buffer ++= "<h2>CFA</h2>\n"
     for (as <- agents; a <- as) {
       buffer ++= "<p>" + a.id + a.params.mkString("(",", ",")") +"</p>" + "\n"
-      buffer ++= graphvizToSvg(Misc.docToString(a.toGraphviz("agent", "digraph", "agt"))) + "\n"
+      buffer ++= Misc.graphvizToSvgDot(Misc.docToString(a.toGraphviz("agent", "digraph", "agt"))) + "\n"
     }
     
     buffer ++= "<h2>Graph rewriting rules</h2>\n"
     buffer ++= "<h3>Transitions</h3>\n"
     for (ts <- transitions; t <- ts) {
       buffer ++= "<p>"+t.id+"</p>" + "\n"
-      buffer ++= graphvizToSvg(Misc.docToString(t.toGraphviz("trs"))) + "\n"
+      buffer ++= Misc.graphvizToSvgDot(Misc.docToString(t.toGraphviz("trs"))) + "\n"
     }
     buffer ++= "<h3>Initial Configuration</h3>\n"
-    for (i <- initConf) buffer ++= graphvizToSvg(i.toGraphviz("init"), "fdp") + "\n"
+    for (i <- initConf) buffer ++= Misc.graphvizToSvgFdp(i.toGraphviz("init")) + "\n"
 
     buffer ++= "<h2>Cover</h2>\n"
     for (cs <- cover; (c, i) <- cs.zipWithIndex) {
       buffer ++= "<p>("+i+")</p>" + "\n"
-      buffer ++= graphvizToSvg(c.toGraphviz("cover"), "fdp") + "\n"
+      buffer ++= Misc.graphvizToSvgFdp(c.toGraphviz("cover")) + "\n"
     }
     
     for (e <- error) {
