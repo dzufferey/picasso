@@ -18,9 +18,37 @@ extends Transition[DepthBoundedConf[P]]
   type Conf = DepthBoundedConf[P]
   type Morphism = Map[P#V, P#V]
 
+
+  /* (1) New way of handling the inhibitor:
+   * XXX This is wrong. XXX
+   * First, the inhibitors should be handled separately of the LHS morphism. Ideally, they should be connected with some mapping (we can do that later).
+   * Then, the main problem is to choose which node to remove. We don't need to remove every node in order to prevent the inhibitor from matching.
+   * Let's try the following way: the nodes that are not replicated should not be removed, only the node that are replicated can be removed.
+   * The reason is the following:
+   *   if we think of it as a counter program and of inhibitor as ?=0 constraint,
+   *   removing something not replicated amounts to 1=0.
+   *   removing something replicated a constraint that looks like c=0 (makes more sense).
+   *   To do that we need take care of the inhibitor before the unfolding. (the unfolding is like a >0 constraint.)
+   * XXX new monotonic version XXX
+   * add a mapping from lhs to inh
+   * only nodes that are not in the range of the mapping can be removed (the rest stays).
+   * that version should be monotonic because what gets removed is specified in the transition, and all morphisms remove the same elements.
+   * ...
+   *
+   * (2) keeping track of the morphisms to generate counter programs later.
+   * There is a few morphisms we need to keep:
+   * - inhibitor morphisms: for the c=0 constraints
+   * - LHS morphism + RHS morphism (so that we can connect them with hr hk)
+   * - ? frame morphism ?
+   * - folding morphism
+   * - ? do we need the unfolding generated during the transition ?
+   */
+
   def apply(conf: Conf): Set[Conf] = {
     val homs = lhs.morphisms(conf)
     
+    //TODO not the right way of doing it.
+    //Only the node of depth > 0 should be removed.
     def removeInhibitors(conf: Conf, g: Morphism): Conf = {
       inh match {
         case Some(inhibitor) => {
@@ -76,6 +104,8 @@ extends Transition[DepthBoundedConf[P]]
     homs.map(post).toSet
   }
 
+  //TODO this is not really what should happen:
+  //need to check if the LHS match, then that the inhibitor does not.
   def isDefinedAt(conf: Conf): Boolean = true
 
   def toGraphviz(name: String, prefix: String = "digraph"): scala.text.Document = {

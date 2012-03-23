@@ -35,3 +35,12 @@ post
   s -> s
 <==
   c -> c
+
+transition "receive reply" 
+pre
+  (r, reply) -> (c, _) [C]
+post
+  node (c, _)
+==>
+<==
+  c -> c
