@@ -20,7 +20,7 @@ trait DefDBP {
   type DBCC = DepthBoundedConf[DBC]
   type DBT = DepthBoundedTransition[DBC]
   type DBP = DepthBoundedProcess[DBC]
-  type PartialDBT = (String, DBCC, DBCC, Map[DBC#V,DBC#V], Map[DBC#V,DBC#V], Option[DBCC])
+  type PartialDBT = (String, DBCC, DBCC, Map[DBC#V,DBC#V], Map[DBC#V,DBC#V], Option[(DBCC, Map[DBC#V,DBC#V])])
   
   implicit val ordering = new WellPartialOrdering[DBC#State] {
     def tryCompare(x: DBC#State, y: DBC#State): Option[Int] = {
@@ -84,8 +84,9 @@ trait DefDBP {
   /** create a DBT from the individual component and do some sanity checks.
    *  TODO generate all the possible aliasing of wildcard nodes in the graphs.
    *  TODO variable type might help to exclude aliasing ...
+   *  TODO the mapping from g1 to forbidden
    */
-  def makeTrans(id: String, g1: DBCC, g2: DBCC, m1: Map[DBC#V,DBC#V], m2: Map[DBC#V,DBC#V], forbidden: Option[DBCC]): DBT = {
+  def makeTrans(id: String, g1: DBCC, g2: DBCC, m1: Map[DBC#V,DBC#V], m2: Map[DBC#V,DBC#V], forbidden: Option[(DBCC, Map[DBC#V,DBC#V])]): DBT = {
     //check that the mappings have the appropriate domains
     val m1Domain = g1.vertices //also m2 coDomain
     val m2Domain = g2.vertices //also m1 coDomain
@@ -107,7 +108,16 @@ trait DefDBP {
     assert(m2p.values.forall(m1Domain(_)))
     //check that all wildcards from m2 are mapped to a node in m1
     assert(g2WC forall (m2p contains _))
-    DepthBoundedTransition[DBC](id, g1, g2, m1p, m2p, forbidden)(ordering)
+    
+    val forbiddenp = for ( (inh, m3) <- forbidden ) yield {
+      val m3p = m3.filterKeys(m1Domain(_))
+      val m3pRange = m3p.values.toSet.size
+      assert(m3p.values.size == m3pRange)
+      assert(m3pRange <= inh.vertices.size)
+      (inh, m3p)
+    }
+
+    DepthBoundedTransition[DBC](id, g1, g2, m1p, m2p, forbiddenp )(ordering)
   }
   
   def makeTrans(partial: PartialDBT): DBT = {

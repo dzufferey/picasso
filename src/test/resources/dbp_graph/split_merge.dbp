@@ -49,6 +49,8 @@ post
 <==
 no
   (m, master2) -> (w, _) [idle]
+==>
+  m -> m
 
 transition "gather result" 
 pre
@@ -69,3 +71,5 @@ post
 <==
 no
   (m, master3) -> (w, _) [working]
+==>
+  m -> m

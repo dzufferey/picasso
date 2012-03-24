@@ -190,7 +190,8 @@ class DepthBoundedProcessSuite extends FunSuite {
       val postCond = emp + d0
       val mapping = Map(a0 -> d0)
       val inhibitor = emp ++ (a0 --> b0)
-      DepthBoundedTransition[LocDBCT]("t", preCond, postCond, mapping, Map(), Some(inhibitor))
+      val inhibitorMap = Map(a0 -> a0)
+      DepthBoundedTransition[LocDBCT]("t", preCond, postCond, mapping, Map(), Some((inhibitor, inhibitorMap)))
     }
     val postSet4 = tr4(pre4)
     assert(postSet4.size == 1)

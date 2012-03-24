@@ -45,11 +45,21 @@ object DBPGraphParser extends StandardTokenParsers {
     rep(ident ~ ("->" ~> ident))  ^^ ( lst => (Map[NodeId, NodeId]() /: lst)( (acc, p) => p match { case id1 ~ id2 => acc + (id1 -> id2) } ) )
 
   def transition : Parser[DepthBoundedTransition[DBCGraph]] =
-    ("transition" ~> stringLit) ~ ("pre" ~> graph) ~ ("post" ~> graph) ~ ("==>" ~> mapping) ~ ("<==" ~> mapping) ~ opt("no" ~> graph) ^^ {
+    ("transition" ~> stringLit) ~
+    ("pre" ~> graph) ~
+    ("post" ~> graph) ~
+    ("==>" ~> mapping) ~
+    ("<==" ~> mapping) ~
+    opt(("no" ~> graph) ~ opt("==>" ~> mapping)) ^^ {
       case id ~ lhs ~ rhs ~ forward ~ backward ~ inhibitory =>
         val hr = forward.map{ case (k,v) => (nodeInGraph(k, lhs), nodeInGraph(v, rhs))}
         val hk = backward.map{ case (k,v) => (nodeInGraph(k, rhs), nodeInGraph(v, lhs))}
-        DepthBoundedTransition[DBCGraph](id, lhs, rhs, hr, hk, inhibitory)
+        val inhibitory2 = for ( (inh ~  map) <- inhibitory ) yield {
+          val map2 = map.getOrElse(Map())
+          val map3 = map2.map{ case (k,v) => (nodeInGraph(k, lhs), nodeInGraph(v, inh))}
+          (inh, map3)
+        }
+        DepthBoundedTransition[DBCGraph](id, lhs, rhs, hr, hk, inhibitory2)
     }
 
   def system: Parser[(DepthBoundedConf[DBCGraph], List[DepthBoundedTransition[DBCGraph]], Option[DepthBoundedConf[DBCGraph]])] =

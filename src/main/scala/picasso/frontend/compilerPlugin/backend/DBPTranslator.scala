@@ -171,7 +171,7 @@ trait DBPTranslator {
                   rhsPartial: DBCC,
                   mapForward: Map[DBC#V,DBC#V],
                   mapBackward: Map[DBC#V,DBC#V]
-                ): (String, DBCC, DBCC, Map[DBC#V,DBC#V], Map[DBC#V,DBC#V], Option[DBCC]) = {
+                ): (String, DBCC, DBCC, Map[DBC#V,DBC#V], Map[DBC#V,DBC#V], Option[(DBCC, Map[DBC#V,DBC#V])]) = {
     //(1) get what is live, and what should die
     val variable = p.id //only thing that gets written
     val varLiveBefore = testLive(liveAt,a,variable)
@@ -256,7 +256,8 @@ trait DBPTranslator {
           val g1 = emptyConf + n1
           val g2 = emptyConf + n2
           val forbidden = makeConf(accessID(n1,thisNode,set,collectionNode)) + (collectionNode, collectionMember(set.id), unk)
-          (g1,g2,Map.empty[DBC#V, DBC#V],Some(forbidden))
+          val forbiddenMap = Map(n1 -> n1)
+          (g1,g2,Map.empty[DBC#V, DBC#V],Some(forbidden -> forbiddenMap))
 
         case id @ ID(v) if v.tpe == HBool =>
           assert(testLive(liveAt,a,id))

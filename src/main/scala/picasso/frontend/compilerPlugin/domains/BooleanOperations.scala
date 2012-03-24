@@ -111,7 +111,7 @@ trait BooleanOperations {
     }
 
     //TODO preserving ref correctly ??
-    def makeBooleanNarrowFct(clazz: PClass, a: PC, p: Affect, b: PC, liveAt: Map[PC,Set[ID]]): Seq[(String, DBCC, DBCC, Map[DBC#V,DBC#V], Map[DBC#V,DBC#V], Option[DBCC])] = {
+    def makeBooleanNarrowFct(clazz: PClass, a: PC, p: Affect, b: PC, liveAt: Map[PC,Set[ID]]): Seq[PartialDBT] = {
       val thisNode = unk
       val n1 = DBCN(a)
       val n2 = DBCN(b)
