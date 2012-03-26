@@ -207,10 +207,10 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     (DepthBoundedConf[P](res._2), res._1)
   }
 
-  def fold(implicit wpo: WellPartialOrdering[P#State]): Self = {
+  def foldWithWitness(implicit wpo: WellPartialOrdering[P#State]): (Self, Morphism) = {
     val iter = this morphisms this
 
-    def loop() : Self = {
+    def loop() : (Self, Morphism) = {
       if (iter.hasNext) { 
         val m = iter.next
 
@@ -218,12 +218,14 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
         val redundant = vertices &~ used
         
         if (redundant.isEmpty) loop()
-        else this -- redundant
-      } else this
+        else (this -- redundant, m)
+      } else (this, Map())
     }
 
     loop()    
   }
+
+  def fold(implicit wpo: WellPartialOrdering[P#State]): Self = foldWithWitness._1
 
   def widen(newThreads: Set[V]): Self = {
 

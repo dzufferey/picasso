@@ -46,6 +46,18 @@ object Misc {
     prefix + builder
   }
 
+  def safeCall[A,B](fct: A => B, arg: A): Option[B] = {
+    try {
+      Some(fct(arg))
+    } catch {
+      case _ => None
+    }
+  }
+
+  def toBoolean(str: String): Option[Boolean] = safeCall((x: String) => x.toBoolean, str)
+
+  def toInt(str: String): Option[Int] = safeCall((x: String) => x.toInt, str)
+
   //TODO test
   def allSubLists[A](lst: Seq[A]): Seq[Seq[A]] = lst.headOption match {
     case Some(e) =>

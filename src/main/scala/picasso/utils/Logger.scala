@@ -40,6 +40,28 @@ class Logger {
   def disallow(str: String) = disallowed += str
   def allow(str: String) = disallowed -= str
 
+  private def increaseLevel(l: Level): Level = l match {
+    case LogCritical => LogError
+    case LogError    => LogWarning
+    case LogWarning  => LogNotice
+    case LogNotice   => LogInfo
+    case LogInfo     => LogDebug
+    case LogDebug    => LogDebug
+  }
+  
+  private def decreaseLevel(l: Level): Level = l match {
+    case LogCritical => LogCritical
+    case LogError    => LogCritical
+    case LogWarning  => LogError
+    case LogNotice   => LogWarning
+    case LogInfo     => LogNotice
+    case LogDebug    => LogInfo
+  }
+
+  def moreVerbose = setMinPriority( increaseLevel(getMinPriority))
+
+  def lessVerbose = setMinPriority( decreaseLevel(getMinPriority))
+
   /** Should be dispayed ? */
   def apply(relatedTo: String, lvl: Level): Boolean =
     lvl.priority >= minPriority && !disallowed(relatedTo)

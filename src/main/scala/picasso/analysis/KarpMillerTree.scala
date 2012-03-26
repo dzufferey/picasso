@@ -40,6 +40,8 @@ trait KarpMillerTree {
 
     def size: Int = (1 /: children)((acc,ch) => acc + ch.size)
 
+    //TODO add the covering backEdges in the tree
+
   }
 
   case class KMRoot(state: S) extends KMTree {
@@ -166,6 +168,7 @@ trait KarpMillerTree {
     KMNode(current, t, s2, acceleratedFrom.toList)
   }
 
+  /*
   def buildTree(initState: S): (DownwardClosedSet[S], KMTree) = {
     val startTime = java.lang.System.currentTimeMillis
     val root = KMRoot(initState)
@@ -206,6 +209,7 @@ trait KarpMillerTree {
     }
     (cover, root)
   }
+  */
 
   //TODO smarter search policy
   //when the depth of the tree increases, it becomes very slow.
