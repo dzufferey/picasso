@@ -24,9 +24,9 @@ class TransitionWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
 
   //can be recomputed afterward
   /** 'from' after unfolding */
-  var unlfolded: DepthBoundedConf[P] = null
+  var unfolded: DepthBoundedConf[P] = null
   /** firstMorhism after unfolding */
-  var unlfoldedMorphism: Morphism = null
+  var unfoldedMorphism: Morphism = null
 
   //can be recomputed afterward
   /** nodes removed due to the inhibitor */
@@ -45,6 +45,21 @@ class WideningWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
   type Conf = DepthBoundedConf[P]
   type Morphism = Map[P#V, P#V]
 
-  //TODO
+  var smaller: Conf = null
+  var bigger: Conf = null
+  var result: Conf = null
+
+  //set of nodes that gets replicated
+  var replicated: Set[P#V] = null
+
+  var unfoldedResult: Conf = null
+  var folding: Morphism = null
+
+}
+
+class WideningWitnessSeq[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
+{
+
+  var sequence: List[WideningWitness[P]] = Nil
 
 }

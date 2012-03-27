@@ -47,13 +47,11 @@ object Main {
 
         val (cover, tree) = process.computeTree(init)
 
-        Logger("dbpGraph", LogInfo, "tree:\n" +
-          process.TreePrinter.printGraphviz(tree , (t, id, pref) => t().toGraphvizFull(id, "subgraph", "", pref)._1 ) )
-        report.add( new GenericItem(
-          "KM Tree",
-          process.TreePrinter.printGraphviz(tree , (t, id, pref) => t().toGraphvizFull(id, "subgraph", "", pref)._1 ),
-          Misc.graphvizToSvgFdp(process.TreePrinter.printGraphviz(tree , (t, id, pref) => t().toGraphvizFull(id, "subgraph", "", pref)._1 ))
-        ))
+        if (Config.KM_showTree) {
+          val treeAsGV = process.TreePrinter.printGraphviz(tree , (t, id, pref) => t().toGraphvizFull(id, "subgraph", "", pref)._1 )
+          Logger("dbpGraph", LogInfo, "tree:\n" + treeAsGV )
+          report.add( new GenericItem( "KM Tree", treeAsGV,Misc.graphvizToSvgFdp(treeAsGV) ))
+        }
 
         Logger("dbpGraph", LogNotice, "cover:\n" + cover)
         val coverReport = new List("Cover")

@@ -107,22 +107,38 @@ object Arg {
 class Config {
   
   var input: List[String] = Nil
-  var report = false
-  var reportOutput: Option[String] = None
-
-  val verbose = ("-v", Arg.Unit(() => Logger.moreVerbose), "increase the verbosity level.")
-  val quiet   = ("-q", Arg.Unit(() => Logger.lessVerbose), "decrease the verbosity level.")
-  val reportQuick = ("-r", Arg.Unit(() => report = true), "output a report (with a default name).")
-  val reportFull = ("--report", Arg.String(str => { report = true; reportOutput = Some(str) } ), "output a report with given name.")
-
-  /** process arguments that do not belong to an option. */
+  /** process arguments that do not belong to an option (i.e. the input files). */
   def default(arg: String) {
     input = arg :: input
   }
+  
+  //verbosity
+  val verbose = ("-v", Arg.Unit(() => Logger.moreVerbose), "increase the verbosity level.")
+  val quiet   = ("-q", Arg.Unit(() => Logger.lessVerbose), "decrease the verbosity level.")
+  val hide    = ("--hide", Arg.String( str => Logger.disallow(str)), "hide the output with given prefix")
+
+  //general reporting option
+  var report = false
+  var reportOutput: Option[String] = None
+
+  val reportQuick = ("-r", Arg.Unit(() => report = true), "output a report (with a default name).")
+  val reportFull = ("--report", Arg.String(str => { report = true; reportOutput = Some(str) } ), "output a report with given name.")
+
+  //about the KM tree analysis
+  var KM_showTree = false
+  var KM_fullTree = false
+
+  val tree1 = ("-t", Arg.Unit(() => KM_showTree = true), "output the Karp-Miller tree (when applicable) as part of the report.")
+  val tree2 = ("--full", Arg.Unit(() => KM_fullTree = true), "keep all the successors in the Karp-Miller tree.")
+
 
   val usage = "..."
 
-  val options = List(verbose, quiet, reportQuick, reportFull)
+  val options = List(
+    verbose, quiet, hide,
+    reportQuick, reportFull,
+    tree1, tree2
+  )
 
   def apply(args: Seq[String]) {
     Arg.process(options, default, usage)(args)

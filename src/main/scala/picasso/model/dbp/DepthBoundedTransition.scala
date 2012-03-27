@@ -20,54 +20,55 @@ extends Transition[DepthBoundedConf[P]]
   type Morphism = Map[P#V, P#V]
 
 
+  protected def removeInhibitors(conf: Conf, g: Morphism): Option[(Conf, Set[P#V])] = {
+    inh match {
+      case Some((inhibitor, inhMap)) => {
+        //get the mapping of the inhibitor starting form the inhMap
+        //val gRestricted = g filter (p => inhibitor.vertices(p._1))
+        val gRestricted = g filterKeys (inhMap contains _)
+        val partialMorphism: Morphism = gRestricted.map{ case (k,v) => (inhMap(k), v) }.toMap
+        val matches = inhibitor.morphisms(conf, partialMorphism) 
 
-  //TODO modify to generated TransitionWitness(es)
-  def apply(conf: Conf): Set[Conf] = {
+        val inhMapRange = inhMap.values.toSet
+        val nodesToRemove = inhibitor.vertices.filter(v => !inhMapRange.contains(v))
+        var nodeRemoved = Set[P#V]()
+        
+        //for each of such match removes the part which is not in the range of inhMap
+        val notInhibited = (conf /: matches) {
+          (conf, m) =>
+            val nodesToRemoveMapped = nodesToRemove.map(m(_))
+            val coercedConf = conf -- nodesToRemoveMapped
+            nodeRemoved = nodeRemoved ++ nodesToRemoveMapped
+            coercedConf
+        }
+        //make sure that the morphism g is still valid after removing the inhibitors
+        if ( g.values.forall(v => notInhibited contains v) ) {
+          Some( notInhibited -> nodeRemoved )
+        } else {
+          None
+        }
+      }
+      case None => Some(conf -> Set[P#V]())
+    }
+  }
+
+
+  def applyWithWitness(conf: Conf): Seq[(TransitionWitness[P], Conf)] = {
     val homs = lhs.morphisms(conf)
-    
+
     //g: lhs -> conf
     //TODO this is not quite monotonic:
     // removing all the matches can lead to a situation where the transition cannot be applied,
     // even though removing some matches can lead to a situation where the transition can still be applied.
     // for the moment, we will assume the transition are 'nice'
-    def removeInhibitors(conf: Conf, g: Morphism): Option[Conf] = {
-      inh match {
-        case Some((inhibitor, inhMap)) => {
-          //get the mapping of the inhibitor starting form the inhMap
-          //val gRestricted = g filter (p => inhibitor.vertices(p._1))
-          val gRestricted = g filterKeys (inhMap contains _)
-          val partialMorphism: Morphism = gRestricted.map{ case (k,v) => (inhMap(k), v) }.toMap
-          val matches = inhibitor.morphisms(conf, partialMorphism) 
-
-          val inhMapRange = inhMap.values.toSet
-          val nodesToRemove = inhibitor.vertices.filter(v => !inhMapRange.contains(v))
-          
-          //for each of such match removes the part which is not in the range of inhMap
-          val notInhibited = (conf /: matches) {
-            (conf, m) =>
-              val nodesToRemoveMapped = nodesToRemove.map(m(_))
-              val coercedConf = conf -- nodesToRemoveMapped
-              coercedConf
-          }
-          //make sure that the morphism g is still valid after removing the inhibitors
-          if ( g.values.forall(v => notInhibited contains v) ) {
-            Some( notInhibited )
-          } else {
-            None
-          }
-        }
-        case None => Some(conf)
-      }
-    }
-
-    def post(g: Morphism): Option[Conf] = {
+    def post(g: Morphism): Option[(TransitionWitness[P], Conf)] = {
       val (conf0, g1) = conf.unfold(lhs, g)
       //print("conf1: " + conf1)
       //print("lhs: " + lhs.morph(g1))
 
       // remove all inhibiting subgraphs from conf0 (monotonicity abstraction)
-      for ( conf1 <- removeInhibitors(conf0, g1) ) yield {
-      
+      for ( (conf1, removed) <- removeInhibitors(conf0, g1) ) yield {
+
         // Compute nodes that the transition removes from conf1
         val hkRange = hk.values
         val removed = lhs.vertices.flatMap{v => if((hr isDefinedAt v) || (hkRange exists (_ == v))) Set[P#V]() else Set[P#V](g1(v))}
@@ -90,18 +91,33 @@ extends Transition[DepthBoundedConf[P]]
  
         // add rhs to the frame and fold the result
         val postUnfolded = (frame morph f_hr_g1) ++ (rhsClone morph g1_hk_f)
-        val post = postUnfolded.fold
+        val (post, folding) = postUnfolded.foldWithWitness
         //print("post: " + post)
-        post
 
+        val witness = new TransitionWitness
+        witness.transition = this
+        witness.from = conf
+        witness.firstMorhism = g
+        witness.unfolded = conf0
+        witness.unfoldedMorphism = g1
+        witness.inhibitedNodes = removed
+        witness.unfoldedAfterPost = postUnfolded
+        witness.folding = folding
+        witness.to = post
+      
+        (witness, post)
       }
     }
 
-    homs.flatMap(post).toSet
+    homs.flatMap(post).toSeq
+  }
+
+  def apply(conf: Conf): Set[Conf] = {
+    applyWithWitness(conf).map(_._2).toSet
   }
 
   //TODO this is not really what should happen:
-  //need to check if the LHS match, then that the inhibitor does not.
+  //need to check if the LHS match, then that the inhibitor cannot be removed while preserving the match.
   def isDefinedAt(conf: Conf): Boolean = true
 
   def toGraphviz(name: String, prefix: String = "digraph"): scala.text.Document = {

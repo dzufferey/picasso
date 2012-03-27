@@ -1,7 +1,7 @@
 package picasso.analysis
 
 import picasso.math._
-import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger, Misc}
+import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger, Misc, Config}
 
 trait KarpMillerTree {
   self : WSTS with WADL =>
@@ -14,7 +14,7 @@ trait KarpMillerTree {
     /** Checks whether the tree covers some state.
      *  Since the tree is cut due to subsumed nodes,
      *  this methods makes only sense if applied at the root. */
-    def covers(state: S): Boolean
+    def covers(state: S): Boolean = ordering.lteq(this(), state) || (children exists (_ covers this()))
 
     def ancestors: Seq[KMTree]
 
@@ -26,7 +26,7 @@ trait KarpMillerTree {
 
     def ancestorSmallerQuick(s: S, toInclude: Set[KMTree]): Seq[KMTree]
 
-    /** inplace modification of the tree */
+    /** List of children (modified inplace) */
     protected var _children: List[KMNode] = Nil
     def children = _children
     def addChildren(c: KMNode) = _children = c :: _children
@@ -40,7 +40,8 @@ trait KarpMillerTree {
 
     def size: Int = (1 /: children)((acc,ch) => acc + ch.size)
 
-    //TODO add the covering backEdges in the tree
+    //covering edges: points to the node that made the exploration of this tree stopped
+    var subsumed: Option[KMTree] = None
 
   }
 
@@ -48,7 +49,6 @@ trait KarpMillerTree {
     override def toString = "KMRoot("+state+")" 
 
     def apply() = state
-    def covers(s: S) = ordering.lteq(s, state) || (children exists (_ covers s))
     def ancestors: Seq[KMTree] = Seq(this)
     
     def ancestorSmallerQuick(s: S, toInclude: Set[KMTree]): Seq[KMTree] = {
@@ -67,7 +67,6 @@ trait KarpMillerTree {
     }
 
     def apply() = state
-    def covers(s: S) = ordering.lteq(s, state) || (children exists (_ covers s))
     def ancestors: Seq[KMTree] = this +: parent.ancestors
     def ancestorSmallerQuick(s: S, toInclude: Set[KMTree]): Seq[KMTree] = {
       if (toInclude(this)) this +: parent.ancestorSmallerQuick(s, toInclude ++ acceleratedFrom)
@@ -110,6 +109,16 @@ trait KarpMillerTree {
       t.children.flatMap( c => (myId, directory(c)) +: makeEdges(c, directory))
     }
 
+    private def makeCoveringEdges(t: KMTree, directory: Map[KMTree, String]): Seq[(String, String)] = {
+      val childrenEdges = t.children.flatMap( c => makeCoveringEdges(c, directory))
+      t.subsumed match {
+        case Some(s) =>
+          (directory(t), directory(s)) +: childrenEdges
+        case None =>
+          childrenEdges
+      }
+    }
+
     def toGraphviz(t: KMTree, nodeToGraph: TreeToGV): scala.text.Document = {
       import scala.text.Document._
       //step 1: assigns ids to the nodes in the tree
@@ -118,8 +127,9 @@ trait KarpMillerTree {
       val gv = for ( (tree, id) <- withIDs) yield nodeToGraph(tree, id, id + "__")
       val oneDocG = gv.reduceRight(_ :/: _)
       //step 3: the edges between clusters
-      val edges = makeEdges(t, withIDs).map{ case (a, b) => a :: " -> " :: b :: text(";") }
-      val oneDocE = edges.foldRight(empty: scala.text.Document)(_ :/: _)
+      val edges1 = makeEdges(t, withIDs).map{ case (a, b) => a :: " -> " :: b :: text(";") }
+      val edges2 = makeCoveringEdges(t, withIDs).map{ case (a, b) => a :: " -> " :: b :: text("[color=\"#0000aa\"];") }
+      val oneDocE = (edges1 ++ edges2).foldRight(empty: scala.text.Document)(_ :/: _)
       //setp 4: the whole graph
       "digraph KMTree {" :/: nest(4, empty :/: oneDocG :/: oneDocE) :/: text("}")
     }
@@ -168,48 +178,18 @@ trait KarpMillerTree {
     KMNode(current, t, s2, acceleratedFrom.toList)
   }
 
-  /*
-  def buildTree(initState: S): (DownwardClosedSet[S], KMTree) = {
-    val startTime = java.lang.System.currentTimeMillis
-    val root = KMRoot(initState)
-    //In Theory, a DFS should be the fastest way to saturate the system, so ...
-    //On the side, maintains a (downward-closed) covering set to check for subsumption
-    var cover = DownwardClosedSet.empty[S]
-    val stack = scala.collection.mutable.Stack[KMTree](root)
-    while (!stack.isEmpty) {
-      val current = stack.pop()
-      logIteration(root, current, cover)
-      if (!cover(current())) {
-        cover = cover + current()
-        val possible = transitions.filter(_ isDefinedAt current()).par
-        val successors = possible.flatMap( t => t(current()).map(t -> _)).par
-        //TODO at that point keep only the greatest successors
-        val nodes = successors.map { case (t, s) => wideningPolicy(current, t, s) }
-        //do this sequentially to avoid data races + use library sorting
-        val sortedNodes = current match {
-          case KMRoot(_) => nodes.seq
-          case KMNode(_, by, _, acceleratedFrom) => 
-            val scoredNodes= nodes.map( n => n -> transitionsAffinity(by, n.by) )
-            scoredNodes.seq.sortWith( (n1, n2) => n1._2 > n2._2 ).map(_._1)  //TODO what about acceleration
-        }
-        sortedNodes.foreach( n => {
-          current.addChildren(n)
-          stack.push(n)
-        })
-      }
-    }
-    val endTime = java.lang.System.currentTimeMillis
-    Logger("Analysis", LogInfo, "KMTree computed in " + ((endTime - startTime)/1000F) + " sec (cover of size "+cover.size+", K-M tree of size " + root.size + ").")
-    Logger("Analysis", LogDebug, "KMTree is\n" + TreePrinter.print(root))
-    Logger("Analysis", LogInfo, "Checking fixed-point.")
-    if (checkFixedPoint(cover)) {
-      Logger("Analysis", LogInfo, "Fixed-point checked.")
+  protected def oneStepPost(current: KMTree): scala.collection.GenSeq[(T, S)] = {
+    val possible = transitions.filter(_ isDefinedAt current()).par
+    val successors = possible.flatMap( t => t(current()).map(t -> _)).par
+    //Logger("Analysis", LogInfo, "#successors: " + successors.size)
+    if (Config.KM_fullTree) {
+      successors
     } else {
-      Logger("Analysis", LogError, "Fixed-point checking failed.")
+      //at that point keep only the greatest successors
+      val successors2 = DownwardClosedSet(successors.map(_._2).seq:_*).basis.toSeq
+      successors2.map(b => successors.find(_._2 == b).get)
     }
-    (cover, root)
   }
-  */
 
   //TODO smarter search policy
   //when the depth of the tree increases, it becomes very slow.
@@ -235,7 +215,19 @@ trait KarpMillerTree {
     val startTime = java.lang.System.currentTimeMillis
     val root = KMRoot(initState)
     var cover = DownwardClosedSet.empty[S]
+    val coverMap = scala.collection.mutable.HashMap[S, KMTree]()
     val stack = scala.collection.mutable.Stack[KMTree]()
+
+    var cleanUpCounter = 0
+    val cleanUpThreshold = 1000
+    def periodicCleanUp {
+      cleanUpCounter += 1
+      if (cleanUpCounter > cleanUpThreshold) {
+        cleanUpCounter = 0
+        val unNeededKeys = coverMap.keys.filterNot(k => cover.basis.contains(k))
+        coverMap -- unNeededKeys
+      }
+    }
 
     def restart {
       //fold over the tree and collect the parts to process:
@@ -262,6 +254,7 @@ trait KarpMillerTree {
         }
       }
     }
+
     def buildFromRoot(root: KMRoot) {
       Logger("Analysis", LogDebug, "starting from " + root())
       assert(stack.isEmpty)
@@ -274,29 +267,27 @@ trait KarpMillerTree {
           //like the normal buildTree
           val current = stack.pop()
           logIteration(root, current, cover)
-          //Logger("Analysis", LogInfo, "processing\n" + current())
-          if (!cover(current())) {
-            cover = cover + current()
-            val possible = transitions.filter(_ isDefinedAt current()).par
-            //Logger("Analysis", LogInfo, "#possible transitions: " + possible.size)
-            val successors = possible.flatMap( t => t(current()).map(t -> _)).par
-            //Logger("Analysis", LogInfo, "#successors: " + successors.size)
-            //at that point keep only the greatest successors
-            val successors2 = DownwardClosedSet(successors.map(_._2).seq:_*).basis.toSeq
-            val successors3 = successors2.map(b => successors.find(_._2 == b).get).par
-            val nodes = successors3.map { case (t, s) => wideningPolicy(current, t, s) }
-            //val nodes = successors.map { case (t, s) => wideningPolicy(current, t, s) }
-            //do this sequentially to avoid data races + use library sorting
-            val sortedNodes = current match {
-              case KMRoot(_) => nodes.seq
-              case KMNode(_, by, _, acceleratedFrom) => 
-                val scoredNodes= nodes.map( n => n -> transitionsAffinity(by, n.by) )
-                scoredNodes.seq.sortWith( (n1, n2) => n1._2 > n2._2 ).map(_._1)  //TODO what about acceleration
-            }
-            sortedNodes.foreach( n => {
-              current.addChildren(n)
-              stack.push(n)
-            })
+          periodicCleanUp
+          cover.elementCovering(current()) match {
+            case Some(elt) =>
+              val by = coverMap(elt)
+              current.subsumed = Some(by)
+            case None =>
+              cover = cover + current()
+              coverMap += (current() -> current)
+              val successors = oneStepPost(current).par
+              val nodes = successors.map { case (t, s) => wideningPolicy(current, t, s) }
+              //do this sequentially to avoid data races + use library sorting
+              val sortedNodes = current match {
+                case KMRoot(_) => nodes.seq
+                case KMNode(_, by, _, acceleratedFrom) => 
+                  val scoredNodes = nodes.map( n => n -> transitionsAffinity(by, n.by) )
+                  scoredNodes.seq.sortWith( (n1, n2) => n1._2 > n2._2 ).map(_._1) //TODO what about acceleration
+              }
+              sortedNodes.foreach( n => {
+                current.addChildren(n)
+                stack.push(n)
+              })
           }
         }
       }

@@ -30,55 +30,48 @@ class DepthBoundedProcess[P <: DBCT](trs: GenSeq[DepthBoundedTransition[P]])(imp
   val trs2 = trs.par
   def transitions = trs2
 
-  def tryAcceleratePair(smaller: S, bigger: S): Option[S] = {
-    //go over all the morphisms ...
+  /** accelration/widening with witness:
+   * returns:
+   * - the result
+   * - the set of replicated nodes
+   * - the result before folding
+   * - the mapping used for the folding
+   */
+  def tryAcceleratePairWithWitness(smaller: S, bigger: S): Option[(S, WideningWitness[P])] = {
     val ms = (smaller morphisms bigger).toSeq
     val seeds = ms.map(m => bigger.vertices -- m.values)
-    val widenend = (bigger /: seeds)( (acc, seed) => {
+    val (widenedUnfolded, usedSeed) = ((bigger, None: Option[Set[P#V]]) /: seeds)( (acc, seed) => {
       val w = bigger widen seed
-      if (ordering.gt(acc, w)) acc else w
-    }).fold
+      if (ordering.gt(acc._1, w)) acc else (w, Some(seed))
+    })
+    val (widened, folding) = widenedUnfolded.foldWithWitness
     //println("Acceleration:")
     //print(smaller.toGraphviz("smaller"))
     //print(bigger.toGraphviz("bigger"))
     //print(widenend.toGraphviz("widenend"))
-    if (ms.isEmpty) None
-    else Some(widenend)
-    /*
-    smaller morphism bigger match {
-      case None => None
-      case Some(m) => {
-        val newThreads = bigger.vertices -- m.values
-        
-        val accBigger = bigger widen newThreads
-
-        //println("Acceleration:")
-        //print(smaller.toGraphviz("smaller"))
-        //print(bigger.toGraphviz("bigger"))
-        //print(accBigger.toGraphviz("accBigger"))
-        
-        Some((bigger widen newThreads).fold)
-
-        /*
-        val threadsInc = new scala.collection.mutable.HashMap[S#V,S#V]
-        val mapping: PartialFunction[S#V,S#V] = 
-          threadsInc orElse { case v =>
-            if (!(newThreads contains v)) v else {
-              val vInc = v++
-              threadsInc += (v -> vInc)
-              vInc
-            }
-          }
-
-        val accBigger = bigger morph mapping
-
-        if (threadsInc.values.forall (_.depth > 1)) Some(bigger) else Some(accBigger)
-        */
-      }
+    if (usedSeed.isEmpty) None
+    else {
+       val witness = new WideningWitness
+       witness.smaller = smaller
+       witness.bigger = bigger
+       witness.result = widened
+       witness.replicated = usedSeed.get
+       witness.unfoldedResult = widenedUnfolded
+       witness.folding = folding
+       Some((widened, witness))
     }
-    */
+  }
+
+  def tryAcceleratePair(smaller: S, bigger: S): Option[S] = {
+    tryAcceleratePairWithWitness(smaller, bigger).map(_._1)
   }
   
+  def wideningWithWitness(smaller: S, bigger: S): (S, WideningWitness[P]) = {
+    val opt = tryAcceleratePairWithWitness(smaller, bigger)
+    if (opt.isDefined) opt.get
+    else Logger.logAndThrow("Limits", LogError, "widening not defined for " + smaller + " and " + bigger)
+  }
+
   lazy val affinityMap: GenMap[(T,T), Int] = {
     val pairs = for (t1 <- transitions; t2 <- transitions) yield {
       //as produced: look at the nodes in t1.rhs that are not in t1.lhs (as a multiset)
