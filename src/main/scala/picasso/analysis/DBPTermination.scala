@@ -27,11 +27,18 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
   override protected def wideningPolicy(current: KMTree, t: T, s: S): KMNode = {
     val acceleratedFrom = current.ancestorSmaller(s)
     val reducedSeq = expBackoff(acceleratedFrom)
-    /*
-    val s2 = (s /: reducedSeq)( (bigger, smaller) => widening(smaller(), bigger))
+    var witnesses: List[WideningWitness[P]] = Nil
+    val s2 = (s /: reducedSeq)( (bigger, smaller) => {
+      val (bigger2, witness) = wideningWithWitness(smaller(), bigger)
+      witnesses = witness :: witnesses
+      bigger2
+    })
+    val seqWitness = new WideningWitnessSeq[P]
+    seqWitness.sequence = witnesses.reverse
+    wideningWitnesses.add(seqWitness)
     KMNode(current, t, s2, acceleratedFrom.toList)
-    */
-    sys.error("TODO")
   }
+
+  //TODO (2), (3)
 
 }

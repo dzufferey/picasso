@@ -57,7 +57,7 @@ class WideningWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
 
 }
 
-class WideningWitnessSeq[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
+class WideningWitnessSeq[P <: DBCT]
 {
 
   var sequence: List[WideningWitness[P]] = Nil

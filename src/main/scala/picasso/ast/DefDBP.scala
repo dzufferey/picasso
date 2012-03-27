@@ -114,6 +114,7 @@ trait DefDBP {
       val m3pRange = m3p.values.toSet.size
       assert(m3p.values.size == m3pRange)
       assert(m3pRange <= inh.vertices.size)
+      assert(m3p.forall {case (k, v) => g1.labelOf(k) == inh.labelOf(v) })
       (inh, m3p)
     }
 
