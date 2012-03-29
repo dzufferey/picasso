@@ -127,17 +127,26 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
 
     def getComponent(graph: Self, node: V): Set[V] = {
       assert(node.depth > 0)
-      //take all the nodes conntected with depth greater of equal, repeat until fixpoint.
+      val depth = node.depth
+      //take all the nodes conntected with depth greater or equal, repeat until fixpoint.
       def process(acc: Set[V], frontier: Set[V]): Set[V] = frontier.headOption match {
         case Some(x) =>
-          sys.error("TODO")
+          val next = graph(x).filter(v => v.depth >= depth && !acc(v))
+          process(acc ++ next, (frontier - x) ++ next)
         case None => acc
       }
       process(Set(node), Set(node))
     }
 
     def cloneComponent(graph: Self, nodes: Set[V]): (Self, Morphism) = {
-      sys.error("TODO")
+      assert(nodes.forall(_.depth > 0))
+      val witness: Map[V, V] = nodes.map( x => (x, x--) ).toMap
+      val newNodes = witness.map(_._2)
+      val edgesToCopy = graph.edges.filter{ case (a,_,b) => nodes(a) || nodes(b) }
+      val copiedEdges = edgesToCopy.map{ case (a,b,c) => (witness.getOrElse(a,a), b, witness.getOrElse(c,c)) }
+      val graph1 = graph ++ copiedEdges
+      val graph2 = (graph1 /: newNodes)(_ + _)
+      (graph2, witness)
     }
 
     //m is not injective, after unfolding it should be.
@@ -147,10 +156,14 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
         if (x.depth > 0) {
           val cmp = getComponent(graph, x)
           val (graph2, newWitness) = cloneComponent(graph, cmp)
-          //TODO todo2, newM2, witness2
+          val newM2: Morphism = newM.map{case (a,b) => (a, newWitness.getOrElse(b, b)) }.toMap
+          val witness2 = witness ++ newWitness.map{ case (a,b) => (a, witness.getOrElse(a, b)) }
+
+          //TODO todo2: more complex since we need to preserve edges ...
+          //we should group the todo nodes according to the whether they point to the same component and whether they are "linked" in smaller
+          //so that when multiple unfolding of the same part is needed, we know how to keep track of the nodes ...
           val todo2 = sys.error("TODO")
-          val newM2 = sys.error("TODO")
-          val witness2 = sys.error("TODO")
+
           unfold(graph2, todo2, newM2, witness2)
         } else {
           unfold(graph, todo.tail, newM, witness)
