@@ -119,14 +119,47 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
   
   def degree(v: V): Int = undirectedAdjacencyMap(v).size
 
-  /*
-  override protected def mkLookup: (Map[V,Int], IndexedSeq[V]) = {
-    val sortFun = { (v: V, w: V) => v.label._2 > w.label._2 || (v.label._2 == w.label._2 && degree(v) > degree(w)) }
-    val vs: IndexedSeq[V] = vertices.toIndexedSeq.sortWith(sortFun)
-    val table: Map[V,Int] = (Map.empty[V,Int] /: vs.indices)( (table, i) => table + (vs(i) -> i))
-    (table, vs)
+  /** Unfold the nodes in this graph which are replicated and in the codomain of the morphism.
+   *  @param smaller the LHS of a transition
+   *  @param m a mapping from the LHS to this graph
+   */
+  def unfoldWithWitness(smaller: Self, m: Morphism): (Self, Morphism, Morphism) = {
+
+    def getComponent(graph: Self, node: V): Set[V] = {
+      assert(node.depth > 0)
+      //take all the nodes conntected with depth greater of equal, repeat until fixpoint.
+      def process(acc: Set[V], frontier: Set[V]): Set[V] = frontier.headOption match {
+        case Some(x) =>
+          sys.error("TODO")
+        case None => acc
+      }
+      process(Set(node), Set(node))
+    }
+
+    def cloneComponent(graph: Self, nodes: Set[V]): (Self, Morphism) = {
+      sys.error("TODO")
+    }
+
+    //m is not injective, after unfolding it should be.
+
+    def unfold(graph: Self, todo: Seq[V], newM: Morphism, witness: Morphism): (Self, Morphism, Morphism) = todo.headOption match {
+      case Some(x) =>
+        if (x.depth > 0) {
+          val cmp = getComponent(graph, x)
+          val (graph2, newWitness) = cloneComponent(graph, cmp)
+          //TODO todo2, newM2, witness2
+          val todo2 = sys.error("TODO")
+          val newM2 = sys.error("TODO")
+          val witness2 = sys.error("TODO")
+          unfold(graph2, todo2, newM2, witness2)
+        } else {
+          unfold(graph, todo.tail, newM, witness)
+        }
+      case None => (graph, newM, witness)
+    }
+
+    unfold(this, m.values.toSeq, m, Map())
   }
-  */
 
   def unfold(smaller: Self, m: Morphism): (Self, Morphism) = {
     

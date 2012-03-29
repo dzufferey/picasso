@@ -34,7 +34,9 @@ object Expression {
 
 abstract class Statement 
 case class Affect(v: Variable, rhs: Expression) extends Statement
+case object Skip extends Statement
 case class Havoc(v: Variable) extends Statement
+case class Assume(c: Condition) extends Statement
 
 abstract class Condition
 case class Eq(l: Expression, r: Expression) extends Condition
@@ -43,6 +45,7 @@ case class Leq(l: Expression, r: Expression) extends Condition
 case class And(l: Condition, r: Condition) extends Condition
 case class Or(l: Condition, r: Condition) extends Condition
 case class Not(c: Condition) extends Condition
+case class Literal(b: Boolean) extends Condition
 
 object Condition {
 
@@ -53,6 +56,7 @@ object Condition {
     case And(_,_) => 11
     case Or(_,_) => 10
     case Not(_) => 20
+    case Literal(_) => 30
   }
   
   def needParenthesis(currentPriority: Int, e: Condition): String = {
@@ -67,6 +71,7 @@ object Condition {
     case And(l,r) =>  needParenthesis(priority(e), l) + " && " + needParenthesis(priority(e), r)
     case Or(l,r) =>  needParenthesis(priority(e), l) + " || " + needParenthesis(priority(e), r)
     case Not(c) =>  "!" + needParenthesis(priority(e), c) 
+    case Literal(b) => b.toString
   }
 
 }

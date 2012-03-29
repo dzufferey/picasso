@@ -3,7 +3,7 @@ package picasso.utils
 import scala.collection.mutable.HashMap
 
 object Namer {
-  val map = new java.util.concurrent.ConcurrentHashMap[String, java.util.concurrent.atomic.AtomicInteger]()
+  private val map = new java.util.concurrent.ConcurrentHashMap[String, java.util.concurrent.atomic.AtomicInteger]()
 
   private def counter = new java.util.concurrent.atomic.AtomicInteger()
 
