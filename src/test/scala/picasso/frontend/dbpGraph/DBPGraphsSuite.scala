@@ -9,7 +9,7 @@ class DBPGraphsSuite extends FunSuite {
   val testDir = "src/test/resources/dbp_graph/"
   val logLevel = LogNotice
   val allowedLevel = LogDebug
-  val disallowed = List("graph")
+  val disallowed = List("graph", "DBP")
 
   def computeCover(fileName: String) {
     val previousLog = Logger.getMinPriority

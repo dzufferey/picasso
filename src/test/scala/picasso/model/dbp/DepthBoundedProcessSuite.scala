@@ -76,35 +76,47 @@ class DepthBoundedProcessSuite extends FunSuite {
   }
 
   test("undfolding") {
-    def checkUnfold(c1: DepthBoundedConf[LocDBCT], c2: DepthBoundedConf[LocDBCT], c2_unfold: DepthBoundedConf[LocDBCT]) = {
+    def checkUnfold( c1: DepthBoundedConf[LocDBCT],
+                     c2: DepthBoundedConf[LocDBCT],
+                     c2_unfold: DepthBoundedConf[LocDBCT],
+                     m: Map[Thread[Loc],Thread[Loc]] ) = {
       assert(c1 <= c2_unfold)
       assert(c2 <= c2_unfold)
       assert(!c2_unfold.morphism(c2).isEmpty)
+      assert(m.keys.forall(x => m.keys.forall(y => {
+        if (c1(x)(y)) c2_unfold(m(x))(m(y))
+        else true
+      })))
     }
     
     val conf1 = emp ++ (a0 --> b0)
     val conf2 = emp ++ (a0 --> b1)
     val m12 = conf1.morphism(conf2).get
-    val (conf21, _) = conf2.unfold(conf1, m12)
+    val (conf21, _m12) = conf2.unfold(conf1, m12)
     
-    checkUnfold(conf1, conf2, conf21)
+    checkUnfold(conf1, conf2, conf21, _m12)
 
     val conf3 = conf2 ++ (b1 --> c2)
     val m13 = conf1.morphism(conf3).get
-    val (conf31, _) = conf3.unfold(conf1, m13)
+    val (conf31, _m13) = conf3.unfold(conf1, m13)
     
-    checkUnfold(conf1, conf3, conf31)
+    checkUnfold(conf1, conf3, conf31, _m13)
 
     val a01 = Thread[Loc](A,0)
     val conf4 = conf3 ++ (a01 --> c1)
     val m14 = conf1.morphism(conf3).get
-    val (conf41, _) = conf4.unfold(conf1, m14)
+    val (conf41, _m14) = conf4.unfold(conf1, m14)
     
     val conf5 = conf4 ++ (b1 --> a0)
     val m15 = conf1.morphism(conf5).get
-    val (conf51, _) = conf5.unfold(conf1, m15)
+    val (conf51, _m15) = conf5.unfold(conf1, m15)
 
-    checkUnfold(conf1, conf5, conf51)
+    checkUnfold(conf1, conf5, conf51, _m15)
+
+    val manyUnfold = emp ++ (a0 --> b0) ++ (b0 --> c0) ++ (b0 --> cc0)
+    val m23 = manyUnfold.morphism(conf3).get
+    val (conf32, _m23) = conf3.unfold(manyUnfold, m23)
+    checkUnfold(manyUnfold, conf3, conf32, _m23)
 
   }
 

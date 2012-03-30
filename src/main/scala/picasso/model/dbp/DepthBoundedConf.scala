@@ -125,13 +125,16 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
    */
   def unfoldWithWitness(smaller: Self, m: Morphism): (Self, Morphism, Morphism) = {
 
+    val smallerUndirected = smaller.undirect
+
     def getComponent(graph: Self, node: V): Set[V] = {
-      assert(node.depth > 0)
+      assert(node.depth == 1)
       val depth = node.depth
+      val undirected = graph.undirect
       //take all the nodes conntected with depth greater or equal, repeat until fixpoint.
       def process(acc: Set[V], frontier: Set[V]): Set[V] = frontier.headOption match {
         case Some(x) =>
-          val next = graph(x).filter(v => v.depth >= depth && !acc(v))
+          val next = undirected(x).filter(v => v.depth >= depth && !acc(v))
           process(acc ++ next, (frontier - x) ++ next)
         case None => acc
       }
@@ -149,31 +152,67 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
       (graph2, witness)
     }
 
-    //m is not injective, after unfolding it should be.
-
-    def unfold(graph: Self, todo: Seq[V], newM: Morphism, witness: Morphism): (Self, Morphism, Morphism) = todo.headOption match {
-      case Some(x) =>
-        if (x.depth > 0) {
-          val cmp = getComponent(graph, x)
-          val (graph2, newWitness) = cloneComponent(graph, cmp)
-          val newM2: Morphism = newM.map{case (a,b) => (a, newWitness.getOrElse(b, b)) }.toMap
-          val witness2 = witness ++ newWitness.map{ case (a,b) => (a, witness.getOrElse(a, b)) }
-
-          //TODO todo2: more complex since we need to preserve edges ...
-          //we should group the todo nodes according to the whether they point to the same component and whether they are "linked" in smaller
-          //so that when multiple unfolding of the same part is needed, we know how to keep track of the nodes ...
-          val todo2 = sys.error("TODO")
-
-          unfold(graph2, todo2, newM2, witness2)
-        } else {
-          unfold(graph, todo.tail, newM, witness)
-        }
-      case None => (graph, newM, witness)
+    /** "project" the component cmp of graph back to the smaller graph.
+     * @param cmp the component
+     * @param newM morphism from smaller to graph
+     * @param node seed of the component in smaller 
+     */
+    def componentOnSmaller(cmp: Set[V], newM: Morphism, node: V): Set[V] = {
+      //get the neighbors of smallerX and keep the ones that maps to neighbors of x (i.e. cmp)
+      //repeat until fixed point is reached.
+      def process(acc: Set[V], frontier: Set[V]): Set[V] = frontier.headOption match {
+        case Some(x) =>
+          val next = smallerUndirected(x).filter(v => cmp(newM(v)) && !acc(v) )
+          process(acc ++ next, (frontier - x) ++ next)
+        case None => acc
+      }
+      process(Set(node), Set(node))
     }
 
-    unfold(this, m.values.toSeq, m, Map())
+    //to get around a bug in the type checker (not precise enough)
+    def dummy(set: Set[V], map: Morphism)( entry: (V, V)): (V, V) = {
+      var b: V = null
+      if (set(entry._1))
+        b = map(entry._2)
+      else
+        b = entry._2
+      (entry._1, b)
+    }
+
+    //m is not injective, after unfolding it should be.
+
+    //the unfolding should be done on depth 1 (higher depth will follows from the earlier unfolding)
+
+    //witness if from the new graph to the old one (reverse of the usual morphism)
+    def unfold(graph: Self, newM: Morphism, witness: Morphism): (Self, Morphism, Morphism) = newM.find{ case (a,b) => b.depth == 1 } match {
+      case Some((smallerX, x)) =>
+        val cmp = getComponent(graph, x)
+        Logger("DBP", LogDebug, "component is : " + cmp.mkString)
+        val (graph2, newWitness) = cloneComponent(graph, cmp)
+        val witness2 = witness ++ newWitness.map{ case (a,b) => (b, witness.getOrElse(a, a)) } //the newWitness has te be reversed to point in the right direction
+
+        //compute the component on the smaller graph ...
+        val smallerCmp = componentOnSmaller(cmp, newM, smallerX)
+        Logger("DBP", LogDebug, "smaller component is : " + smallerCmp.mkString)
+        //use the witness to rewire the nodes
+        val newM2: Morphism = newM.map(dummy(smallerCmp, newWitness)).toMap
+
+        unfold(graph2, newM2, witness2)
+      case None =>
+        assert(newM.forall(_._2.depth == 0), newM.mkString(","))
+        (graph, newM, witness)
+    }
+
+    unfold(this, m, Map())
+  }
+  
+  def unfold(smaller: Self, m: Morphism): (Self, Morphism) = {
+    Logger("DBP", LogDebug, "unfolding: " + this + " from " + smaller + " with " + m.mkString)
+    val (a,b,_) = unfoldWithWitness(smaller, m)
+    (a,b)
   }
 
+  /*
   def unfold(smaller: Self, m: Morphism): (Self, Morphism) = {
     
     val smallerAdj = smaller.undirectedAdjacencyMap
@@ -252,6 +291,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     val res = unfold(m, biggerAdj, adjacencyMap)
     (DepthBoundedConf[P](res._2), res._1)
   }
+  */
 
   def foldWithWitness(implicit wpo: WellPartialOrdering[P#State]): (Self, Morphism) = {
     val iter = this morphisms this

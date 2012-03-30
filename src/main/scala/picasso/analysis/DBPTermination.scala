@@ -185,9 +185,44 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
   }
 
   // the reverse of folding ...
-  protected def unfolding(from: S, morph1: Map[P#V,P#V], to: S, morph2: Map[P#V, P#V]): Transition = {
-    //TODO the first step is to reconstruct a mapping from the node of 'to' to the node of 'from'
-    sys.error("TODO")
+  //revMorph is a mapping from the node of 'to' to the node of 'from'
+  protected def unfolding(from: S, revMorph: Map[P#V,P#V], to: S): Transition = {
+    val (pc1, map1) = getPC(from)
+    val (pc2, map2) = getPC(to)
+    //reverse the unfolding
+    val backwardUnFolding: Map[P#V, Seq[P#V]] = revMorph.toSeq.map{ case (a,b) => (b,a) }.groupBy( _._1 ).mapValues( _ map (_._2) )
+    val stmts1 = for ( (node, lst) <- backwardUnFolding ) yield {
+       var rhs = lst.map(getCardinality(map2, _)).reduceLeft(Plus(_, _))
+       getCardinality(map1, node) match {
+         case v @ Variable(_) =>
+           Assume(Eq(v, rhs)) //TODO this is not realley an assume but it should be an assign where the rhs are the primed variables
+         case Constant(1) => 
+           assert(rhs == Constant(1))
+           Skip
+         case other =>
+           Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+       }
+    }
+    val stmts2 = for ( node <- backwardUnFolding.keys ) yield {
+      getCardinality(map1, node) match {
+         case v @ Variable(_) => Affect(v, Constant(0))
+         case Constant(1) => Skip
+         case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+      }
+    }
+    val lowerBounds = for ( (node, lst) <- backwardUnFolding ) yield {
+       var rhs = lst.map(getCardinality(map2, _))
+       var constants = rhs.map{ case Constant(c) => c; case _ => 0 }
+       val sum = ( 0 /: constants)(_ + _)
+       getCardinality(map1, node) match {
+         case v @ Variable(_) => Leq(Constant(sum), v)
+         case Constant(c) => assert(c == sum); Literal(true)
+         case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+       }
+    }
+    val guard = ((Literal(true): Condition) /: lowerBounds)(And(_,_))
+    val stmts = (stmts1 ++ stmts2).toSeq
+    new Transition(pc1, pc2, guard, stmts)
   }
 
   // ...
