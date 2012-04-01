@@ -2,6 +2,7 @@ package picasso.analysis
 
 import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger, Misc, Namer}
 import picasso.model.dbp._
+import picasso.graph._
 
 trait DBPTermination[P <: DBCT] extends KarpMillerTree {
   self: DepthBoundedProcess[P] =>
@@ -156,8 +157,76 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
   // ...
   //this would be for thomas' improved version of the widening (i.e self loop)
   //another simpler version would be to just have a back edges that transform transfer some of the counters
-  protected def replicating(from: S, replicating: Set[P#V], to: S): Transition = {
-    sys.error("TODO")
+  protected def replicating(from: S, replicating: Map[P#V,P#V], to: S): Transition = {
+    //the thing is that we are starting with a small configuration and replicating nodes give a bigger config.
+    //for depth 1, we are adding to the replicated nodes x > 0 ,
+    //for depth 2, the increase is y >= x
+    //for depth 3, z >= y
+    // ...
+    val (pc1, map1) = getPC(from)
+    val (pc2, map2) = getPC(to)
+    val frame = from.vertices -- replicating.keys
+    //we need to get the components in 'to' to know the inequalities between increases
+    val components = to.decomposeInComponents
+    val cmpId = components.zipWithIndex.toMap
+    val nodeToCmpId = (cmpId.flatMap{ case (seq, id) => seq.map(x => (x, id)) } : Iterable[(P#V, Int)]).toMap
+    val edges = components.flatMap( x => components.flatMap( y => if (y subsetOf x) Some(cmpId(x) -> cmpId(y)) else None) )
+    //val depGraph = DiGraph[GT.ULGT{type V = Int}](edges)
+    val accelerationVariables = cmpId.map{ case (k,v) => (v, Variable("widen_" + v)) }
+    //now make the statments
+    val assumes1 = for ( (_,v) <- accelerationVariables) yield Assume(Leq(Constant(0), v))
+    val assumes2 = for ( (c1, c2) <- edges ) yield Assume(Leq(accelerationVariables(c1), accelerationVariables(c2)))
+    val stmts1 = for ( (n1, n2) <- replicating) yield {
+      getCardinality(map2, n2) match {
+        case v @ Variable(_) => Affect(v, Plus(v, Plus( accelerationVariables(nodeToCmpId(n2)), getCardinality(map1, n1))))
+        case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+      }
+    }
+    val stmts2 = for ( (n1, _) <- replicating) yield {
+      getCardinality(map1, n1) match {
+        case v @ Variable(_) => Affect(v, Constant(0))
+        case Constant(c) => Skip
+        case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+      }
+    }
+    val stmts3 = for (node <- frame ) yield {
+       getCardinality(map2, node) match {
+         case v @ Variable(_) => Affect(v, Plus(v, getCardinality(map1, node)))
+         case Constant(c) => Skip
+         case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+       }
+    }
+    val havocs = accelerationVariables.values.map( v => Havoc(v) )
+    val stmts = (assumes1 ++ assumes2 ++ stmts1 ++ stmts2 ++ stmts3 ++ havocs).toSeq
+    new Transition(pc1, pc2, Literal(true), stmts)
+  }
+
+  //send back the counters
+  protected def covering(smaller: S, bigger: S): Seq[Transition] = {
+    val (pc1, map1) = getPC(smaller)
+    val (pc2, map2) = getPC(bigger)
+    val morphisms = smaller.morphisms(bigger)(self.stateOrdering)
+    val trs = for (m <- morphisms) yield {
+      val backwardM: Map[P#V, Seq[P#V]] = m.toSeq.map{ case (a,b) => (b,a) }.groupBy( _._1 ).mapValues( _ map (_._2) )
+      val stmts1 = for ((node, lst) <- backwardM) yield {
+        var rhs = lst.map(getCardinality(map1, _)).reduceLeft(Plus(_, _))
+        getCardinality(map2, node) match {
+          case v @ Variable(_) => Affect(v, Plus(v, rhs))
+          case Constant(c) => assert(rhs == Constant(c)); Skip
+          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+        }
+      }
+      val stmts2 = for (node <- smaller.vertices) yield {
+         getCardinality(map2, node) match {
+           case v @ Variable(_) => Affect(v, Constant(0))
+           case Constant(c) => Skip
+           case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+         }
+      }
+      val stmts = (stmts1 ++ stmts2).toSeq
+      new Transition(pc1, pc2, Literal(true), stmts)
+    }
+    trs.toSeq
   }
   
   // replicated nodes that disappear are set to 0
@@ -168,7 +237,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     val stmts1 = for ( node <- from.vertices if !inhibited.contains(node)) yield {
       assert(to.vertices contains node)
       getCardinality(map2, node) match {
-         case v @ Variable(_) => Affect(v, getCardinality(map1, node))
+         case v @ Variable(_) => Affect(v, Plus(v, getCardinality(map1, node)))
          case Constant(1) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
       }
@@ -195,7 +264,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
        var rhs = lst.map(getCardinality(map2, _)).reduceLeft(Plus(_, _))
        getCardinality(map1, node) match {
          case v @ Variable(_) =>
-           Assume(Eq(v, rhs)) //TODO this is not realley an assume but it should be an assign where the rhs are the primed variables
+           Assume(Eq(v, rhs)) //TODO this is not really an assume but it should be an assign where the rhs are the primed variables
          case Constant(1) => 
            assert(rhs == Constant(1))
            Skip
@@ -225,9 +294,31 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     new Transition(pc1, pc2, guard, stmts)
   }
 
-  // ...
+  //Actually, there is nothing to do here.
+  //Just check that the transition does not change replicated things and transfer the frame
   protected def morphing(from: S, morph1: Map[P#V, P#V], tr: T, to: S): Transition = {
-    sys.error("TODO")
+    assert(morph1.values.forall(_.depth == 0))
+    assert(tr.lhs.vertices.forall(_.depth == 0))
+    assert(tr.rhs.vertices.forall(_.depth == 0))
+    val (pc1, map1) = getPC(from)
+    val (pc2, map2) = getPC(to)
+    val frame = from.vertices -- morph1.keys
+    val stmts1 = for (node <- frame ) yield {
+       getCardinality(map2, node) match {
+         case v @ Variable(_) => Affect(v, Plus(v, getCardinality(map1, node)))
+         case Constant(c) => Skip
+         case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+       }
+    }
+    val stmts2 = for (node <- frame) yield {
+       getCardinality(map2, node) match {
+         case v @ Variable(_) => Affect(v, Constant(0))
+         case Constant(c) => Skip
+         case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+       }
+    }
+    val stmts = (stmts1 ++ stmts2).toSeq
+    new Transition(pc1, pc2, Literal(true), stmts)
   }
 
   def makeIntegerProgram(tree: KMTree): Program = {

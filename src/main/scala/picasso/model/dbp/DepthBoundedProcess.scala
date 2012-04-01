@@ -40,9 +40,9 @@ class DepthBoundedProcess[P <: DBCT](trs: GenSeq[DepthBoundedTransition[P]])(imp
   def tryAcceleratePairWithWitness(smaller: S, bigger: S): Option[(S, WideningWitness[P])] = {
     val ms = (smaller morphisms bigger).toSeq
     val seeds = ms.map(m => bigger.vertices -- m.values)
-    val (widenedUnfolded, usedSeed) = ((bigger, None: Option[Set[P#V]]) /: seeds)( (acc, seed) => {
-      val w = bigger widen seed
-      if (ordering.gt(acc._1, w)) acc else (w, Some(seed))
+    val (widenedUnfolded, usedSeed) = ((bigger, Map[P#V,P#V]()) /: seeds)( (acc, seed) => {
+      val (w,m) = bigger widenWithWitness seed
+      if (ordering.gt(acc._1, w)) acc else (w, m)
     })
     val (widened, folding) = widenedUnfolded.foldWithWitness
     //println("Acceleration:")
@@ -55,7 +55,7 @@ class DepthBoundedProcess[P <: DBCT](trs: GenSeq[DepthBoundedTransition[P]])(imp
        witness.smaller = smaller
        witness.bigger = bigger
        witness.result = widened
-       witness.replicated = usedSeed.get
+       witness.replicated = usedSeed
        witness.unfoldedResult = widenedUnfolded
        witness.folding = folding
        Some((widened, witness))

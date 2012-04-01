@@ -49,8 +49,8 @@ class WideningWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
   var bigger: Conf = null
   var result: Conf = null
 
-  //set of nodes that gets replicated
-  var replicated: Set[P#V] = null
+  //nodes -> node after replication
+  var replicated: Morphism = null
 
   var unfoldedResult: Conf = null
   var folding: Morphism = null

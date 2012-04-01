@@ -119,6 +119,35 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
   
   def degree(v: V): Int = undirectedAdjacencyMap(v).size
 
+  protected def getComponent1(undirected: Self, node: V): Set[V] = {
+    val depth = node.depth
+    //take all the nodes conntected with depth greater or equal, repeat until fixpoint.
+    def process(acc: Set[V], frontier: Set[V]): Set[V] = frontier.headOption match {
+      case Some(x) =>
+        val next = undirected(x).filter(v => v.depth >= depth && !acc(v))
+        process(acc ++ next, (frontier - x) ++ next)
+      case None => acc
+    }
+    process(Set(node), Set(node))
+  }
+
+  def getComponent(node: V): Set[V] = {
+    val undirected = this.undirect
+    getComponent1(undirected, node)
+  }
+
+  def decomposeInComponents: Seq[Set[V]] = {
+    val undirected = this.undirect
+    def process(todo: List[V], acc: List[Set[V]]): Seq[Set[V]] = todo match {
+      case x :: xs =>
+        val cmp = getComponent1(undirected, x)
+        val todo2 = xs.filterNot(cmp(_))
+        process(todo2, cmp :: acc)
+      case Nil => acc
+    }
+    process(vertices.toList.sortWith( (a, b) => a.depth > b.depth), Nil)
+  }
+
   /** Unfold the nodes in this graph which are replicated and in the codomain of the morphism.
    *  @param smaller the LHS of a transition
    *  @param m a mapping from the LHS to this graph
@@ -126,20 +155,6 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
   def unfoldWithWitness(smaller: Self, m: Morphism): (Self, Morphism, Morphism) = {
 
     val smallerUndirected = smaller.undirect
-
-    def getComponent(graph: Self, node: V): Set[V] = {
-      assert(node.depth == 1)
-      val depth = node.depth
-      val undirected = graph.undirect
-      //take all the nodes conntected with depth greater or equal, repeat until fixpoint.
-      def process(acc: Set[V], frontier: Set[V]): Set[V] = frontier.headOption match {
-        case Some(x) =>
-          val next = undirected(x).filter(v => v.depth >= depth && !acc(v))
-          process(acc ++ next, (frontier - x) ++ next)
-        case None => acc
-      }
-      process(Set(node), Set(node))
-    }
 
     def cloneComponent(graph: Self, nodes: Set[V]): (Self, Morphism) = {
       assert(nodes.forall(_.depth > 0))
@@ -186,7 +201,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     //witness if from the new graph to the old one (reverse of the usual morphism)
     def unfold(graph: Self, newM: Morphism, witness: Morphism): (Self, Morphism, Morphism) = newM.find{ case (a,b) => b.depth == 1 } match {
       case Some((smallerX, x)) =>
-        val cmp = getComponent(graph, x)
+        val cmp = graph.getComponent(x)
         Logger("DBP", LogDebug, "component is : " + cmp.mkString)
         val (graph2, newWitness) = cloneComponent(graph, cmp)
         val witness2 = witness ++ newWitness.map{ case (a,b) => (b, witness.getOrElse(a, a)) } //the newWitness has te be reversed to point in the right direction
@@ -313,7 +328,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
 
   def fold(implicit wpo: WellPartialOrdering[P#State]): Self = foldWithWitness._1
 
-  def widen(newThreads: Set[V]): Self = {
+  def widenWithWitness(newThreads: Set[V]): (Self, Morphism) = {
 
     def processSeed(depth: Int, newThreads: Set[V], threadsInc: Map[V, V]): Map[V, V] = {
       newThreads find (v => (v.depth == depth) && (depth == 0 || (undirectedAdjacencyMap(v) exists (w => (w.depth == depth) && !(newThreads contains w))))) match {
@@ -339,8 +354,10 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     }
 
     val mapping = processSeed(0, newThreads, Map.empty[V,V])
-    this morph mapping
+    (this morph mapping, mapping)
   }
+  
+  def widen(newThreads: Set[V]): Self = widenWithWitness(newThreads)._1
 
   override def clone: (Self, Morphism) = {
     val m = (Map.empty[V,V] /: vertices){ (acc, v) => acc + (v -> v.clone)}
