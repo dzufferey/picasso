@@ -30,13 +30,56 @@ object Expression {
     case Variable(v) => v
   }
 
+  def variables(e: Expression): Set[Variable] = e match {
+    case Plus(l,r) => variables(l) ++ variables(r)
+    case Minus(l,r) => variables(l) ++ variables(r)
+    case UMinus(u) => variables(u)
+    case Constant(_) => Set()
+    case v @ Variable(_) => Set(v)
+  }
+
 }
 
+//TODO the new vs old variable convention needs to be made cleaner ...
 abstract class Statement 
-case class Affect(v: Variable, rhs: Expression) extends Statement
+case class Transient(v: Variable) extends Statement //declare a local variable
+case class Relation(_new: Expression, _old: Expression) extends Statement //eqality between an expr on new variables and an expr on old variables
 case object Skip extends Statement
-case class Havoc(v: Variable) extends Statement
-case class Assume(c: Condition) extends Statement
+case class Assume(c: Condition) extends Statement //one the transient and new variables
+
+object Affect {
+  def apply(v: Variable, rhs: Expression) = Relation(v, rhs)
+  def unapply(rel: Relation): Option[(Variable, Expression)] = rel match {
+    case Relation(v @ Variable(_), rhs) => Some(v -> rhs)
+    case _ => None
+  }
+}
+
+object Statement {
+
+  def getAllVariables(s: Statement): Set[Variable] = s match {
+    case Relation(n, o) => Expression.variables(n) ++ Expression.variables(o)
+    case Assume(c) => Condition.variables(c)
+    case _ => Set()
+  }
+
+  def getTransientVariables(s: Statement): Set[Variable] = s match {
+    case Transient(v) => Set(v)
+    case _ => Set()
+  }
+
+  def getUpdatedVars(s: Statement): Set[Variable] = s match {
+    case Relation(n, _) => Expression.variables(n)
+    case Assume(c) => Condition.variables(c)
+    case _ => Set()
+  }
+
+  /*
+  def variables(s: Statement): Set[Variable] = {
+    getAllVariables(s) -- getTransientVariables(s)
+  }
+  */
+}
 
 abstract class Condition
 case class Eq(l: Expression, r: Expression) extends Condition
@@ -72,6 +115,35 @@ object Condition {
     case Or(l,r) =>  needParenthesis(priority(e), l) + " || " + needParenthesis(priority(e), r)
     case Not(c) =>  "!" + needParenthesis(priority(e), c) 
     case Literal(b) => b.toString
+  }
+
+  def variables(c: Condition): Set[Variable] = c match {
+    case Eq(l,r) => Expression.variables(l) ++ Expression.variables(r)
+    case Lt(l,r) => Expression.variables(l) ++ Expression.variables(r)
+    case Leq(l,r) => Expression.variables(l) ++ Expression.variables(r)
+    case And(l,r) => variables(l) ++ variables(r)
+    case Or(l,r) => variables(l) ++ variables(r)
+    case Not(c) => variables(c)
+    case Literal(_) => Set()
+  }
+
+  def nnf(c: Condition): Condition = {
+    def process(c: Condition, negate: Boolean): Condition = c match {
+      case e @ Eq(_,_) => if (negate) Not(e) else e
+      case Lt(l,r) => if (negate) Leq(r,l) else Lt(l,r)
+      case Leq(l,r) => if (negate) Lt(r,l) else Leq(l,r)
+      case And(l,r) =>
+        val l2 = process(l, negate)
+        val r2 = process(r, negate)
+        if (negate) Or(l2, r2) else And(l2, r2)
+      case Or(l,r) => 
+        val l2 = process(l, negate)
+        val r2 = process(r, negate)
+        if (negate) And(l2, r2) else Or(l2, r2)
+      case Not(c) => process(c, !negate)
+      case Literal(b) => if (negate) Literal(!b) else Literal(b)
+    }
+    process(c, false)
   }
 
 }

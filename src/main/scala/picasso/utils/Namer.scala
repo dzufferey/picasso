@@ -2,7 +2,8 @@ package picasso.utils
 
 import scala.collection.mutable.HashMap
 
-object Namer {
+class Namer {
+
   private val map = new java.util.concurrent.ConcurrentHashMap[String, java.util.concurrent.atomic.AtomicInteger]()
 
   private def counter = new java.util.concurrent.atomic.AtomicInteger()
@@ -15,4 +16,7 @@ object Namer {
     realPrefix.trim + "$" + c3.incrementAndGet
   }
 
+}
+
+object Namer extends Namer {
 }

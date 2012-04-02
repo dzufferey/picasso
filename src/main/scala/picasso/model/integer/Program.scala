@@ -10,7 +10,6 @@ import scala.collection.GenSeq
   // cutpoints (for ARMC)
   //the simplest thing might be to have somthing between T2 and ARMC:
   // get updates like T2, but with an all at the same time semantics like ARMC.
-  // we want automatic frame generation -> havoc statement.
 
 /** Integer Program.
  *  Integer program are use during the termination proof of DBP.
@@ -25,6 +24,9 @@ class Program(init: State, trs: GenSeq[Transition]) extends picasso.math.Transit
 
   def transitions: GenSeq[T] = trs
 
+  def variables: Set[Variable] = {
+    trs.aggregate(Set[Variable]())(_ ++ _.variables, _ ++ _)
+  }
 
   def printForARMC = {
     sys.error("TODO")

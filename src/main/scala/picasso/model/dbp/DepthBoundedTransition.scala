@@ -62,7 +62,7 @@ extends Transition[DepthBoundedConf[P]]
     // even though removing some matches can lead to a situation where the transition can still be applied.
     // for the moment, we will assume the transition are 'nice'
     def post(g: Morphism): Option[(TransitionWitness[P], Conf)] = {
-      val (conf0, g1) = conf.unfold(lhs, g)
+      val (conf0, g1, unfolding) = conf.unfoldWithWitness(lhs, g)
       //print("conf1: " + conf1)
       //print("lhs: " + lhs.morph(g1))
 
@@ -94,13 +94,23 @@ extends Transition[DepthBoundedConf[P]]
         val (post, folding) = postUnfolded.foldWithWitness
         //print("post: " + post)
 
+        //the morphism for the post is f_hr_g1 restricted to the frame + g1_hk_f inverted ?
+        val postMorphism0 = (frame.vertices.toSeq.map{ case x => (x,x) }: Iterable[(P#V,P#V)] ).toMap
+        val postMorphism1 = f_hr_g1.filterKeys( x => !frame.vertices.contains(x) )
+        val postMorphism2 = g1_hk_f.flatMap[(P#V,P#V), Morphism]{ case (a,b) => if (a != b) Some(b -> a) else None}
+        val postMorphism = postMorphism0 ++ postMorphism1 ++ postMorphism2
+        assert(postMorphism.forall{ case (k,v) => g1.contains(k) && postUnfolded.contains(v) })
+
         val witness = new TransitionWitness
         witness.transition = this
         witness.from = conf
-        witness.firstMorhism = g
+        //witness.firstMorhism = g
+        witness.unfolding = unfolding
         witness.unfolded = conf0
-        witness.unfoldedMorphism = g1
+        //witness.unfoldedMorphism = g1
         witness.inhibitedNodes = removed
+        witness.inhibited = conf1
+        witness.post = postMorphism
         witness.unfoldedAfterPost = postUnfolded
         witness.folding = folding
         witness.to = post

@@ -20,17 +20,22 @@ class TransitionWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
   var to: Conf = null
 
   /** from transition.lhs to 'from' */
-  var firstMorhism: Morphism = null
+  //var firstMorhism: Morphism = null
 
-  //can be recomputed afterward
+  /** unfolding maps the unfolded nodes to their origin */
+  var unfolding: Morphism = null
   /** 'from' after unfolding */
   var unfolded: DepthBoundedConf[P] = null
   /** firstMorhism after unfolding */
-  var unfoldedMorphism: Morphism = null
+  //var unfoldedMorphism: Morphism = null
 
   //can be recomputed afterward
   /** nodes removed due to the inhibitor */
   var inhibitedNodes: Set[P#V] = Set[P#V]()
+  var inhibited: DepthBoundedConf[P] = null
+
+  /** what happened during the post */
+  var post: Morphism = null
 
   /** conf after the removal of inhibited nodes and applying the transition */
   var unfoldedAfterPost: Conf = null

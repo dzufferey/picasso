@@ -147,6 +147,18 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     }
     process(vertices.toList.sortWith( (a, b) => a.depth > b.depth), Nil)
   }
+  
+  def decomposeInDisjointComponents: DiGraph[GT.ULGT{type V = Set[P#V]}] = {
+    val cmps = decomposeInComponents
+    val edges = cmps.flatMap( x => cmps.flatMap( y => if (y subsetOf x) Some(x -> y) else None) )
+    val directEdges = edges.filter{ case (a,b) => a.head.depth == b.head.depth - 1 }
+    def trim(cmp: Set[V]): Set[V] = {
+      val minDepth = cmp.map(_.depth).reduceLeft(math.min)
+      cmp.filter(_.depth == minDepth)
+    }
+    val trimedEdges = edges.map{ case (a,b) => (trim(a), trim(b)) }
+    DiGraph[GT.ULGT{type V = Set[P#V]}](trimedEdges)
+  }
 
   /** Unfold the nodes in this graph which are replicated and in the codomain of the morphism.
    *  @param smaller the LHS of a transition

@@ -10,6 +10,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
   //(1) compute the cover and extract the transition witnesses
   //(2) build some sensible datastructure out of the witnesses buffers
   //(3) using the witnesses create an integer program ...
+  //(4) methods to compute KM + test integer program
 
   protected val transitionWitnesses = new java.util.concurrent.ConcurrentLinkedQueue[TransitionWitness[P]]()
   protected val wideningWitnesses = new java.util.concurrent.ConcurrentLinkedQueue[WideningWitnessSeq[P]]()
@@ -80,7 +81,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     witnessesMap = simplification1.seq
   }
 
-  //TODO (3)
+  //(3)
   //what are the states: configuration, not KMTree
   //  for each conf we should associate a set of counters (Map[P#V, String])
   //  then ...
@@ -90,7 +91,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
   //   -> unfolding
   //   -> morphing
   //   -> folding
-  // - covering (? similar to folding ?)
+  // - covering (similar to folding)
   // - widening:
   //   -> replicating
   //   -> folding
@@ -126,18 +127,17 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
 
   // summing up the variable and adding constant for non-replicated nodes.
   protected def folding(from: S, folding: Map[P#V, P#V], to: S): Transition = {
+    assert(from.vertices forall (folding contains _))
     val (pc1, map1) = getPC(from)
     val (pc2, map2) = getPC(to)
     //invert the folding so that when we look at one node in to, we get all the from nodes that map to it.
     val backwardFolding: Map[P#V, Seq[P#V]] = folding.toSeq.map{ case (a,b) => (b,a) }.groupBy( _._1 ).mapValues( _ map (_._2) )
+    assert(to.vertices forall (backwardFolding contains _))
     val stmts1 = for ( (node, lst) <- backwardFolding ) yield {
        var rhs = lst.map(getCardinality(map1, _)).reduceLeft(Plus(_, _))
        getCardinality(map2, node) match {
-         case v @ Variable(_) =>
-           Affect(v, Plus(v, rhs))
-         case Constant(1) => 
-           assert(rhs == Constant(1))
-           Skip
+         case v @ Variable(_) => Affect(v, Plus(v, rhs))
+         case Constant(1) => assert(rhs == Constant(1)); Skip
          case other =>
            Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        }
@@ -155,9 +155,10 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
   }
 
   // ...
-  //this would be for thomas' improved version of the widening (i.e self loop)
+  //this should be for thomas' improved version of the widening (i.e self loop)
   //another simpler version would be to just have a back edges that transform transfer some of the counters
   protected def replicating(from: S, replicating: Map[P#V,P#V], to: S): Transition = {
+    sys.error("TODO: this is wrong -> nothing ever decreasing ! (nor is it a loop)")  //TODO
     //the thing is that we are starting with a small configuration and replicating nodes give a bigger config.
     //for depth 1, we are adding to the replicated nodes x > 0 ,
     //for depth 2, the increase is y >= x
@@ -167,15 +168,19 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     val (pc2, map2) = getPC(to)
     val frame = from.vertices -- replicating.keys
     //we need to get the components in 'to' to know the inequalities between increases
-    val components = to.decomposeInComponents
-    val cmpId = components.zipWithIndex.toMap
+    val components: DiGraph[GT.ULGT{type V = Set[P#V]}] = to.decomposeInDisjointComponents
+    val cmpId = components.vertices.zipWithIndex.toMap
     val nodeToCmpId = (cmpId.flatMap{ case (seq, id) => seq.map(x => (x, id)) } : Iterable[(P#V, Int)]).toMap
-    val edges = components.flatMap( x => components.flatMap( y => if (y subsetOf x) Some(cmpId(x) -> cmpId(y)) else None) )
-    //val depGraph = DiGraph[GT.ULGT{type V = Int}](edges)
     val accelerationVariables = cmpId.map{ case (k,v) => (v, Variable("widen_" + v)) }
     //now make the statments
+    val declare = accelerationVariables.values.map( v => Transient(v) )
     val assumes1 = for ( (_,v) <- accelerationVariables) yield Assume(Leq(Constant(0), v))
-    val assumes2 = for ( (c1, c2) <- edges ) yield Assume(Leq(accelerationVariables(c1), accelerationVariables(c2)))
+    val edges: Iterable[(Set[P#V],Unit,Set[P#V])] = components.edges
+    val assumes2 = for ( (c1, _, c2) <- edges ) yield {
+      val v1 = accelerationVariables(cmpId(c1))
+      val v2 = accelerationVariables(cmpId(c2))
+      Assume(Leq(v1, v2))
+    }
     val stmts1 = for ( (n1, n2) <- replicating) yield {
       getCardinality(map2, n2) match {
         case v @ Variable(_) => Affect(v, Plus(v, Plus( accelerationVariables(nodeToCmpId(n2)), getCardinality(map1, n1))))
@@ -196,8 +201,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        }
     }
-    val havocs = accelerationVariables.values.map( v => Havoc(v) )
-    val stmts = (assumes1 ++ assumes2 ++ stmts1 ++ stmts2 ++ stmts3 ++ havocs).toSeq
+    val stmts = (declare ++ assumes1 ++ assumes2 ++ stmts1 ++ stmts2 ++ stmts3).toSeq
     new Transition(pc1, pc2, Literal(true), stmts)
   }
 
@@ -207,6 +211,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     val (pc2, map2) = getPC(bigger)
     val morphisms = smaller.morphisms(bigger)(self.stateOrdering)
     val trs = for (m <- morphisms) yield {
+      assert(smaller.vertices forall (m contains _))
       val backwardM: Map[P#V, Seq[P#V]] = m.toSeq.map{ case (a,b) => (b,a) }.groupBy( _._1 ).mapValues( _ map (_._2) )
       val stmts1 = for ((node, lst) <- backwardM) yield {
         var rhs = lst.map(getCardinality(map1, _)).reduceLeft(Plus(_, _))
@@ -235,7 +240,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     val (pc1, map1) = getPC(from)
     val (pc2, map2) = getPC(to)
     val stmts1 = for ( node <- from.vertices if !inhibited.contains(node)) yield {
-      assert(to.vertices contains node)
+      assert(to contains node)
       getCardinality(map2, node) match {
          case v @ Variable(_) => Affect(v, Plus(v, getCardinality(map1, node)))
          case Constant(1) => Skip
@@ -260,16 +265,14 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     val (pc2, map2) = getPC(to)
     //reverse the unfolding
     val backwardUnFolding: Map[P#V, Seq[P#V]] = revMorph.toSeq.map{ case (a,b) => (b,a) }.groupBy( _._1 ).mapValues( _ map (_._2) )
+    assert(to.vertices forall (revMorph contains _))
+    assert(from.vertices forall (backwardUnFolding contains _))
     val stmts1 = for ( (node, lst) <- backwardUnFolding ) yield {
        var rhs = lst.map(getCardinality(map2, _)).reduceLeft(Plus(_, _))
        getCardinality(map1, node) match {
-         case v @ Variable(_) =>
-           Assume(Eq(v, rhs)) //TODO this is not really an assume but it should be an assign where the rhs are the primed variables
-         case Constant(1) => 
-           assert(rhs == Constant(1))
-           Skip
-         case other =>
-           Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+         case v @ Variable(_) => Relation(rhs, v)
+         case Constant(1) => assert(rhs == Constant(1)); Skip
+         case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        }
     }
     val stmts2 = for ( node <- backwardUnFolding.keys ) yield {
@@ -321,8 +324,84 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     new Transition(pc1, pc2, Literal(true), stmts)
   }
 
+  protected def initialize(init: S, allVariables: Set[Variable]): Transition = {
+    val (pc0, _) = getPC(DepthBoundedConf.empty[P])
+    val (pc1, map1) = getPC(init)
+    //the inital transition is similar to the widening transitions ... 
+    val components: DiGraph[GT.ULGT{type V = Set[P#V]}] = init.decomposeInDisjointComponents
+    val cmpId = components.vertices.zipWithIndex.toMap
+    val nodeToCmpId = (cmpId.flatMap{ case (seq, id) => seq.map(x => (x, id)) } : Iterable[(P#V, Int)]).toMap
+    val accelerationVariables = cmpId.map{ case (k,v) => (v, Variable("widen_" + v)) }
+    //now make the statments
+    val declare = accelerationVariables.values.map( v => Transient(v) )
+    val assumes1 = for ( (_,v) <- accelerationVariables) yield Assume(Leq(Constant(0), v))
+    val edges: Iterable[(Set[P#V],Unit,Set[P#V])] = components.edges
+    val assumes2 = for ( (c1, _, c2) <- edges ) yield {
+      val v1 = accelerationVariables(cmpId(c1))
+      val v2 = accelerationVariables(cmpId(c2))
+      Assume(Leq(v1, v2))
+    }
+    val stmts1 = for (node <- init.vertices) yield {
+       getCardinality(map1, node) match {
+         case v @ Variable(_) => Affect(v, accelerationVariables(nodeToCmpId(node)))
+         case Constant(c) => Skip
+         case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+       }
+    }
+    val zeroVars = allVariables -- map1.values
+    val stmts2 = for (v <- zeroVars) yield Affect(v, Constant(0))
+    val stmts = (stmts1 ++ stmts2).toSeq
+    new Transition(pc0, pc1, Literal(true), stmts)
+  }
+
+  protected def collectForwardEdges(tree: KMTree): Seq[(S,S)] = {
+    val toChildren = tree.children.map(x => (tree(), x()))
+    (toChildren /: tree.children)(_ ++ collectForwardEdges(_))
+  }
+  
+  protected def collectBackwardEdges(tree: KMTree): Seq[(S,S)] = {
+    val covered = tree.subsumed.map(x => (tree(), x())).toSeq
+    (covered /: tree.children)(_ ++ collectBackwardEdges(_))
+  }
+
+  protected def transitionForWitness1(witness: TransitionWitness[P]): Seq[Transition] = {
+    Seq(
+      unfolding(witness.from, witness.unfolding, witness.unfolded),
+      inhibiting(witness.unfolded, witness.inhibitedNodes, witness.inhibited),
+      morphing(witness.inhibited, witness.post, witness.transition, witness.unfoldedAfterPost),
+      folding(witness.unfoldedAfterPost, witness.folding, witness.to)
+    )
+  }
+  
+  protected def transitionForWitness2(witness: WideningWitness[P]): Seq[Transition] = {
+    Seq( replicating(witness.bigger, witness.replicated, witness.unfoldedResult),
+         folding(witness.unfoldedResult, witness.folding, witness.result) )
+  }
+
+  protected def transitionForWitness(witness: (TransitionWitness[P], WideningWitnessSeq[P])): Seq[Transition] = {
+    transitionForWitness1(witness._1) ++ witness._2.sequence.flatMap(transitionForWitness2)
+  }
+
   def makeIntegerProgram(tree: KMTree): Program = {
-    sys.error("TODO")
+    //all the transitions: what is witnessed + the back edges
+    val forwardEdges = collectForwardEdges(tree)
+    val backwardEdges = collectBackwardEdges(tree)
+    val witnesses = forwardEdges.map{ case (a,b) => witnessesMap(a)(b) }
+    val forwardTrs = witnesses.flatMap( transitionForWitness )
+    val backwardTrs = backwardEdges.flatMap{ case (a,b) => covering(a,b) }
+    val allTransitions = forwardTrs ++ backwardTrs
+    //need an initialisation transition (from nothing to the init state)
+    val variables = (Set[Variable]() /: allTransitions)(_ ++ _.variables)
+    val init = initialize(tree(), variables)
+    val initState = new State(init.sourcePC, Map())
+    new Program(initState, init +: allTransitions)
+  }
+
+  //(4) TODO
+  def termination(initState: S) = {
+    val (_, tree) = computeTree(initState)
+    val program = makeIntegerProgram(tree)
+    sys.error("TODO print and call ARMC")
   }
 
 }
