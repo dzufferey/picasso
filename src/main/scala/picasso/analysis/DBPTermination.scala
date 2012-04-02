@@ -154,7 +154,95 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     new Transition(pc1, pc2, Literal(true), stmts)
   }
 
-  // ...
+  //TODO simple version of the replication -> send the counters back
+  protected def replicatingSimple(from: S, smaller: S, replicating: Map[P#V, P#V], to: S): Seq[Transition] = {
+    val (pc1, map1) = getPC(from)
+    val (pc2, map2) = getPC(to)
+    val (pc3, map3) = getPC(smaller)
+    val frame = from.vertices -- replicating.keys
+    //first transition: add to the counter
+    val stmts1 = for ( (n1, n2) <- replicating) yield {
+      getCardinality(map2, n2) match {
+        case v @ Variable(_) => Affect(v, Plus(v, getCardinality(map1, n1)))
+        case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+      }
+    }
+    val stmts2 = for ( (n1, _) <- replicating) yield {
+      getCardinality(map1, n1) match {
+        case v @ Variable(_) => Affect(v, Constant(0))
+        case Constant(c) => Skip
+        case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+      }
+    }
+    val stmts3 = for (node <- frame ) yield {
+       getCardinality(map2, node) match {
+         case v @ Variable(_) => Affect(v, Plus(v, getCardinality(map1, node)))
+         case Constant(c) => Skip
+         case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+       }
+    }
+    val stmts4 = for (node <- frame ) yield {
+       getCardinality(map1, node) match {
+         case v @ Variable(_) => Affect(v, Constant(0))
+         case Constant(c) => Skip
+         case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+       }
+    }
+    val stmts = (stmts1 ++ stmts2 ++ stmts3 ++ stmts4).toSeq
+    val t1 = new Transition(pc1, pc2, Literal(true), stmts)
+    //second transition: back edge
+    val morphisms = smaller.morphisms(to)(self.stateOrdering)
+    var trs2 = for( m <- morphisms ) yield {
+      val frame = to.vertices -- m.values
+      val stmts1 = for ( (n3, n2) <- m) yield {
+        getCardinality(map3, n3) match {
+          case v @ Variable(_) => Affect(v, Plus(v, getCardinality(map2, n2)))
+          case Constant(_) => Skip
+          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+        }
+      }
+      val stmts2 = for ( (n3, n2) <- m) yield {
+        getCardinality(map2, n2) match {
+          case v @ Variable(_) => {
+            getCardinality(map3, n3) match {
+              case Variable(_) => Affect(v, Plus(v, Constant(0)))
+              case c @ Constant(_) => Affect(v, Minus(v, c))
+              case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+            }
+          }
+          case Constant(c) => Skip
+          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+        }
+      }
+      val stmts3 = for (node <- frame ) yield {
+         getCardinality(map1, node) match {
+           case v @ Variable(_) => Affect(v, v)
+           case Constant(c) => Skip
+           case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+         }
+      }
+      val lowerBounds = for ( (n3, n2) <- m) yield {
+        getCardinality(map2, n2) match {
+          case v @ Variable(_) => {
+            getCardinality(map3, n3) match {
+              case c @ Constant(_) => Some(Leq(c, v))
+              case _ => None
+            }
+          }
+          case _ => None
+        }
+      }
+      val guard = ((Literal(true): Condition) /: lowerBounds){
+        case (acc, Some(c)) => And(acc,c)
+        case (acc, None) => acc
+      }
+      val stmts = (stmts1 ++ stmts2 ++ stmts3).toSeq
+      new Transition(pc2, pc3, guard, stmts)
+    }
+    t1 +: trs2.toSeq
+  }
+
+  //XXX
   //this should be for thomas' improved version of the widening (i.e self loop)
   //another simpler version would be to just have a back edges that transform transfer some of the counters
   protected def replicating(from: S, replicating: Map[P#V,P#V], to: S): Transition = {
@@ -374,8 +462,8 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
   }
   
   protected def transitionForWitness2(witness: WideningWitness[P]): Seq[Transition] = {
-    Seq( replicating(witness.bigger, witness.replicated, witness.unfoldedResult),
-         folding(witness.unfoldedResult, witness.folding, witness.result) )
+    replicatingSimple(witness.bigger, witness.smaller, witness.replicated, witness.unfoldedResult) :+
+    folding(witness.unfoldedResult, witness.folding, witness.result)
   }
 
   protected def transitionForWitness(witness: (TransitionWitness[P], WideningWitnessSeq[P])): Seq[Transition] = {
