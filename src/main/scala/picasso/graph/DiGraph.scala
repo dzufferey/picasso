@@ -3,7 +3,10 @@ package picasso.graph
 import scala.collection.immutable.{Map, Stream, Set, BitSet}
 import scala.text.Document
 import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger, Misc}
-import scala.annotation.tailrec
+
+
+//TODO refactor to split this file into multiple components (easier to read an maintains)
+
 
 object Labeled {
   
@@ -146,6 +149,11 @@ extends Traceable[P#V,P#EL] {
   def get(el: VL): Set[V] = adjacencyMap.keysIterator.foldLeft(Set.empty[V])( (acc, v) => if (labelOf(v) == el) acc + v else acc)
 
   def outEdges(v: V): Map[EL, Set[V]] = adjacencyMap(v)
+  
+  /** Returns the list of labels on the edges between v1 and v2. */
+  def edgesBetween(v1: V, v2: V): Iterable[EL] = {
+    outEdges(v1).flatMap{ case (k, v) => if (v(v2)) Some(k) else None }
+  }
     
   def contains(v: V): Boolean = adjacencyMap.contains(v)
   
@@ -196,6 +204,8 @@ extends Traceable[P#V,P#EL] {
     val toRemove = vertices.filterNot(fct)
     this -- toRemove
   }
+
+  def inducedSubgraph(nodes: Set[V]): Self = filterNodes(nodes contains _)
 
   def outDegree(v: V): Map[EL, Int] = adjacencyMap(v).mapValues(_.size)
   def outDegreeAll: Map[V, Int] = adjacencyMap.map{case (v, m) => (v, m.values.foldLeft(0)( (acc,set) => acc + set.size )) }
@@ -801,6 +811,81 @@ extends Traceable[P#V,P#EL] {
       }
     }
     loop(connections, inDegree, outDegree, this, Nil)
+  }
+  
+  def elementaryCycles: Seq[Trace[V,EL]] = {
+
+    //after Finding all the elementary cycles of a directed graph by Donald B. Johnson, 1975
+
+    val nodeOrder = vertices.zipWithIndex.toMap
+    val idToNode: Map[Int, V] = nodeOrder.map( x => (x._2, x._1) )
+    var acc: List[List[V]] = Nil
+
+    def circuit(least: V, subgraph: Self) {
+      import scala.collection.mutable._
+      val blocked = HashSet[V]()
+      var blocked2 = HashMap[V,HashSet[V]]()
+      val stack = Stack[V]()
+
+      def unblock(v: V) {
+        blocked -= v
+        val b2 = blocked2.getOrElse(v, HashSet[V]())
+        blocked2 += (v -> HashSet[V]())
+        b2 foreach unblock
+      }
+
+      def dfs(v: V): Boolean = {
+        stack.push(v)
+        blocked += v
+        var cycleFound = false
+        for (w <- subgraph(v)) {
+          if (w == least) {
+            //we have a cycle
+            cycleFound = true
+            val trace = least :: stack.toList
+            acc = trace :: acc
+          } else if (!blocked(w)) {
+            cycleFound = dfs(w)
+          }
+        }
+        if (cycleFound) {
+          unblock(v)
+        } else {
+          for (w <- subgraph(v)) {
+            val b2 = blocked2.getOrElse(w, HashSet[V]())
+            b2 += v
+            blocked2 += (w -> b2)
+          }
+        }
+        stack.pop
+        cycleFound
+      }
+
+      dfs(least)
+    }
+
+    var sccs = SCC
+    var n = 0
+    while (n < nodeOrder.size && !sccs.isEmpty) {
+      val leastSCC = sccs.minBy(scc => nodeOrder(scc.minBy(nodeOrder)))
+      sccs = sccs.filterNot(_ == leastSCC)
+      val subgraph = this.inducedSubgraph(leastSCC)
+      val leastNode = leastSCC.minBy(nodeOrder)
+      circuit(leastNode, subgraph)
+      sccs = (subgraph - leastNode).SCC ++ sccs
+    }
+
+    def mkRevTrace(revNodes: List[V]): List[Trace[V, EL]] = revNodes match {
+      case x :: Nil => List(Trace[V,EL](x))
+      case Nil => Logger.logAndThrow("graph", LogError, "elementaryCycles: empty trace.")
+      case x :: y :: xs =>
+        val stubs = mkRevTrace(y :: xs)
+        val labels = edgesBetween(y, x).toList
+        assert(!labels.isEmpty, revNodes + "\n" + this)
+        labels.flatMap( l => stubs.map( t => t.prepend(x, l)) )
+    }
+
+    (acc flatMap mkRevTrace) map (_.reverse)
   }
 
 }

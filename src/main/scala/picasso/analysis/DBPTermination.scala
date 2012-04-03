@@ -50,7 +50,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
   //in the algo widening directly follows the transitions,
   //i.e. to connect to states in the tree, we need one witness for the transition and for the widening.
 
-  protected var witnessesMap: Map[S, Map[S, (TransitionWitness[P], WideningWitnessSeq[P])]]
+  protected var witnessesMap: Map[S, Map[S, (TransitionWitness[P], WideningWitnessSeq[P])]] = null
 
   protected def populateWitnessesMap {
     val wWitnesses = wideningWitnesses.toArray(Array.ofDim[WideningWitnessSeq[P]](0))
@@ -488,8 +488,10 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
   //(4) TODO
   def termination(initState: S) = {
     val (_, tree) = computeTree(initState)
+    populateWitnessesMap
     val program = makeIntegerProgram(tree)
-    sys.error("TODO print and call ARMC")
+    (tree, program)
+    //sys.error("TODO print and call ARMC")
   }
 
 }

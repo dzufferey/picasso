@@ -29,7 +29,11 @@ class Program(init: State, trs: GenSeq[Transition]) extends picasso.math.Transit
   }
 
   def printForARMC = {
-    sys.error("TODO")
+    val str = new java.io.StringWriter()
+    val writer = new java.io.BufferedWriter(str)
+    ARMCPrinter(writer, this)
+    writer.close
+    str.toString
   }
   
   def printForT2 = {

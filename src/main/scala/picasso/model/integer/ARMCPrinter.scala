@@ -3,6 +3,7 @@ package picasso.model.integer
 import java.io._
 import scala.collection.GenSeq
 import picasso.utils._
+import picasso.graph._
 
 object ARMCPrinter {
 
@@ -50,14 +51,27 @@ object ARMCPrinter {
 
   protected def cutpoints(trs: GenSeq[Transition])(implicit writer: BufferedWriter) {
     //find all the cycles in the graph (induced cycles generate the complete cycle space)
-    //then set hitting problem (combinatorial optimisation) / can we do is as linear algebra in the cycle space ?
-    /*
-cutpoint(pc(l0)).
-cutpoint(pc(l1)).
-cutpoint(pc(l2)).
-cutpoint(pc(l3)).
-    */
-    sys.error("TODO")
+    //then set hitting problem (combinatorial optimisation) (can we do is as linear algebra in the cycle space or only as ILP ?)
+    val cfa = DiGraph[GT.ULGT{type V = String}](trs.map(t => (t.sourcePC, t.targetPC)).seq)
+    //TODO considering all the elementaryCycles is sufficient, but not necessary. We can do better and consider less cycles
+    val cycles = cfa.elementaryCycles
+    val setsToHit = cycles.map( _.states.toSet )
+    //for the moment, use a greedy algorithm ...
+    def greedy(candidate: Set[String], toCover: Seq[Set[String]], acc: Set[String]): Set[String] = {
+      if (candidate.isEmpty || toCover.isEmpty) {
+        assert(toCover.isEmpty)
+        acc
+      } else {
+        val best = candidate.maxBy( x => toCover.filter(_ contains x).length )
+        val toCover2 = toCover filterNot (_ contains best)
+        greedy(candidate - best, toCover2, acc + best)
+      }
+    }
+    val cutpoints = greedy(cfa.vertices, setsToHit, Set())
+    for (pc <- cutpoints) {
+        writer.write("cutpoint(pc(" + asLit(pc) + "))")
+        writer.newLine
+    }
   }
 
   protected def primeVar(v: Variable): Variable = Variable(v.name + "_prime")
@@ -129,7 +143,7 @@ cutpoint(pc(l3)).
     writer.write(", [], " + idx + ")." )
   }
 
-  protected def apply(implicit writer: BufferedWriter, prog: Program) {
+  def apply(implicit writer: BufferedWriter, prog: Program) {
     val vars = prog.variables.toSeq
     writer.write(preamble); writer.newLine
     var2names(vars); writer.newLine
@@ -139,9 +153,10 @@ cutpoint(pc(l3)).
       r(t, idx, vars)
       writer.newLine
     }
+    writer.flush
   }
 
-  val preamble = """% BEGIN FIXED PREAMBLE
+  protected val preamble = """% BEGIN FIXED PREAMBLE
 :- multifile r/5,implicit_updates/0,var2names/2,preds/2,trans_preds/3,
 cube_size/1,start/1,error/1,refinement/1,cutpoint/1,invgen_template/2,
  invgen_template/1,cfg_exit_relation/1,stmtsrc/2,strengthening/2,globals/3,

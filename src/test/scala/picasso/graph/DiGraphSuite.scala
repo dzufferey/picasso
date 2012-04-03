@@ -357,5 +357,17 @@ class DiGraphSuite extends FunSuite {
     assert(dg1.SCC(false).size == 1, dg1.SCC(false))
   }
 
+  test("Elementary Cycles"){
+    val emptyDG = DiGraph.empty[UIGT]
+    val dg0 = emptyDG ++ (N(0) --> 1) ++ (N(1) --> 2)
+    assert(dg0.elementaryCycles.size == 0, dg0.elementaryCycles)
+    val dg1 = dg0 ++ (N(2) --> 0)
+    assert(dg1.elementaryCycles.size == 1, dg1.elementaryCycles)
+    val dg2 = dg1 ++ (N(0) --> 2) ++ (N(2) --> 1) ++ (N(1) --> 0)
+    assert(dg2.elementaryCycles.size == 5, dg2.elementaryCycles)
+    val dg3 = dg2 ++ (N(1) --> 3) ++ (N(3) --> 2)
+    assert(dg3.elementaryCycles.size == 7, dg3.elementaryCycles)
+  }
+
 }
 

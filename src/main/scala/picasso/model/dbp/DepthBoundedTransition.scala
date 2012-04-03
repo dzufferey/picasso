@@ -95,11 +95,15 @@ extends Transition[DepthBoundedConf[P]]
         //print("post: " + post)
 
         //the morphism for the post is f_hr_g1 restricted to the frame + g1_hk_f inverted ?
-        val postMorphism0 = (frame.vertices.toSeq.map{ case x => (x,x) }: Iterable[(P#V,P#V)] ).toMap
-        val postMorphism1 = f_hr_g1.filterKeys( x => !frame.vertices.contains(x) )
-        val postMorphism2 = g1_hk_f.flatMap[(P#V,P#V), Morphism]{ case (a,b) => if (a != b) Some(b -> a) else None}
-        val postMorphism = postMorphism0 ++ postMorphism1 ++ postMorphism2
-        assert(postMorphism.forall{ case (k,v) => g1.contains(k) && postUnfolded.contains(v) })
+        val postMorphism0 = (frame.vertices.toSeq.map{ case x => (x,f_hr_g1.getOrElse(x,x)) }: Iterable[(P#V,P#V)] ).toMap
+        Logger("dbp", LogDebug, "postMorphism0: " + postMorphism0)
+        val postMorphism1 = g1_hk_f.flatMap[(P#V,P#V), Morphism]{ case (a,b) => if (a != b) Some(b -> a) else None}
+        Logger("dbp", LogDebug, "postMorphism1: " + postMorphism1)
+        val postMorphism = postMorphism0 ++ postMorphism1
+        for ( (k, v) <- postMorphism ) {
+          assert(conf1.contains(k), k + " not in " + conf1.vertices)
+          assert(postUnfolded.contains(v), v + " not in " + postUnfolded.vertices)
+        }
 
         val witness = new TransitionWitness
         witness.transition = this

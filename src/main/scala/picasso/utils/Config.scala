@@ -131,6 +131,9 @@ class Config {
   val tree1 = ("-t", Arg.Unit(() => KM_showTree = true), "output the Karp-Miller tree (when applicable) as part of the report.")
   val tree2 = ("--full", Arg.Unit(() => KM_fullTree = true), "keep all the successors in the Karp-Miller tree.")
 
+  //about the termination analysis
+  var termination = false
+  val termination1 = ("--termination", Arg.Unit(() => termination = true), "Compute the termination of the system.")
 
   val usage = "..."
 
