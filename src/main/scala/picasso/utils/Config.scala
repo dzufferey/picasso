@@ -140,7 +140,8 @@ class Config {
   val options = List(
     verbose, quiet, hide,
     reportQuick, reportFull,
-    tree1, tree2
+    tree1, tree2,
+    termination1
   )
 
   def apply(args: Seq[String]) {

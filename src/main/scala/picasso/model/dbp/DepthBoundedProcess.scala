@@ -42,14 +42,24 @@ class DepthBoundedProcess[P <: DBCT](trs: GenSeq[DepthBoundedTransition[P]])(imp
     val seeds = ms.map(m => bigger.vertices -- m.values)
     val (widenedUnfolded, usedSeed) = ((bigger, Map[P#V,P#V]()) /: seeds)( (acc, seed) => {
       val (w,m) = bigger widenWithWitness seed
-      if (ordering.gt(acc._1, w)) acc else (w, m)
+      //println("YY seed: " + seed)
+      //println("YY m: " + m)
+      //print(w.toGraphviz("w"))
+      if (ordering.gt(acc._1, w)) {
+        //println("XX keeping acc")
+        acc
+      } else {
+        //println("XX selecting w")
+        (w, m)
+      }
     })
     val (widened, folding) = widenedUnfolded.foldWithWitness
     //println("Acceleration:")
     //print(smaller.toGraphviz("smaller"))
     //print(bigger.toGraphviz("bigger"))
-    //print(widenend.toGraphviz("widenend"))
-    if (usedSeed.isEmpty) None
+    //print(widened.toGraphviz("widenend"))
+    //println("usedSeed:" + usedSeed)
+    if (seeds.isEmpty) None
     else {
        val witness = new WideningWitness
        witness.smaller = smaller

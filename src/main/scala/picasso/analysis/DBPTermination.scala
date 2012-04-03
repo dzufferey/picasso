@@ -112,7 +112,9 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
       PCs.get(conf)
     } else {
       val varMap = variablesForNodes(conf)
-      PCs.putIfAbsent(conf, (Namer("S_"), varMap))
+      val value = (Namer("S_"), varMap)
+      val res = PCs.putIfAbsent(conf, value)
+      if (res == null) value else res
     }
   }
 
@@ -349,11 +351,18 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
   // the reverse of folding ...
   //revMorph is a mapping from the node of 'to' to the node of 'from'
   protected def unfolding(from: S, revMorph: Map[P#V,P#V], to: S): Transition = {
+    Logger("DBPTermination", LogDebug, "unfolding transition from " + from +
+                                       " to " + to +
+                                       " with " + revMorph +
+                                       "\nfrom.vertices: " + from.vertices +
+                                       "\nto.vertices: " + to.vertices)
     val (pc1, map1) = getPC(from)
     val (pc2, map2) = getPC(to)
     //reverse the unfolding
-    val backwardUnFolding: Map[P#V, Seq[P#V]] = revMorph.toSeq.map{ case (a,b) => (b,a) }.groupBy( _._1 ).mapValues( _ map (_._2) )
-    assert(to.vertices forall (revMorph contains _))
+    val frame = to.vertices -- revMorph.keys
+    val revMorph2 = revMorph ++ frame.map(x => (x,x))
+    val backwardUnFolding: Map[P#V, Seq[P#V]] = revMorph2.toSeq.map{ case (a,b) => (b,a) }.groupBy( _._1 ).mapValues( _ map (_._2) )
+    assert(to.vertices forall (revMorph2 contains _))
     assert(from.vertices forall (backwardUnFolding contains _))
     val stmts1 = for ( (node, lst) <- backwardUnFolding ) yield {
        var rhs = lst.map(getCardinality(map2, _)).reduceLeft(Plus(_, _))
@@ -388,6 +397,12 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
   //Actually, there is nothing to do here.
   //Just check that the transition does not change replicated things and transfer the frame
   protected def morphing(from: S, morph1: Map[P#V, P#V], tr: T, to: S): Transition = {
+    Logger("DBPTermination", LogInfo, "morphing transition from " + from +
+                                       " to " + to +
+                                       " with " + morph1 +
+                                       "\nfrom.vertices: " + from.vertices +
+                                       "\nto.vertices: " + to.vertices)
+    //TODO morph1 also has the frame ? (morph1 does not really make sense ...)
     assert(morph1.values.forall(_.depth == 0))
     assert(tr.lhs.vertices.forall(_.depth == 0))
     assert(tr.rhs.vertices.forall(_.depth == 0))
