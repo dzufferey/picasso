@@ -22,6 +22,8 @@ class Program(init: State, trs: GenSeq[Transition]) extends picasso.math.Transit
   //transition type
   type T = Transition
 
+  def intialState = init
+
   def transitions: GenSeq[T] = trs
 
   def variables: Set[Variable] = {

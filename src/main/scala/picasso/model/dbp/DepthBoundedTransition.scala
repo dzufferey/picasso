@@ -67,7 +67,7 @@ extends Transition[DepthBoundedConf[P]]
       //print("lhs: " + lhs.morph(g1))
 
       // remove all inhibiting subgraphs from conf0 (monotonicity abstraction)
-      for ( (conf1, removed) <- removeInhibitors(conf0, g1) ) yield {
+      for ( (conf1, removedByInhibitor) <- removeInhibitors(conf0, g1) ) yield {
 
         // Compute nodes that the transition removes from conf1
         val hkRange = hk.values
@@ -94,11 +94,19 @@ extends Transition[DepthBoundedConf[P]]
         val (post, folding) = postUnfolded.foldWithWitness
         //print("post: " + post)
 
+        //Logger("dbp", LogWarning, "removed: " + removed)
+        //Logger("dbp", LogWarning, "lhs.morph(g1): " + lhs.morph(g1))
+        //Logger("dbp", LogWarning, "conf1 -- lhs.morph(g1): " + (conf1 -- lhs.morph(g1)))
+        //Logger("dbp", LogWarning, "frame: " + frame)
+        //Logger("dbp", LogWarning, "(frame morph f_hr_g1): " + (frame morph f_hr_g1))
+        //Logger("dbp", LogWarning, "(rhsClone morph g1_hk_f): " + (rhsClone morph g1_hk_f))
+
         //the morphism for the post is f_hr_g1 restricted to the frame + g1_hk_f inverted ?
         val postMorphism0 = (frame.vertices.toSeq.map{ case x => (x,f_hr_g1.getOrElse(x,x)) }: Iterable[(P#V,P#V)] ).toMap
-        Logger("dbp", LogDebug, "postMorphism0: " + postMorphism0)
+        //Logger("dbp", LogWarning, "postMorphism0: " + postMorphism0)
         val postMorphism1 = g1_hk_f.flatMap[(P#V,P#V), Morphism]{ case (a,b) => if (a != b) Some(b -> a) else None}
-        Logger("dbp", LogDebug, "postMorphism1: " + postMorphism1)
+        //Logger("dbp", LogWarning, "postMorphism1: " + postMorphism1)
+        //Logger("dbp", LogWarning, "g1_hk_f: " + g1_hk_f)
         val postMorphism = postMorphism0 ++ postMorphism1
         for ( (k, v) <- postMorphism ) {
           assert(conf1.contains(k), k + " not in " + conf1.vertices)
@@ -112,7 +120,7 @@ extends Transition[DepthBoundedConf[P]]
         witness.unfolding = unfolding
         witness.unfolded = conf0
         //witness.unfoldedMorphism = g1
-        witness.inhibitedNodes = removed
+        witness.inhibitedNodes = removedByInhibitor
         witness.inhibited = conf1
         witness.post = postMorphism
         witness.unfoldedAfterPost = postUnfolded

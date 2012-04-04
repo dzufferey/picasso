@@ -122,30 +122,37 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     if (map contains node) {
       map(node)
     } else {
-      assert(node.depth == 0)
+      assert(node.depth == 0, node)
       Constant(1)
     }
   }
 
   // summing up the variable and adding constant for non-replicated nodes.
   protected def folding(from: S, folding: Map[P#V, P#V], to: S): Transition = {
-    assert(from.vertices forall (folding contains _))
+    Logger("DBPTermination", LogDebug, "folding transition from " + from +
+                                       " to " + to +
+                                       " with " + folding +
+                                       "\nfrom.vertices: " + from.vertices +
+                                       "\nto.vertices: " + to.vertices)
+    assert(from != to)
+    val folding2 = (from.vertices.map(v => (v, folding.getOrElse(v,v))): Iterable[(P#V,P#V)]).toMap
+    //assert(from.vertices forall (folding contains _))
     val (pc1, map1) = getPC(from)
     val (pc2, map2) = getPC(to)
     //invert the folding so that when we look at one node in to, we get all the from nodes that map to it.
-    val backwardFolding: Map[P#V, Seq[P#V]] = folding.toSeq.map{ case (a,b) => (b,a) }.groupBy( _._1 ).mapValues( _ map (_._2) )
+    val backwardFolding: Map[P#V, Seq[P#V]] = folding2.toSeq.map{ case (a,b) => (b,a) }.groupBy( _._1 ).mapValues( _ map (_._2) )
     assert(to.vertices forall (backwardFolding contains _))
     val stmts1 = for ( (node, lst) <- backwardFolding ) yield {
        var rhs = lst.map(getCardinality(map1, _)).reduceLeft(Plus(_, _))
        getCardinality(map2, node) match {
-         case v @ Variable(_) => Affect(v, Plus(v, rhs))
+         case v @ Variable(_) => Affect(v, rhs)
          case Constant(1) => assert(rhs == Constant(1)); Skip
          case other =>
            Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        }
     }
     //stmt1 contains the update of the counter into to 'to', now we need statments for the counters of 'from'
-    val stmts2 = for ( node <- folding.keys ) yield {
+    val stmts2 = for ( node <- folding2.keys ) yield {
       getCardinality(map1, node) match {
          case v @ Variable(_) => Affect(v, Constant(0))
          case Constant(1) => Skip
@@ -153,11 +160,17 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
       }
     }
     val stmts = (stmts1 ++ stmts2).toSeq
-    new Transition(pc1, pc2, Literal(true), stmts)
+    new Transition(pc1, pc2, Literal(true), stmts, "folding")
   }
 
   //TODO simple version of the replication -> send the counters back
   protected def replicatingSimple(from: S, smaller: S, replicating: Map[P#V, P#V], to: S): Seq[Transition] = {
+    Logger("DBPTermination", LogDebug, "replicatingSimple transition from " + from +
+                                       " to " + to +
+                                       " with " + smaller +
+                                       " and " + replicating +
+                                       "\nfrom.vertices: " + from.vertices +
+                                       "\nto.vertices: " + to.vertices)
     val (pc1, map1) = getPC(from)
     val (pc2, map2) = getPC(to)
     val (pc3, map3) = getPC(smaller)
@@ -191,7 +204,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
        }
     }
     val stmts = (stmts1 ++ stmts2 ++ stmts3 ++ stmts4).toSeq
-    val t1 = new Transition(pc1, pc2, Literal(true), stmts)
+    val t1 = new Transition(pc1, pc2, Literal(true), stmts, "replicating 1")
     //second transition: back edge
     val morphisms = smaller.morphisms(to)(self.stateOrdering)
     var trs2 = for( m <- morphisms ) yield {
@@ -217,7 +230,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
         }
       }
       val stmts3 = for (node <- frame ) yield {
-         getCardinality(map1, node) match {
+         getCardinality(map2, node) match {
            case v @ Variable(_) => Affect(v, v)
            case Constant(c) => Skip
            case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
@@ -239,7 +252,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
         case (acc, None) => acc
       }
       val stmts = (stmts1 ++ stmts2 ++ stmts3).toSeq
-      new Transition(pc2, pc3, guard, stmts)
+      new Transition(pc2, pc3, guard, stmts, "replicating 2")
     }
     t1 +: trs2.toSeq
   }
@@ -292,16 +305,21 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
        }
     }
     val stmts = (declare ++ assumes1 ++ assumes2 ++ stmts1 ++ stmts2 ++ stmts3).toSeq
-    new Transition(pc1, pc2, Literal(true), stmts)
+    new Transition(pc1, pc2, Literal(true), stmts, "replicating")
   }
 
   //send back the counters
   protected def covering(smaller: S, bigger: S): Seq[Transition] = {
+    Logger("DBPTermination", LogDebug, "covering transition from " + smaller +
+                                       " to " + bigger +
+                                       "\nsmaller.vertices: " + smaller.vertices +
+                                       "\nbigger.vertices: " + bigger.vertices)
     val (pc1, map1) = getPC(smaller)
     val (pc2, map2) = getPC(bigger)
     val morphisms = smaller.morphisms(bigger)(self.stateOrdering)
     val trs = for (m <- morphisms) yield {
       assert(smaller.vertices forall (m contains _))
+      assert(m forall { case (a,b) => a.depth <= b.depth})
       val backwardM: Map[P#V, Seq[P#V]] = m.toSeq.map{ case (a,b) => (b,a) }.groupBy( _._1 ).mapValues( _ map (_._2) )
       val stmts1 = for ((node, lst) <- backwardM) yield {
         var rhs = lst.map(getCardinality(map1, _)).reduceLeft(Plus(_, _))
@@ -312,14 +330,14 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
         }
       }
       val stmts2 = for (node <- smaller.vertices) yield {
-         getCardinality(map2, node) match {
+         getCardinality(map1, node) match {
            case v @ Variable(_) => Affect(v, Constant(0))
            case Constant(c) => Skip
            case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
          }
       }
       val stmts = (stmts1 ++ stmts2).toSeq
-      new Transition(pc1, pc2, Literal(true), stmts)
+      new Transition(pc1, pc2, Literal(true), stmts, "covering")
     }
     trs.toSeq
   }
@@ -327,12 +345,18 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
   // replicated nodes that disappear are set to 0
   // node from 'from' should be either in 'to' or in 'inhibited'
   protected def inhibiting(from: S, inhibited: Set[P#V], to: S): Transition = {
+    Logger("DBPTermination", LogDebug, "inhibited transition from " + from +
+                                       " to " + to +
+                                       " with " + inhibited +
+                                       "\nfrom.vertices: " + from.vertices +
+                                       "\nto.vertices: " + to.vertices)
+    assert(from != to)
     val (pc1, map1) = getPC(from)
     val (pc2, map2) = getPC(to)
     val stmts1 = for ( node <- from.vertices if !inhibited.contains(node)) yield {
       assert(to contains node)
       getCardinality(map2, node) match {
-         case v @ Variable(_) => Affect(v, Plus(v, getCardinality(map1, node)))
+         case v @ Variable(_) => Affect(v, getCardinality(map1, node))
          case Constant(1) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
       }
@@ -345,17 +369,19 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
       }
     }
     val stmts = (stmts1 ++ stmts2).toSeq
-    new Transition(pc1, pc2, Literal(true), stmts)
+    new Transition(pc1, pc2, Literal(true), stmts, "inhibiting")
   }
 
   // the reverse of folding ...
   //revMorph is a mapping from the node of 'to' to the node of 'from'
+  //TODO when unfolding a component, do we need to keep some more information (i.e. unfold the same as or at least as much as ...)
   protected def unfolding(from: S, revMorph: Map[P#V,P#V], to: S): Transition = {
     Logger("DBPTermination", LogDebug, "unfolding transition from " + from +
                                        " to " + to +
                                        " with " + revMorph +
                                        "\nfrom.vertices: " + from.vertices +
                                        "\nto.vertices: " + to.vertices)
+    assert(from != to)
     val (pc1, map1) = getPC(from)
     val (pc2, map2) = getPC(to)
     //reverse the unfolding
@@ -391,40 +417,42 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     }
     val guard = ((Literal(true): Condition) /: lowerBounds)(And(_,_))
     val stmts = (stmts1 ++ stmts2).toSeq
-    new Transition(pc1, pc2, guard, stmts)
+    new Transition(pc1, pc2, guard, stmts, "unfolding")
   }
 
   //Actually, there is nothing to do here.
   //Just check that the transition does not change replicated things and transfer the frame
-  protected def morphing(from: S, morph1: Map[P#V, P#V], tr: T, to: S): Transition = {
-    Logger("DBPTermination", LogInfo, "morphing transition from " + from +
+  protected def morphing(from: S, frame: Map[P#V, P#V], tr: T, to: S): Transition = {
+    Logger("DBPTermination", LogDebug, "morphing transition from " + from +
                                        " to " + to +
-                                       " with " + morph1 +
+                                       " with " + frame +
                                        "\nfrom.vertices: " + from.vertices +
                                        "\nto.vertices: " + to.vertices)
-    //TODO morph1 also has the frame ? (morph1 does not really make sense ...)
-    assert(morph1.values.forall(_.depth == 0))
+    assert(from != to)
+    //assert(morph1.values.forall(_.depth == 0))
+    assert(frame.forall{case (a,b) => a.depth == b.depth})
     assert(tr.lhs.vertices.forall(_.depth == 0))
     assert(tr.rhs.vertices.forall(_.depth == 0))
     val (pc1, map1) = getPC(from)
     val (pc2, map2) = getPC(to)
-    val frame = from.vertices -- morph1.keys
-    val stmts1 = for (node <- frame ) yield {
-       getCardinality(map2, node) match {
-         case v @ Variable(_) => Affect(v, Plus(v, getCardinality(map1, node)))
+    val changing = from.vertices -- frame.keys
+    assert(changing forall (_.depth == 0))
+    val stmts1 = for ((n1,n2) <- frame ) yield {
+       getCardinality(map2, n2) match {
+         case v @ Variable(_) => Affect(v, Plus(v, getCardinality(map1, n1)))
          case Constant(c) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        }
     }
-    val stmts2 = for (node <- frame) yield {
-       getCardinality(map2, node) match {
+    val stmts2 = for ((n1,n2) <- frame) yield {
+       getCardinality(map1, n1) match {
          case v @ Variable(_) => Affect(v, Constant(0))
          case Constant(c) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        }
     }
     val stmts = (stmts1 ++ stmts2).toSeq
-    new Transition(pc1, pc2, Literal(true), stmts)
+    new Transition(pc1, pc2, Literal(true), stmts, "morphing")
   }
 
   protected def initialize(init: S, allVariables: Set[Variable]): Transition = {
@@ -434,7 +462,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     val components: DiGraph[GT.ULGT{type V = Set[P#V]}] = init.decomposeInDisjointComponents
     val cmpId = components.vertices.zipWithIndex.toMap
     val nodeToCmpId = (cmpId.flatMap{ case (seq, id) => seq.map(x => (x, id)) } : Iterable[(P#V, Int)]).toMap
-    val accelerationVariables = cmpId.map{ case (k,v) => (v, Variable("widen_" + v)) }
+    val accelerationVariables = cmpId.map{ case (k,v) => (v, Variable("init_" + v)) }
     //now make the statments
     val declare = accelerationVariables.values.map( v => Transient(v) )
     val assumes1 = for ( (_,v) <- accelerationVariables) yield Assume(Leq(Constant(0), v))
@@ -453,8 +481,8 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     }
     val zeroVars = allVariables -- map1.values
     val stmts2 = for (v <- zeroVars) yield Affect(v, Constant(0))
-    val stmts = (stmts1 ++ stmts2).toSeq
-    new Transition(pc0, pc1, Literal(true), stmts)
+    val stmts = (declare ++ assumes1 ++ assumes2 ++ stmts1 ++ stmts2).toSeq
+    new Transition(pc0, pc1, Literal(true), stmts, "initialize")
   }
 
   protected def collectForwardEdges(tree: KMTree): Seq[(S,S)] = {
@@ -467,18 +495,64 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     (covered /: tree.children)(_ ++ collectBackwardEdges(_))
   }
 
+  protected def isUnfoldingTrivial(from: S, revMorph: Map[P#V,P#V], to: S) = {
+    if (from == to) {
+      assert(revMorph.isEmpty)
+      true
+    } else {
+      false
+    }
+  }
+  protected def isInhibitingTrivial(from: S,  inhibited: Set[P#V], to: S) = {
+    if (from == to) {
+      assert(inhibited.isEmpty)
+      true
+    } else {
+      false
+    }
+  }
+  protected def isFoldingTrivial(from: S, folding: Map[P#V,P#V], to: S) = {
+    if (from == to) {
+      assert(folding.isEmpty)
+      true
+    } else {
+      false
+    }
+  }
+  protected def isMorphingTrivial(from: S, frame: Map[P#V, P#V], tr: T, to: S) = {
+    assert(from != to)
+    false
+  }
+  protected def isReplicationTrivial(from: S, smaller: S, replicating: Map[P#V, P#V], to: S) = {
+    assert(from != to)
+    false
+  }
+
   protected def transitionForWitness1(witness: TransitionWitness[P]): Seq[Transition] = {
-    Seq(
-      unfolding(witness.from, witness.unfolding, witness.unfolded),
-      inhibiting(witness.unfolded, witness.inhibitedNodes, witness.inhibited),
-      morphing(witness.inhibited, witness.post, witness.transition, witness.unfoldedAfterPost),
-      folding(witness.unfoldedAfterPost, witness.folding, witness.to)
-    )
+    val t1 =
+      if (isUnfoldingTrivial(witness.from, witness.unfolding, witness.unfolded)) None
+      else Some(unfolding(witness.from, witness.unfolding, witness.unfolded))
+    val t2 =
+      if (isInhibitingTrivial(witness.unfolded, witness.inhibitedNodes, witness.inhibited)) None
+      else Some(inhibiting(witness.unfolded, witness.inhibitedNodes, witness.inhibited))
+    val t3 =
+      if (isMorphingTrivial(witness.inhibited, witness.post, witness.transition, witness.unfoldedAfterPost)) None
+      else Some(morphing(witness.inhibited, witness.post, witness.transition, witness.unfoldedAfterPost))
+    val t4 =
+      if (isFoldingTrivial(witness.unfoldedAfterPost, witness.folding, witness.to)) None
+      else Some(folding(witness.unfoldedAfterPost, witness.folding, witness.to))
+    Seq(t1, t2, t3, t4).flatten
   }
   
   protected def transitionForWitness2(witness: WideningWitness[P]): Seq[Transition] = {
-    replicatingSimple(witness.bigger, witness.smaller, witness.replicated, witness.unfoldedResult) :+
-    folding(witness.unfoldedResult, witness.folding, witness.result)
+    //TODO remove trivial transitions
+    val t1 =
+      if (isReplicationTrivial(witness.bigger, witness.smaller, witness.replicated, witness.unfoldedResult)) Seq[Transition]()
+      else replicatingSimple(witness.bigger, witness.smaller, witness.replicated, witness.unfoldedResult)
+    val t2 =
+      if (isFoldingTrivial(witness.unfoldedResult, witness.folding, witness.result)) Seq[Transition]()
+      else Seq(folding(witness.unfoldedResult, witness.folding, witness.result))
+    t1 ++ t2
   }
 
   protected def transitionForWitness(witness: (TransitionWitness[P], WideningWitnessSeq[P])): Seq[Transition] = {
@@ -493,6 +567,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     val forwardTrs = witnesses.flatMap( transitionForWitness )
     val backwardTrs = backwardEdges.flatMap{ case (a,b) => covering(a,b) }
     val allTransitions = forwardTrs ++ backwardTrs
+    //TODO build a graph, get all the simple paths and try to compact the transitions
     //need an initialisation transition (from nothing to the init state)
     val variables = (Set[Variable]() /: allTransitions)(_ ++ _.variables)
     val init = initialize(tree(), variables)

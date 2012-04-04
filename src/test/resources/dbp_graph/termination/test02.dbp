@@ -1,0 +1,12 @@
+//this program does not terminate
+init
+  (s, S) -> (h, head) [head]
+
+transition "Op1 created" 
+pre
+  node (s, S)
+post
+  (o, Op1) -> (s, S) [x]
+==>
+  s -> s
+<==

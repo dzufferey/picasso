@@ -1,0 +1,13 @@
+//this program terminates
+init
+  (s, S) -> (h, head) [head]
+  (o, Op1)* -> (s, S) [x]
+
+transition "Op1 dies" 
+pre
+  (o, Op1) -> (s, S) [x]
+post
+  node (s, S)
+==>
+  s -> s
+<==

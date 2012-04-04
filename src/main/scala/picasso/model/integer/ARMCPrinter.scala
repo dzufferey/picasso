@@ -5,20 +5,7 @@ import scala.collection.GenSeq
 import picasso.utils._
 import picasso.graph._
 
-object ARMCPrinter {
-
-  protected def asLit(str: String): String = {
-    assert(str.length > 0)
-    if (str(0).isLower) str
-    else str.updated(0, str(0).toLower)
-  }
-  
-  protected def asVar(str: String): String = {
-    assert(str.length > 0)
-    if (str(0).isUpper) str
-    else str.updated(0, str(0).toUpper)
-  }
-  protected def asVar(v: Variable): String = asVar(v.name)
+object ARMCPrinter extends PrologLikePrinter {
 
   protected def loc(pc: Option[String], vars: Seq[Variable])(implicit writer: BufferedWriter) {
     val pcString = pc match {
@@ -37,7 +24,7 @@ object ARMCPrinter {
     writer.write("var2names( ")
     loc(None, vars)
     writer.write(", [")
-    writer.write(vars.map(v => "(" + asVar(v) + ", '" + v.name + "'" ).mkString("",", ",""))
+    writer.write(vars.map(v => "(" + asVar(v) + ", '" + v.name + "')" ).mkString("",", ",""))
     writer.write("]).")
     writer.newLine
   }
@@ -46,6 +33,11 @@ object ARMCPrinter {
     writer.write("preds( ")
     loc(None, vars)
     writer.write(", []).")
+    writer.newLine
+  }
+
+  protected def start(pc: String)(implicit writer: BufferedWriter) {
+    writer.write("start( pc(" + asLit(pc) + ")).")
     writer.newLine
   }
 
@@ -69,59 +61,13 @@ object ARMCPrinter {
     }
     val cutpoints = greedy(cfa.vertices, setsToHit, Set())
     for (pc <- cutpoints) {
-        writer.write("cutpoint(pc(" + asLit(pc) + "))")
+        writer.write("cutpoint(pc(" + asLit(pc) + ")).")
         writer.newLine
     }
   }
 
-  protected def primeVar(v: Variable): Variable = Variable(v.name + "_prime")
-
-  protected def primeNotTransient(e: Expression, transient: Set[Variable]): Expression = e match {
-    case Plus(l,r) => Plus(primeNotTransient(l, transient), primeNotTransient(r, transient))
-    case Minus(l,r) => Minus(primeNotTransient(l, transient), primeNotTransient(r, transient))
-    case UMinus(u) => UMinus(primeNotTransient(u, transient))
-    case c @ Constant(_) => c
-    case v @ Variable(_) => if (transient(v)) v else primeVar(v)
-  }
-
-  protected def primeNotTransient(c: Condition, transient: Set[Variable]): Condition = c match {
-    case Eq(l,r) => Eq(primeNotTransient(l, transient), primeNotTransient(r, transient))
-    case Lt(l,r) => Lt(primeNotTransient(l, transient), primeNotTransient(r, transient))
-    case Leq(l,r) => Leq(primeNotTransient(l, transient), primeNotTransient(r, transient))
-    case And(l,r) => And(primeNotTransient(l, transient), primeNotTransient(r, transient))
-    case Or(l,r) => Or(primeNotTransient(l, transient), primeNotTransient(r, transient))
-    case Not(c) => Not(primeNotTransient(c, transient))
-    case l @ Literal(_) => l
-  }
-
-  protected def printCondition(c: Condition): String = c match {
-    case Eq(l,r) =>  Expression.print(l) + " = " + Expression.print(r)
-    case Lt(l,r) =>  Expression.print(l) + " < " + Expression.print(r)
-    case Leq(l,r) => Expression.print(l) + " =< " + Expression.print(r)
-    case And(l,r) => printCondition(l) + ", " + printCondition(r) 
-    case err @ Or(l,r) => Logger.logAndThrow("ARMC", LogError, "Or not yet supported:  " + err)
-    case err @ Not(c) =>  Logger.logAndThrow("ARMC", LogError, "Not not yet supported:  " + err)
-    case Literal(b) => if (b) "0 = 0" else "1 = 0"
-  }
-
-  protected def makeConditionNice(c: Condition): Seq[Condition] = {
-    //flatten the And, remove the literals, ... 
-    def flatten(c: Condition, acc: List[Condition]): List[Condition] = c match {
-      case And(l,r) => flatten(r, flatten(l, acc))
-      case err @ Or(l,r) => Logger.logAndThrow("ARMC", LogError, "Or not yet supported:  " + err)
-      case err @ Not(c) =>  Logger.logAndThrow("ARMC", LogError, "Not not yet supported:  " + err)
-      case Literal(b) => if (b) acc else List(Literal(false))
-      case other => other :: acc
-    }
-    flatten(Condition.nnf(c), Nil)
-  }
-
-  protected def constraints(guard: Condition, stmts: Seq[Statement], transient: Set[Variable])(implicit writer: BufferedWriter) {
-    val readyToPrint = guard +: (stmts flatMap {
-      case Skip | Transient(_) => Seq()
-      case Relation(n, o) => makeConditionNice(Eq(primeNotTransient(n, transient), o))
-      case Assume(c) => makeConditionNice(primeNotTransient(c, transient))
-    })
+  protected def constraints(t: Transition)(implicit writer: BufferedWriter) {
+    val readyToPrint = transitionConstraints(t)
     writer.write(readyToPrint.map(printCondition).mkString("[ ",", ","]"))
     writer.newLine
   }
@@ -134,12 +80,13 @@ object ARMCPrinter {
     val additionalCstr = frame.map(v => Affect(v, v))
     val allTrs = t.updates ++ additionalCstr
 
+    writer.write("% " + t.comment); writer.newLine
     writer.write("r( ")
     loc(t.sourcePC, vars)
     writer.write(", ")
     loc(t.targetPC, vars2)
     writer.write(", ")
-    constraints(t.guard, allTrs, t.transientVariables)
+    constraints(t)
     writer.write(", [], " + idx + ")." )
   }
 
@@ -148,6 +95,7 @@ object ARMCPrinter {
     writer.write(preamble); writer.newLine
     var2names(vars); writer.newLine
     preds(vars); writer.newLine
+    start(prog.intialState.pc)
     cutpoints(prog.transitions); writer.newLine
     for ( (t, idx) <- prog.transitions.seq.zipWithIndex ) {
       r(t, idx, vars)

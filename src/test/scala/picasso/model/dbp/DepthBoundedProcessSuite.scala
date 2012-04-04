@@ -211,6 +211,21 @@ class DepthBoundedProcessSuite extends FunSuite {
     val post4Expected = emp ++ (d0 --> c0)
     assert(post4 isSubgraphOf post4Expected)
     assert(post4Expected isSubgraphOf post4)
+
+    //
+    val pre5 = emp ++ (a0 --> c0) ++ (a0 --> b0)
+    val tr5 = {
+      val preCond = emp ++ (a0 --> c0)
+      val postCond = emp + d0
+      val mapping = Map(a0 -> d0)
+      DepthBoundedTransition[LocDBCT]("t", preCond, postCond, mapping)
+    }
+    val postSet5 = tr5(pre5)
+    assert(postSet5.size == 1)
+    val post5 = postSet5.head
+    val post5Expected = emp ++ (d0 --> b0)
+    assert(post5 isSubgraphOf post5Expected)
+    assert(post5Expected isSubgraphOf post5)
   }
 
   /*
