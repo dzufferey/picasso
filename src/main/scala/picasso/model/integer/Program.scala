@@ -1,6 +1,7 @@
 package picasso.model.integer
   
 import scala.collection.GenSeq
+import picasso.graph._
 
   //what is an ARMC/T2/integer program:
   // program location
@@ -56,38 +57,41 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     //TODO compact the transitions
     //TODO merge the variables (liveness + transfer analysis)
     //TODO transition in sequence that operates on disjoint set of variable might be merged (if the control flow is linear)
+    //if two variables are not live at the same moment, we can merge them!
     new Program(initPC, trs2)
   }
 
   /** Return a map from PC location to the set of variables that may be non-zero at that location. */
-  def nonZeroVariable: Map[String, Set[Variable]] = {
-    //TODO similar to liveVariables
-
-    sys.error("TODO")
-  }
-  /*
-  lazy val liveVariables: Map[PC, Set[ID]] = {
-    val read = readMap
-    val written = writeMap
-    assert(written.keySet == read.keySet)
-    read.map{ case (k,v) => (k, v intersect written(k))}
-  }
-
-  //defaultValue: at the initState, the argument are written!
-  lazy val writeMap: Map[PC, Set[ID]] = {
-    def default(s: PC) = if (s == cfa.initState) params.toSet
-                         else Set.empty[ID]
-    cfa.aiFixpoint( ((written: Set[ID], p: Process) => written ++ p.writtenIDs),
-                    ((a: Set[ID], b: Set[ID]) => a ++ b),
-                    ((a: Set[ID], b: Set[ID]) => b subsetOf a),
+  protected def nonZeroVariable: Map[String, Set[Variable]] = {
+    val emp = EdgeLabeledDiGraph.empty[GT.ELGT{type V = String; type EL = Transition}]
+    val cfa = emp ++ (transitions.map(t => (t.sourcePC, t, t.targetPC)).seq)
+    val allVars = variables
+    def default(s: String) = if (s == initPC) allVars else Set[Variable]()
+    cfa.aiFixpoint( ((nonZeros: Set[Variable], t: Transition) => nonZeros -- t.assignedToZero ++ t.assignedToNonZero),
+                    ((a: Set[Variable], b: Set[Variable]) => a ++ b),
+                    ((a: Set[Variable], b: Set[Variable]) => b subsetOf a),
                     default)
   }
 
-  lazy val readMap: Map[PC, Set[ID]] = 
-    cfa.aiFixpointBackward( ((read: Set[ID], p: Process) => read -- p.writtenIDs ++ p.readIDs),
-                            ((a: Set[ID], b: Set[ID]) => a ++ b),
-                            ((a: Set[ID], b: Set[ID]) => b subsetOf a),
-                            (_ => Set.empty[ID]) )
-  */
+  /** Return a list of groups of variables that may be merged safely.
+   *  A safe merge means that the variables in a group are never non-zero at the same time.
+   */
+  protected def computeVariableMerge: Seq[Set[Variable]] = {
+    val nonZeroMap = nonZeroVariable - initPC
+    //we can build a conflict graph where variables are in conflict iff they are live at the same time.
+    val conflictsTmp = (DiGraph.empty[GT.ULGT{type V = Variable}] /: nonZeroMap)( (acc, kv) => {
+      val group = kv._2
+      val edges = for (x <- group; y <- group if x != y) yield (x, (), y)
+      acc ++ edges
+    })
+    //Then we need to find a minimal coloring of the graph
+    //Since the problem is hard it makes sense to use a greedy algorithm with heuristics rather than finding an optimal coloring.
+    //TODO look at http://shah.freeshell.org/graphcoloring/ or http://code.google.com/p/graphcol/ for some good heuristic
+    //The idea of the greedy algorithm is to associate the first available color to a node.
+    //To add the heuristics, we should rank the available colors according to some distance.
+    //In this case two nodes are close if they share a long prefix.
+    //another idea is to look at which variable flow into which one.
+    sys.error("TODO")
+  }
 
 }

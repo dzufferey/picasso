@@ -45,7 +45,7 @@ class Transition(val sourcePC: String,
   }
     
   //is not exact but a superset
-  def AssignedToNonZero: Set[Variable] = {
+  def assignedToNonZero: Set[Variable] = {
     val nonZeros = updates.flatMap{
       case Affect(lhs, rhs) if rhs != Constant(0) => Expression.variables(lhs)
       case _ => None
@@ -56,7 +56,7 @@ class Transition(val sourcePC: String,
   }
   
   //is not exact but a subset
-  def AssignedToZero: Set[Variable] = {
+  def assignedToZero: Set[Variable] = {
     val zeros = updates.flatMap{
       case Affect(v1 @ Variable(_), Constant(0)) => Some(v1)
       case _ => None
