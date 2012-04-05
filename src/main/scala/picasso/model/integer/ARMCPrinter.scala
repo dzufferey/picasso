@@ -66,27 +66,25 @@ object ARMCPrinter extends PrologLikePrinter {
     }
   }
 
-  protected def constraints(t: Transition)(implicit writer: BufferedWriter) {
-    val readyToPrint = transitionConstraints(t)
+  protected def constraints(t: Transition, vars: Seq[Variable])(implicit writer: BufferedWriter) {
+    //frame since the transition speaks only about the a subset of the variables
+    val updatedVars = t.updatedVars
+    val frame = vars.filterNot( updatedVars(_) )
+    val additionalCstr = frame.map(v => Affect(v, v))
+    val readyToPrint = transitionConstraints(t, additionalCstr)
     writer.write(readyToPrint.map(printCondition).mkString("[ ",", ","]"))
     writer.newLine
   }
 
   protected def r(t: Transition, idx: Int, vars: Seq[Variable])(implicit writer: BufferedWriter) {
     val vars2 = vars map primeVar
-    //frame since the transition speaks only about the a subset of the variables
-    val updatedVars = t.updatedVars
-    val frame = vars.filterNot( updatedVars(_) )
-    val additionalCstr = frame.map(v => Affect(v, v))
-    val allTrs = t.updates ++ additionalCstr
-
     writer.write("% " + t.comment); writer.newLine
     writer.write("r( ")
     loc(t.sourcePC, vars)
     writer.write(", ")
     loc(t.targetPC, vars2)
     writer.write(", ")
-    constraints(t)
+    constraints(t, vars)
     writer.write(", [], " + idx + ")." )
   }
 
@@ -95,7 +93,7 @@ object ARMCPrinter extends PrologLikePrinter {
     writer.write(preamble); writer.newLine
     var2names(vars); writer.newLine
     preds(vars); writer.newLine
-    start(prog.intialState.pc)
+    start(prog.initialPC)
     cutpoints(prog.transitions); writer.newLine
     for ( (t, idx) <- prog.transitions.seq.zipWithIndex ) {
       r(t, idx, vars)

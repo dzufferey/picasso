@@ -15,6 +15,8 @@ class Termination(fileName: String, content: String) extends AnalysisCommon("Ter
     val(tree, intProgram) = process.termination(init)
 
     println(intProgram.printForARMC)
+    println("----------------------")
+    println(intProgram.printForQARMC)
 
     sys.error("TODO")
   }

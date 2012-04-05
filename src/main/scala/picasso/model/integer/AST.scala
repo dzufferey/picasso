@@ -74,6 +74,13 @@ object Statement {
     case _ => Set()
   }
 
+  def print(s: Statement): String = s match {
+    case Transient(v) => "transient("+v.name+")"
+    case Relation(_new, _old) => Expression.print(_new) + "=" + Expression.print(_old)
+    case Skip => "skip"
+    case Assume(c) => "assume("+Condition.print(c)+")"
+  }
+
   /*
   def variables(s: Statement): Set[Variable] = {
     getAllVariables(s) -- getTransientVariables(s)
@@ -144,6 +151,38 @@ object Condition {
       case Literal(b) => if (negate) Literal(!b) else Literal(b)
     }
     process(c, false)
+  }
+
+  def simplify(c: Condition): Condition = c match {
+    case l @ Literal(_) => l
+    case e @ Eq(Constant(c1), Constant(c2)) => if (c1 == c2) Literal(true) else Literal(false)
+    case e @ Eq(e1, e2) => if (e1 == e2) Literal(true) else e
+    case e @ Leq(Constant(c1), Constant(c2)) => if (c1 <= c2) Literal(true) else Literal(false)
+    case e @ Leq(e1, e2) => if (e1 == e2) Literal(true) else e
+    case e @ Lt(Constant(c1), Constant(c2)) => if (c1 < c2) Literal(true) else Literal(false)
+    case e @ Lt(e1, e2) => if (e1 == e2) Literal(false) else e
+    case And(c1, c2) =>
+      val c1s = simplify(c1)
+      val c2s = simplify(c2)
+      (c1s, c2s) match {
+        case (Literal(true), c2s) => c2s
+        case (c1s, Literal(true)) => c1s
+        case (Literal(false), _) => Literal(false)
+        case (_, Literal(false)) => Literal(false)
+        case (c1s, c2s) => if (c1s == c2s) c1s else And(c1s, c2s)
+      }
+    case Or(c1, c2) =>
+      val c1s = simplify(c1)
+      val c2s = simplify(c2)
+      (c1s, c2s) match {
+        case (Literal(false), c2s) => c2s
+        case (c1s, Literal(false)) => c1s
+        case (Literal(true), _) => Literal(true)
+        case (_, Literal(true)) => Literal(true)
+        case (c1s, c2s) => if (c1s == c2s) c1s else Or(c1s, c2s)
+      }
+    case Not(c1) =>
+      nnf(Not(simplify(c1)))
   }
 
 }

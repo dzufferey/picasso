@@ -405,6 +405,15 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
       }
     }
+    val stmts3 = backwardUnFolding.flatMap{ case (_, lst) =>
+       var vars = lst.map(getCardinality(map2, _)).filter{ case Variable(_) => true case _ => false }.toSet
+       if (lst.size > 1) {
+         assert(!vars.isEmpty)
+         vars.map(v => Assume(Leq(Constant(0), v)))
+       } else {
+         Nil
+       }
+    }
     val lowerBounds = for ( (node, lst) <- backwardUnFolding ) yield {
        var rhs = lst.map(getCardinality(map2, _))
        var constants = rhs.map{ case Constant(c) => c; case _ => 0 }
@@ -416,7 +425,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
        }
     }
     val guard = ((Literal(true): Condition) /: lowerBounds)(And(_,_))
-    val stmts = (stmts1 ++ stmts2).toSeq
+    val stmts = (stmts1 ++ stmts2 ++ stmts3).toSeq
     new Transition(pc1, pc2, guard, stmts, "unfolding")
   }
 
@@ -571,7 +580,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     //need an initialisation transition (from nothing to the init state)
     val variables = (Set[Variable]() /: allTransitions)(_ ++ _.variables)
     val init = initialize(tree(), variables)
-    val initState = new State(init.sourcePC, Map())
+    val initState = init.sourcePC
     new Program(initState, init +: allTransitions)
   }
 
@@ -579,8 +588,11 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
   def termination(initState: S) = {
     val (_, tree) = computeTree(initState)
     populateWitnessesMap
-    val program = makeIntegerProgram(tree)
-    (tree, program)
+    val program1 = makeIntegerProgram(tree)
+    Logger("DBPTermination", LogDebug, "unsimplified program:\n" + program1.printForQARMC)
+    val program2 = program1.simplifyForTermination
+    Logger("DBPTermination", LogDebug, "simplified program:\n" + program2.printForQARMC)
+    (tree, program2)
     //sys.error("TODO print and call ARMC")
   }
 

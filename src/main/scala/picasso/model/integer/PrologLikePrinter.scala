@@ -74,9 +74,9 @@ class PrologLikePrinter {
     flatten(Condition.nnf(c), Nil)
   }
 
-  protected def transitionConstraints(t: Transition): Seq[Condition] = {
+  protected def transitionConstraints(t: Transition, frame: Seq[Statement] = Seq()): Seq[Condition] = {
     val transient = t.transientVariables
-    makeConditionNice(t.guard) ++ (t.updates flatMap {
+    makeConditionNice(t.guard) ++ ((t.updates ++ frame) flatMap {
       case Skip | Transient(_) => Seq()
       case Relation(n, o) => makeConditionNice(Eq(primeNotTransient(n, transient), o))
       case Assume(c) => makeConditionNice(primeNotTransient(c, transient))
