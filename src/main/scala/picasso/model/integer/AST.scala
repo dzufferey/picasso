@@ -1,5 +1,7 @@
 package picasso.model.integer
 
+import picasso.utils._
+
 abstract class Expression 
 case class Plus(l: Expression, r: Expression) extends Expression 
 case class Minus(l: Expression, r: Expression) extends Expression 
@@ -36,6 +38,78 @@ object Expression {
     case UMinus(u) => variables(u)
     case Constant(_) => Set()
     case v @ Variable(_) => Set(v)
+  }
+
+  def getPositiveNegativeTerms(e: Expression): (List[Expression], List[Expression]) = e match {
+    case Plus(l,r) => 
+      val (p1, n1) = getPositiveNegativeTerms(l)
+      val (p2, n2) = getPositiveNegativeTerms(r)
+      (p1 ::: p2, n1 ::: n2)
+    case Minus(l,r) => 
+      val (p1, n1) = getPositiveNegativeTerms(l)
+      val (p2, n2) = getPositiveNegativeTerms(r)
+      (p1 ::: n2, n1 ::: p2)
+    case UMinus(u) => 
+      val (p, n) = getPositiveNegativeTerms(u)
+      (n, p)
+    case cstOrVar => (List(cstOrVar), Nil)
+  }
+  
+  def getPositiveTerms(e: Expression) = getPositiveNegativeTerms(e)._1
+
+  def getNegativeTerms(e: Expression) = getPositiveNegativeTerms(e)._2
+
+  /** Returns a list of variables with positive polarity, then negative variables, then constant */
+  def decompose(e: Expression): (List[Variable], List[Variable], Constant) = {
+    val (pos, neg) = getPositiveNegativeTerms(e)
+    val (posVar, posCst) = pos.partition{
+        case Variable(_) => true
+        case Constant(_) => false
+        case other => Logger.logAndThrow("integer.AST", LogError, "expected Variable or Constant, found: " + other)
+      }
+    val (negVar, negCst) = neg.partition{
+        case Variable(_) => true
+        case Constant(_) => false
+        case other => Logger.logAndThrow("integer.AST", LogError, "expected Variable or Constant, found: " + other)
+      }
+    val posVar2: List[Variable] = posVar.map{
+        case v @ Variable(_) => v
+        case other => Logger.logAndThrow("integer.AST", LogError, "expected Variable, found: " + other)
+      }
+    val negVar2: List[Variable] = negVar.map{
+        case v @ Variable(_) => v
+        case other => Logger.logAndThrow("integer.AST", LogError, "expected Variable, found: " + other)
+      }
+    val cst1 = (0 /: posCst)( (acc, c) => c match {
+        case Constant(value) => acc + value
+        case other => Logger.logAndThrow("integer.AST", LogError, "expected Constant, found: " + other)
+      })
+    val cst2 = (cst1 /: negCst)( (acc, c) => c match {
+        case Constant(value) => acc - value
+        case other => Logger.logAndThrow("integer.AST", LogError, "expected Constant, found: " + other)
+      })
+    (posVar2, negVar2, Constant(cst2))
+  }
+
+  def recompose(pos: List[Variable], neg: List[Variable], cst: Constant): Expression = {
+    val posSum = if (pos.isEmpty) None else Some((pos: List[Expression]).reduceLeft(Plus(_, _)))
+    val afterSubtract =
+      if (posSum.isDefined) Some( (posSum.get /: neg)( (acc, v) => Minus(acc, v) ) )
+      else if (neg.isEmpty) None
+      else Some( UMinus((neg: List[Expression]).reduceLeft(Plus(_,_))) )
+    if (afterSubtract.isEmpty) cst
+    else if (cst.i == 0) afterSubtract.get
+    else if (cst.i > 0) Plus(afterSubtract.get, cst)
+    else Minus(afterSubtract.get, Constant(- cst.i))
+  }
+
+  //TODO lazyCopier
+  def alpha(e: Expression, subst: Map[Variable,Expression]): Expression = e match {
+    case Plus(l,r) => Plus(alpha(l, subst), alpha(r, subst)) 
+    case Minus(l,r) => Minus(alpha(l, subst), alpha(r, subst)) 
+    case UMinus(u) => UMinus(alpha(u, subst)) 
+    case c @ Constant(_) => c
+    case v @ Variable(_) => subst.getOrElse(v, v)
   }
 
 }
@@ -81,11 +155,37 @@ object Statement {
     case Assume(c) => "assume("+Condition.print(c)+")"
   }
 
-  /*
-  def variables(s: Statement): Set[Variable] = {
-    getAllVariables(s) -- getTransientVariables(s)
+  def alpha(s: Statement, subst: Map[Variable, Expression]): Statement = s match {
+    case Relation(n, o) => Relation(Expression.alpha(n, subst), Expression.alpha(o, subst))
+    case Assume(c) => Assume(Condition.alpha(c, subst))
+    case Transient(t) => assert(!subst.contains(t)); Transient(t)
+    case Skip => Skip
   }
-  */
+
+  def alphaPre(s: Statement, subst: Map[Variable, Expression]): Statement = s match {
+    case Relation(n, o) => Relation(n, Expression.alpha(o, subst))
+    case Transient(t) => assert(!subst.contains(t)); Transient(t)
+    case other => other
+  }
+
+  def alphaPost(s: Statement, subst: Map[Variable, Expression]): Statement = s match {
+    case Relation(n, o) => Relation(Expression.alpha(n, subst), o)
+    case Assume(c) => Assume(Condition.alpha(c, subst))
+    case Transient(t) => assert(!subst.contains(t)); Transient(t)
+    case other => other
+  }
+
+  //some very simple simplifications to make the printing easier
+  def simplify(s: Statement): Statement = s match {
+    case Relation(Constant(c1), Constant(c2)) => assert(c1 == c2); Skip
+    case Assume(c) =>
+      Condition.simplify(c) match {
+        case Literal(true) => Skip
+        case c2 => Assume(c2)
+      }
+    case other => other
+  }
+
 }
 
 abstract class Condition
@@ -183,6 +283,17 @@ object Condition {
       }
     case Not(c1) =>
       nnf(Not(simplify(c1)))
+  }
+  
+  //TODO lazyCopier
+  def alpha(c: Condition, subst: Map[Variable,Expression]): Condition = c match {
+    case Eq(l,r) => Eq(Expression.alpha(l, subst), Expression.alpha(r, subst))
+    case Lt(l,r) => Lt(Expression.alpha(l, subst), Expression.alpha(r, subst))
+    case Leq(l,r) => Leq(Expression.alpha(l, subst), Expression.alpha(r, subst))
+    case And(l,r) => And(alpha(l, subst), alpha(r, subst))
+    case Or(l,r) => Or(alpha(l, subst), alpha(r, subst))
+    case Not(c) => Not(alpha(c, subst))
+    case l @ Literal(_) => l
   }
 
 }

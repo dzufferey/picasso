@@ -1,0 +1,17 @@
+//this program terminates, it test the inhibitory transitions
+init
+  (s, S) -> (h, head) [head]
+  (o, Op1)* -> (s, S) [x]
+
+transition "no Op1" 
+pre
+  node (s, S)
+post
+  node (s, S2)
+==>
+  s -> s
+<==
+no
+  (o, Op1) -> (s, S) [x]
+==>
+  s -> s

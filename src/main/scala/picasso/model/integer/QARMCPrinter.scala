@@ -34,7 +34,7 @@ object QARMCPrinter extends PrologLikePrinter {
     val preVar = t.sequencedVariable map asVar
     val postVar = t.sequencedVariable.map(x => asVar(primeVar(x)))
     if (preVar.isEmpty) {
-      assert(t.updates forall (_ == Skip))
+      assert(t.updates forall (_ == Skip), t)
       writer.write("%" + t.comment); writer.newLine
       writer.write(name)
       writer.write(".")
@@ -75,8 +75,10 @@ object QARMCPrinter extends PrologLikePrinter {
     val pv = publicVars.toSeq //the public var in a sequence
     val pathName = asLit(namer("path_" + path.head.sourcePC + "_" + path.last.targetPC, true))
 
+    val varNamer = new Namer
+
     //create the connections between the transitions (variable version) 
-    val varsToString = scala.collection.mutable.HashMap[Variable, String]( pv.map(x => (x, asVar(namer(x.name, true)))): _* )
+    val varsToString = scala.collection.mutable.HashMap[Variable, String]( pv.map(x => (x, asVar(varNamer("X")))): _* )
     val firstVars = varsToString.clone
 
     val trs = for (t <- path) yield {
@@ -85,8 +87,8 @@ object QARMCPrinter extends PrologLikePrinter {
       if (tv.isEmpty) {
         name
       } else {
-        val pre = tv.map(v => varsToString.getOrElse(v, asVar(namer(v.name, true))) )
-        for (v <- tv) varsToString.update(v, asVar(namer(v.name, true)))
+        val pre = tv.map(v => varsToString.getOrElse(v, asVar(varNamer("X"))) )
+        for (v <- tv) varsToString.update(v, asVar(varNamer("X")))
         val post = tv map varsToString
         name + pre.mkString("(", ", ", ", ") + post.mkString("", ", ", ")")
       }
