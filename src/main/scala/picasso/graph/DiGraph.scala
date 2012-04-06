@@ -1025,12 +1025,45 @@ extends GraphLike[GT.ULGT,P,DiGraph](_edges, ((x: P#V) => ())) {
   def coloring: Map[V, Int] = {
     assert(vertices forall (v => !contains(v,v)))//anti-reflexive
     assert(edges forall { case (a,_,b) => contains(b, a) })//symmetric
-    //TODO -> org.sat4j.maxsat.MinCostDecorator
     //  create a set of colors (as many as there are vertices)
     //  create constraints: conflict + node has exactly one color
     //  create objective fct: as few variables as possible
     //  extract the solution
     // http://www.sat4j.org/maven23/org.sat4j.maxsat/apidocs/index.html
+    import org.sat4j.maxsat._
+    import org.sat4j.core.VecInt
+    val colors = 0 until vertices.size
+    val solver = new MinCostDecorator(SolverFactory.newDefault())
+    solver.setTimeoutOnConflicts(solver.getTimeout())//HACK: avoid the creation of a timer
+    val nbrVar = vertices.size * (vertices.size + 1) + 1
+    solver.newVar(nbrVar)
+    val assignToVar = scala.collection.mutable.HashMap[(V,Int), Int]()
+    val colorUsed = scala.collection.mutable.HashMap[Int, Int]()
+    var varCounter = 0
+    //populate the variable maps
+    for (v <- vertices; c <- colors) {
+      varCounter += 1
+      assignToVar += ((v, c) -> varCounter)
+    }
+    for (c <- colors) {
+      varCounter += 1
+      colorUsed += (c -> varCounter)
+    }
+    //each vertex has exactly one color:
+    for (v <- vertices) {
+      val sumTo1 = Array.ofDim[Int](colors.size)
+      for (c <- colors) sumTo1(c) = assignToVar(v -> c)
+      solver.addExactly(new VecInt(sumTo1), 1)
+    }
+    //the constraints for the minimisation
+    for (c <- colors) {
+      solver.setCost(colorUsed(c), 1)
+      for (v <- vertices) {
+        val vc = assignToVar(v -> c)
+        solver.addClause(new VecInt( Seq(-vc, colorUsed(c) ).toArray))
+      }
+    }
+    //TODO solve
     sys.error("TODO")
   }
 
