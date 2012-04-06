@@ -1005,8 +1005,8 @@ object NodeLabeledDiGraph {
 }
 */
 
-class DiGraph[P <: GT.ULGT](edges: Map[P#V,Map[P#EL,Set[P#V]]], label: P#V => P#VL)
-extends GraphLike[GT.ULGT,P,DiGraph](edges, ((x: P#V) => ())) {
+class DiGraph[P <: GT.ULGT](_edges: Map[P#V,Map[P#EL,Set[P#V]]], label: P#V => P#VL)
+extends GraphLike[GT.ULGT,P,DiGraph](_edges, ((x: P#V) => ())) {
   
   override def nodeToString(n: V): String = n.toString
   override def edgeToString(n1:V, l: Unit, n2: V): String = n1 + "-->" + n2
@@ -1018,6 +1018,21 @@ extends GraphLike[GT.ULGT,P,DiGraph](edges, ((x: P#V) => ())) {
   
   def transitiveClosure: DiGraph[P] = transitiveClosure((_, _) => ())
   def reflexiveTransitiveClosure: DiGraph[P] = reflexiveTransitiveClosure((_, _) => (), ())
+
+  /** Compute a coloring of the graph.
+   *  The graph needs to be undirected/symmetric and anti-reflexive.
+   */
+  def coloring: Map[V, Int] = {
+    assert(vertices forall (v => !contains(v,v)))//anti-reflexive
+    assert(edges forall { case (a,_,b) => contains(b, a) })//symmetric
+    //TODO -> org.sat4j.maxsat.MinCostDecorator
+    //  create a set of colors (as many as there are vertices)
+    //  create constraints: conflict + node has exactly one color
+    //  create objective fct: as few variables as possible
+    //  extract the solution
+    // http://www.sat4j.org/maven23/org.sat4j.maxsat/apidocs/index.html
+    sys.error("TODO")
+  }
 
 }
 
