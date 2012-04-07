@@ -677,26 +677,38 @@ extends Traceable[P#V,P#EL] {
   }
 
 
-  //TODO is it the best place to put it in ??
-  //it would be better in automaton, but it does not depend of anytimg in automaton.
-
    /** Compute an abstract interpretation fixpoint.
     * @param post the function that computes the post (action on an edge). post shoulde be monotonic.
     * @param join join (associative and commutative)
     * @param cover covering test (_ \geq _)
     * @param defaultValue the initial abstract values
+    * TODO process edges and vertices concurrently ?
     */
   def aiFixpoint[D](post: (D, EL) => D, join: (D, D) => D, cover: (D,D) => Boolean, defaultValue: V => D): Map[V, D] = {
     val fp1 = new scala.collection.mutable.HashMap[P#V, D]()
     val fp2 = new scala.collection.mutable.HashMap[P#V, D]()
-    for (v <- vertices) fp2 += (v -> defaultValue(v)) //initialize fp2
+    val fpTemp = new scala.collection.mutable.HashMap[P#V, scala.collection.mutable.ListBuffer[D]]()
+    for (v <- vertices) {
+      fp2 += (v -> defaultValue(v)) //initialize fp2
+      fpTemp += (v -> scala.collection.mutable.ListBuffer[D]()) //initialize fpTemp
+    }
     do {
       //(1) copy fp2 into fp1
       for (v <- vertices) fp1 += (v -> fp2(v))
       //(2) compute the next iteration
       for ((a,b,c) <- edges) {
         //Console.println("iteration: edge = " + (a,b,c))
-        fp2 += (c -> join(post(fp1(a), b), fp2(c)))
+        fpTemp(c) += post(fp1(a), b)
+      }
+      //(3) apply the join
+      for (v <- vertices) {
+        val buffer = fpTemp(v)
+        if (!buffer.isEmpty) {
+          val joined = buffer.reduceLeft(join)
+          assert(cover(joined, fp1(v))) //make sure it is increasing
+          fp2 += (v -> joined)
+          buffer.clear
+        }
       }
       //Console.println("iteration: fp1 = " + fp1)
       //Console.println("iteration: fp2 = " + fp2)
@@ -1019,52 +1031,176 @@ extends GraphLike[GT.ULGT,P,DiGraph](_edges, ((x: P#V) => ())) {
   def transitiveClosure: DiGraph[P] = transitiveClosure((_, _) => ())
   def reflexiveTransitiveClosure: DiGraph[P] = reflexiveTransitiveClosure((_, _) => (), ())
 
-  /** Compute a coloring of the graph.
+  /** Compute a minimal coloring of the graph.
    *  The graph needs to be undirected/symmetric and anti-reflexive.
+   *  Warning: this method can very very expensive ...
+   *  TODO this encoding is bad, there are a lot of symmetry (permuation of the colors). So the solver blows-up (see pigeon hole problem)
+   *  TODO a way to fix this to force that the ordering on the color respects the vertices index. 
    */
-  def coloring: Map[V, Int] = {
+  def minimalColoring: Map[V, Int] = {
     assert(vertices forall (v => !contains(v,v)))//anti-reflexive
     assert(edges forall { case (a,_,b) => contains(b, a) })//symmetric
+    Logger("graph", LogDebug, "minimalColoring for a graph of size " + vertices.size)
     //  create a set of colors (as many as there are vertices)
     //  create constraints: conflict + node has exactly one color
     //  create objective fct: as few variables as possible
     //  extract the solution
     // http://www.sat4j.org/maven23/org.sat4j.maxsat/apidocs/index.html
+    import org.sat4j.specs.ContradictionException
     import org.sat4j.maxsat._
     import org.sat4j.core.VecInt
     val colors = 0 until vertices.size
     val solver = new MinCostDecorator(SolverFactory.newDefault())
     solver.setTimeoutOnConflicts(solver.getTimeout())//HACK: avoid the creation of a timer
-    val nbrVar = vertices.size * (vertices.size + 1) + 1
+    val nbrVar = vertices.size * (vertices.size + 1) / 2 + vertices.size
     solver.newVar(nbrVar)
     val assignToVar = scala.collection.mutable.HashMap[(V,Int), Int]()
     val colorUsed = scala.collection.mutable.HashMap[Int, Int]()
     var varCounter = 0
     //populate the variable maps
-    for (v <- vertices; c <- colors) {
+    for ((v,idx) <- vertices.zipWithIndex; c <- 0 to idx) {
       varCounter += 1
       assignToVar += ((v, c) -> varCounter)
     }
+    val assignMax = varCounter
     for (c <- colors) {
       varCounter += 1
       colorUsed += (c -> varCounter)
     }
+    assert(varCounter == nbrVar, varCounter + " == " + nbrVar)
     //each vertex has exactly one color:
-    for (v <- vertices) {
-      val sumTo1 = Array.ofDim[Int](colors.size)
-      for (c <- colors) sumTo1(c) = assignToVar(v -> c)
+    for ((v, idx) <- vertices.zipWithIndex) {
+      val sumTo1 = Array.ofDim[Int](idx + 1)
+      for (c <- 0 to idx) sumTo1(c) = assignToVar(v -> c)
       solver.addExactly(new VecInt(sumTo1), 1)
+    }
+    //the conflicts:
+    val seen = scala.collection.mutable.HashSet[(V,V)]()
+    for ( (a,_,b) <- edges if !seen(a -> b)) {
+      seen += (b -> a) //since the conflicts are not directed
+      for (c <- colors;
+           ac <- assignToVar.get(a -> c);
+           bc <- assignToVar.get(b -> c)) {
+        solver.addAtMost(new VecInt( Seq(ac, bc).toArray), 1)
+      }
     }
     //the constraints for the minimisation
     for (c <- colors) {
       solver.setCost(colorUsed(c), 1)
-      for (v <- vertices) {
-        val vc = assignToVar(v -> c)
+      for (v <- vertices;
+           vc <- assignToVar.get(v -> c)) {
         solver.addClause(new VecInt( Seq(-vc, colorUsed(c) ).toArray))
       }
     }
-    //TODO solve
-    sys.error("TODO")
+    //solve
+    var isSatisfiable = false
+    val startTime = java.lang.System.currentTimeMillis
+    var model: Array[Int] = null
+    try {
+      while (solver.admitABetterSolution()) {
+        if (!isSatisfiable) {
+          if (solver.nonOptimalMeansSatisfiable()) {
+            if (solver.hasNoObjectiveFunction()) {
+              Logger.logAndThrow("graph", LogError, "solver.hasNoObjectiveFunction()")
+            }
+            Logger("graph", LogDebug, "MAXSAT problem is satisfiable")
+          }
+          isSatisfiable = true
+        }
+        model = solver.model()
+        val opt = solver.getObjectiveValue()
+        Logger("graph", LogDebug, "MAXSAT problem has a solution of " + opt)
+        Logger("graph", LogDebug, "MAXSAT problem, optimizing further")
+        solver.discardCurrentSolution();
+      }
+      if (!isSatisfiable) {
+        Logger.logAndThrow("graph", LogError, "MAXSAT problem for coloring has no solution.")
+      }
+    } catch { case _: ContradictionException =>
+      if (isSatisfiable) {
+        Logger("graph", LogDebug, "MAXSAT problem optimum found.")
+      } else {
+        Logger.logAndThrow("graph", LogError, "solver has raised ContradictionException.")
+      }
+    }
+    val stopTime = java.lang.System.currentTimeMillis
+    Logger("graph", LogDebug, "MAXSAT problem optimum found in " + ((startTime - stopTime) / 1000))
+    //get the solution from the model
+    val assignPart = model.filter(l => l > 0 && l <= assignMax )
+    val varToAssign: Map[Int,(V,Int)] = assignToVar.map{ case(a,b) => (b,a) }.toMap
+    val assign = assignPart map varToAssign
+    val assignMap = assign.toMap
+    assert(assignMap.size == vertices.size)
+    assignMap
+  }
+
+  /** Compute a small coloring of the graph using heuristics.
+   *  The graph needs to be undirected/symmetric and anti-reflexive.
+   *  Optional arguments:
+   *  - affinity: given two nodes returns a guess on whether they should use the same color (higher = better)
+   *  - largeClique: a large clique in the graph (used to seed the coloring)
+   *  returns the groups of nodes that have the same color
+   */
+  def smallColoring( affinity: (V, V) => Int = (_,_) => 0,
+                       largeClique: Set[V] = Set()
+                     ): Seq[Set[V]] = {
+    assert(vertices forall (v => !contains(v,v)))//anti-reflexive
+    assert(edges forall { case (a,_,b) => contains(b, a) })//symmetric
+    Logger("graph", LogDebug, "minimalColoring for a graph of size " + vertices.size)
+
+    val averageAffinity = {
+      var total = 0
+      var sum = 0
+      val edges = for (x <- vertices; y <- vertices if x != y)  {
+        total += 1
+        sum += affinity(x, y)
+      }
+      if (total > 0) sum.toDouble / total.toDouble
+      else 0
+    }
+
+    //greedy coloring:
+    val varToColor = scala.collection.mutable.HashMap[V, Int]()
+    val colorToVar = scala.collection.mutable.HashMap[Int, List[V]]()
+    var newColor = 0
+    
+    //seeding the coloring
+    for (v <- largeClique) {
+      varToColor += (v -> newColor)
+      colorToVar += (newColor -> (v :: colorToVar.getOrElse(newColor, Nil)))
+      newColor += 1
+    }
+    
+    //now coloring the rest
+    for (v <- (vertices -- largeClique)) {
+      val conflicting: Set[Int] = apply(v).flatMap(varToColor get _)
+      val available = (0 until newColor).filterNot( conflicting contains _ )
+      if (available.isEmpty) {
+        varToColor += (v -> newColor)
+        colorToVar += (newColor -> (v :: colorToVar.getOrElse(newColor, Nil)))
+        newColor += 1
+      } else {
+        val scored = available.map(c => {
+          val others = colorToVar(c)
+          (c, others.map(v2 => affinity(v, v2)).max)
+        })
+        val (c, score) = scored.maxBy(_._2)
+        if(score >= averageAffinity) {
+          varToColor += (v -> c)
+          colorToVar += (c -> (v :: colorToVar.getOrElse(c, Nil)))
+        } else {
+          varToColor += (v -> newColor)
+          colorToVar += (newColor -> (v :: colorToVar.getOrElse(newColor, Nil)))
+          newColor += 1
+        }
+      }
+    }
+    
+    //return the coloring
+    val groups = colorToVar.values.map(_.toSet).toSeq
+    Logger("graph", LogDebug, "small coloring has size " + groups.size)
+    assert(vertices forall (v => groups exists (_ contains v)))
+    groups
   }
 
 }

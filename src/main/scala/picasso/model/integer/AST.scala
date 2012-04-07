@@ -88,7 +88,12 @@ object Expression {
         case Constant(value) => acc - value
         case other => Logger.logAndThrow("integer.AST", LogError, "expected Constant, found: " + other)
       })
-    (posVar2, negVar2, Constant(cst2))
+    //var that are added and removed -> sum to 0
+    val posMS = MultiSet(posVar2:_*)
+    val negMS = MultiSet(negVar2:_*)
+    val posVar3 = posMS -- negMS
+    val negVar3 = negMS -- posMS
+    (posVar3.toList, negVar3.toList, Constant(cst2))
   }
 
   def recompose(pos: List[Variable], neg: List[Variable], cst: Constant): Expression = {
@@ -101,6 +106,11 @@ object Expression {
     else if (cst.i == 0) afterSubtract.get
     else if (cst.i > 0) Plus(afterSubtract.get, cst)
     else Minus(afterSubtract.get, Constant(- cst.i))
+  }
+
+  def simplify(e: Expression): Expression = {
+    val (p, n, c) = decompose(e)
+    recompose(p,n,c)
   }
 
   //TODO lazyCopier
@@ -177,7 +187,13 @@ object Statement {
 
   //some very simple simplifications to make the printing easier
   def simplify(s: Statement): Statement = s match {
-    case Relation(Constant(c1), Constant(c2)) => assert(c1 == c2); Skip
+    case Relation(e1, e2) =>
+      val se1 = Expression.simplify(e1)
+      val se2 = Expression.simplify(e2)
+      (se1, se2) match {
+        case (Constant(c1), Constant(c2)) => assert(c1 == c2); Skip
+        case _ => Relation(se1, se2)
+      }
     case Assume(c) =>
       Condition.simplify(c) match {
         case Literal(true) => Skip

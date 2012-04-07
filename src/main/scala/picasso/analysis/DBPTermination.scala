@@ -220,7 +220,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
         getCardinality(map2, n2) match {
           case v @ Variable(_) => {
             getCardinality(map3, n3) match {
-              case Variable(_) => Affect(v, Plus(v, Constant(0)))
+              case Variable(_) => Affect(v, Constant(0))
               case c @ Constant(_) => Affect(v, Minus(v, c))
               case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
             }
@@ -391,6 +391,8 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     assert(to.vertices forall (revMorph2 contains _))
     assert(from.vertices forall (backwardUnFolding contains _))
     val stmts1 = for ( (node, lst) <- backwardUnFolding ) yield {
+       //TODO the rhs is more complex: it is the sum of the difference ...
+       Logger("DBPTermination", LogWarning, "unfolding is buggy, fix it ...")
        var rhs = lst.map(getCardinality(map2, _)).reduceLeft(Plus(_, _))
        getCardinality(map1, node) match {
          case v @ Variable(_) => Relation(rhs, v)
@@ -589,9 +591,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     val (_, tree) = computeTree(initState)
     populateWitnessesMap
     val program1 = makeIntegerProgram(tree)
-    Logger("DBPTermination", LogDebug, "unsimplified program:\n" + program1.printForQARMC)
     val program2 = program1.simplifyForTermination
-    Logger("DBPTermination", LogDebug, "simplified program:\n" + program2.printForQARMC)
     (tree, program2)
     //sys.error("TODO print and call ARMC")
   }

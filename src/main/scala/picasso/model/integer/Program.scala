@@ -54,16 +54,33 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
 
   /** try to simplify the program while preserving (non)termination. */
   def simplifyForTermination = {
-    val trs2 = transitions.map(_.leaner)
-    val p2 = new Program(initPC, trs2)
-    p2.reduceNumberOfVariables
+    Logger("integer.Program", LogDebug, "unsimplified program:\n" + this.printForQARMC)
+    val p2 = this.propagateZeros
+    Logger("integer.Program", LogDebug, "removing 0s:\n" + p2.printForQARMC)
+    val p3 = p2.reduceNumberOfVariables
+    Logger("integer.Program", LogDebug, "merging variables:\n" + p3.printForQARMC)
+    p3
+    //TODO for variables that are equals all the time -> keep only one
+    //TODO remove strictly increasing 'sink' variables
     //TODO compact the transitions
     //TODO transition in sequence that operates on disjoint set of variable might be merged (if the control flow is linear)
   }
 
+  def propagateZeros = {
+    val allVars = variables
+    val nonZeros = nonZeroVariable
+    val zeros = nonZeros.map{ case (k, nz) => (k, allVars -- nz) }
+    val trs2 = transitions.map(t => {
+      val preSubst = zeros(t.sourcePC).map( _ -> Constant(0) ).toMap
+      //val postSubst = zeros(t.targetPC).map( _ -> Constant(0) ).toMap
+      t.alphaPre(preSubst)/*.alphaPost(postSubst)*/.leaner
+    })
+    new Program(initPC, trs2)
+  }
+
   def reduceNumberOfVariables = {
     //if two variables are not live at the same moment, we can merge them!
-    val groups = computeVariableMerge
+    val groups = computeVariableMergeApprox
     val trs2 = (transitions /: groups)( (trs, grp) => mergeVariables(grp, trs) )
     val p2 = new Program(initPC, trs2)
     p2.renameVariables
@@ -77,18 +94,31 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     new Program(initPC, trs2)
   }
 
+  /** If two variables are always equal, we can keep only one */
+  def removeEqualsVariables = {
+    val equiv = computeEqualsVariable
+    val substs = equiv.map{ case (pc, classes) =>
+      val subst = classes.flatMap(x => x.map(y => (y -> x.head)) ).toMap
+      (pc, subst)
+    }
+    val trs2 = transitions.map( t => {
+      t.alphaPre(substs(t.sourcePC)).alphaPost(substs(t.targetPC))
+    })
+    new Program(initPC, trs2)
+  }
+
   /** Return a map from PC location to the set of variables that may be non-zero at that location. */
   protected lazy val nonZeroVariable: Map[String, Set[Variable]] = {
+    //TODO this is not correct (join is wrong)
     val emp = EdgeLabeledDiGraph.empty[GT.ELGT{type V = String; type EL = Transition}]
     val cfa = emp ++ (transitions.map(t => (t.sourcePC, t, t.targetPC)).seq)
 
     val allVars = variables
     def default(s: String) = if (s == initPC) allVars else Set[Variable]()
 
-    //TODO improve the precision: if something that is 0 is transfered then that thing is also 0
     def transfer(nonZeros: Set[Variable], t: Transition) = {
-      val az = t.assignedToZero
-      val anz = t.assignedToNonZero
+      val az = t.assignedToZero(nonZeros)
+      val anz = t.assignedToNonZero(nonZeros)
       val res = nonZeros -- az ++ anz
       //Logger("integer.Program", LogDebug, "transfer: " + t.sourcePC + " -> " + t.targetPC + ": " + nonZeros + " -- " + az + " ++ " + anz)
       res
@@ -96,7 +126,7 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
 
     val map = cfa.aiFixpoint(
                     transfer,
-                    ((a: Set[Variable], b: Set[Variable]) => a ++ b),
+                    ((a: Set[Variable], b: Set[Variable]) => a union b),
                     ((a: Set[Variable], b: Set[Variable]) => b subsetOf a),
                     default
     )
@@ -112,71 +142,33 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
   protected def computeVariableMerge: Seq[Set[Variable]] = {
     val nonZeroMap = nonZeroVariableButInit
     //we can build a conflict graph where variables are in conflict iff they are live at the same time.
-    val conflicts = (DiGraph.empty[GT.ULGT{type V = Variable}] /: nonZeroMap)( (acc, kv) => {
+    val conflictsBase = (DiGraph.empty[GT.ULGT{type V = Variable}] /: variables)(_ + _)
+    val conflicts = (conflictsBase /: nonZeroMap)( (acc, kv) => {
       val group = kv._2
       val edges = for (x <- group; y <- group if x != y) yield (x, (), y)
       acc ++ edges
     })
-    //Then we need to find a minimal coloring of the graph
-    //Since the problem is hard it makes sense to use a greedy algorithm with heuristics rather than finding an optimal coloring.
-    //TODO look at http://shah.freeshell.org/graphcoloring/ or http://code.google.com/p/graphcol/ for some good heuristic
-    //The idea of the greedy algorithm is to associate the first available color to a node.
-    //To add the heuristics, we should rank the available colors according to some distance.
-    //In this case two nodes are close if they share a long prefix.
-    //another idea for the heuristic is to look at which variable flow into which one.
+    val varToColor = conflicts.minimalColoring
+    val colorToVar = varToColor.groupBy(_._2)
+    val groups = colorToVar.values.map(_.map(_._1).toSet).toSeq
+    assert(variables forall (v => groups exists (_ contains v)))
+    groups
+  }
+
+  protected def computeVariableMergeApprox: Seq[Set[Variable]] = {
+    val nonZeroMap = nonZeroVariableButInit
+    //we can build a conflict graph where variables are in conflict iff they are live at the same time.
+    val conflictsBase = (DiGraph.empty[GT.ULGT{type V = Variable}] /: variables)(_ + _)
+    val conflicts = (conflictsBase /: nonZeroMap)( (acc, kv) => {
+      val group = kv._2
+      val edges = for (x <- group; y <- group if x != y) yield (x, (), y)
+      acc ++ edges
+    })
     def affinity(v1: Variable, v2: Variable): Int = {
       (v1.name zip v2.name).takeWhile{ case (a,b) => a == b}.length
     }
-    val allVars = variables
-    val averageAffinity = {
-      var total = 0
-      var sum = 0
-      val edges = for (x <- allVars; y <- allVars if x != y)  {
-        total += 1
-        sum += affinity(x, y)
-      }
-      if (total > 0) sum.toDouble / total.toDouble
-      else 0
-    }
-    //greedy coloring:
-    val varToColor = scala.collection.mutable.HashMap[Variable, Int]()
-    val colorToVar = scala.collection.mutable.HashMap[Int, List[Variable]]()
-    var newColor = 0
-    //seeding the coloring
     val largeClique = nonZeroMap.values.maxBy(_.size)
-    for (v <- largeClique) {
-      varToColor += (v -> newColor)
-      colorToVar += (newColor -> (v :: colorToVar.getOrElse(newColor, Nil)))
-      newColor += 1
-    }
-    //now coloring the rest
-    for (v <- (allVars -- largeClique)) {
-      val conflicting: Set[Int] = conflicts(v).flatMap(varToColor get _)
-      val available = (0 until newColor).filterNot( conflicting contains _ )
-      if (available.isEmpty) {
-        varToColor += (v -> newColor)
-        colorToVar += (newColor -> (v :: colorToVar.getOrElse(newColor, Nil)))
-        newColor += 1
-      } else {
-        val scored = available.map(c => {
-          val others = colorToVar(c)
-          (c, others.map(v2 => affinity(v, v2)).max)
-        })
-        val (c, score) = scored.maxBy(_._2)
-        if(score >= averageAffinity) {
-          varToColor += (v -> c)
-          colorToVar += (c -> (v :: colorToVar.getOrElse(c, Nil)))
-        } else {
-          varToColor += (v -> newColor)
-          colorToVar += (newColor -> (v :: colorToVar.getOrElse(newColor, Nil)))
-          newColor += 1
-        }
-      }
-    }
-    //return the coloring
-    val groups = colorToVar.values.map(_.toSet).toSeq
-    assert(variables forall (v => groups exists (_ contains v)))
-    groups
+    conflicts.smallColoring(affinity, largeClique)
   }
 
   //take a group of variables and return the transitions modified s.t. only one variable is used for the group
@@ -188,6 +180,34 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
       val newVar = Variable("Merge_" + group.map(_.name).mkString("_"))
       trs.map( _.mergeVariables(group, newVar, nonZeroVariable) )
     }
+  }
+  
+  protected def computeEqualsVariable: Map[String, Set[Set[Variable]]] = {
+    val emp = EdgeLabeledDiGraph.empty[GT.ELGT{type V = String; type EL = Transition}]
+    val cfa = emp ++ (transitions.map(t => (t.sourcePC, t, t.targetPC)).seq)
+
+    //the AI elements are sets of equivalence class (set of variables)
+
+    def default(pc: String) = Set(nonZeroVariable(pc)) //TODO all the other are difference ?
+
+    def transfer(eqClasses: Set[Set[Variable]], t: Transition) = {
+      t.equivalenceClasses(eqClasses)
+    }
+
+    def join(a: Set[Set[Variable]], b: Set[Set[Variable]]): Set[Set[Variable]] = {
+      //the join is a refinement of a and b
+      val product = for (ec1 <- a; ec2 <- b) yield ec1 intersect ec2
+      product.filterNot(_.isEmpty)
+    }
+
+    def cover(a: Set[Set[Variable]], b: Set[Set[Variable]]): Boolean = {
+      //b is a refinement of a, i.e. there is more info in a than in b
+      b forall (x => a exists (y => x subsetOf y))
+    }
+
+    val map = cfa.aiFixpoint( transfer, join, cover, default)
+    Logger("integer.Program", LogDebug, "equivalenceClasses: " + map)
+    map
   }
 
 }

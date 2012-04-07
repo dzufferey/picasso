@@ -45,9 +45,14 @@ class Transition(val sourcePC: String,
   }
     
   //is not exact but a superset
-  def assignedToNonZero: Set[Variable] = {
+  def assignedToNonZero(preNonZero: Set[Variable] = Set()): Set[Variable] = {
     val nonZeros = updates.flatMap{
-      case Relation(lhs, rhs) if rhs != Constant(0) => Expression.variables(lhs)
+      case Relation(lhs, rhs) =>
+        val (pos, neg, cst) = Expression.decompose(rhs)
+        val pos2 = pos.filter(preNonZero)
+        val neg2 = neg.filter(preNonZero)
+        if (pos.isEmpty && neg.isEmpty && cst.i == 0) Set()
+        else Expression.variables(lhs)
       case _ => None
     }
     val nz = nonZeros.toSet
@@ -56,9 +61,14 @@ class Transition(val sourcePC: String,
   }
   
   //is not exact but a subset
-  def assignedToZero: Set[Variable] = {
+  def assignedToZero(preNonZero: Set[Variable] = Set()): Set[Variable] = {
     val zeros = updates.flatMap{
-      case Relation(v1 @ Variable(_), Constant(0)) => Some(v1)
+      case Relation(v1 @ Variable(_), rhs) =>
+        val (pos, neg, cst) = Expression.decompose(rhs)
+        val pos2 = pos.filter(preNonZero)
+        val neg2 = neg.filter(preNonZero)
+        if (pos.isEmpty && neg.isEmpty && cst.i == 0) Some(v1)
+        else None
       case _ => None
     }
     zeros.toSet
@@ -69,6 +79,25 @@ class Transition(val sourcePC: String,
     val updates2 = updates map ( Statement.alpha(_, subst) )
     new Transition(sourcePC, targetPC, guard2, updates2, comment)
   }
+
+  def alphaPre(subst: Map[Variable, Expression]) = {
+    val guard2 = Condition.alpha(guard, subst)
+    val updates2 = updates map ( Statement.alphaPre(_, subst) )
+    new Transition(sourcePC, targetPC, guard2, updates2, comment)
+  }
+  
+  def alphaPost(subst: Map[Variable, Expression]) = {
+    val updates2 = updates map ( Statement.alphaPost(_, subst) )
+    new Transition(sourcePC, targetPC, guard, updates2, comment)
+  }
+
+  /** given equals variable (equivalence classes),
+   *  returns the set of variable that are equal afterward.
+   *  This is not exact but a refinement of the actual equivalence classes.
+   */
+  def equivalenceClasses(preEqClasses: Set[Set[Variable]]) = {
+    sys.error("TODO")
+  }
   
   //TODO can we have a method to eliminate the transient vars ?
   //as a special case of quantifier elimination ?
@@ -77,7 +106,8 @@ class Transition(val sourcePC: String,
   /** Remove unneeded/unchanged variables */
   def leaner: Transition = {
     val guard2 = Condition.simplify(guard)
-    val (changing, notChanging) = updates.partition{
+    val updates2 = updates.map(Statement.simplify)
+    val (changing, notChanging) = updates2.partition{
       case Relation(Variable(v1), Variable(v2)) => v1 != v2
       case _ => true
     }
@@ -88,8 +118,8 @@ class Transition(val sourcePC: String,
     val transient = transientVariables
     val neededForChanging = (Set[Variable]() /: changing)(_ ++ Statement.getAllVariables(_))
     val toRemove = notChangingVars -- neededForGuard -- transient -- neededForChanging
-    val updates2 = updates.filter{ case Affect(v1, v2) => v1 != v2 || !toRemove(v1) case _ => true }
-    val t2 = new Transition(sourcePC, targetPC, guard2, updates2, comment)
+    val updates3 = updates2.filter{ case Affect(v1, v2) => v1 != v2 || !toRemove(v1) case _ => true }
+    val t2 = new Transition(sourcePC, targetPC, guard2, updates3, comment)
     assert((t2.variables intersect toRemove).isEmpty)
     t2
   }
