@@ -75,8 +75,12 @@ extends Transition[DepthBoundedConf[P]]
         //println ("removed: " + removed)
  
         // Frame is conf1 w/o the matched lhs and w/o dangling edges to removed nodes
+        //TODO bug here
         val frame = conf1 -- (lhs.morph(g1)) -- removed
-        //print("frame: " + frame)      
+        print("conf1: " + conf1)      
+        print("lhs.morph(g1): " + lhs.morph(g1))      
+        print("removed: " + removed)      
+        print("frame: " + frame)      
  
         val (rhsClone, f) = rhs.clone
  

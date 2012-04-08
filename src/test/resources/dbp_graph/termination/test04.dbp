@@ -1,0 +1,12 @@
+//this program terminates, to test variable equality
+init
+  node (o, Op1)*
+
+transition "Op1 to Op2" 
+pre
+  node (o, Op1)
+post
+  (o, Op2) -> (p, Op3)
+==>
+  o -> o
+<==

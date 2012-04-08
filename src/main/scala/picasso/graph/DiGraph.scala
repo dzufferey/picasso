@@ -171,7 +171,8 @@ extends Traceable[P#V,P#EL] {
         val (p_newEdges, newVertices) = ((Map.empty[EL,Set[V]], acc._2) /: p._2){(acc, e) => 
           val e_newRange = e._2 -- that(p._1,e._1)
           if (e_newRange.isEmpty) acc else (acc._1 + (e._1 -> e_newRange), acc._2 ++ e_newRange)}
-        if (p_newEdges.isEmpty) acc else (acc._1 + (p._1 -> p_newEdges), newVertices)} 
+        if (p_newEdges.isEmpty && that.contains(p._1)) acc
+        else (acc._1 + (p._1 -> p_newEdges), newVertices)} 
     val newEdges = (newEdges0 /: newVertices){(acc, v) => if (acc isDefinedAt v) acc else acc + (v -> Map.empty[EL,Set[V]])}
     companion(newEdges, label)
   }
@@ -693,6 +694,7 @@ extends Traceable[P#V,P#EL] {
       fpTemp += (v -> scala.collection.mutable.ListBuffer[D]()) //initialize fpTemp
     }
     do {
+      //TODO some output like the status at the beginning of the iteration
       //(1) copy fp2 into fp1
       for (v <- vertices) fp1 += (v -> fp2(v))
       //(2) compute the next iteration
@@ -705,7 +707,7 @@ extends Traceable[P#V,P#EL] {
         val buffer = fpTemp(v)
         if (!buffer.isEmpty) {
           val joined = buffer.reduceLeft(join)
-          assert(cover(joined, fp1(v))) //make sure it is increasing
+          assert(cover(joined, fp1(v)), "not monotonic @ "+v+": new " + joined + ", old " + fp1(v)) //make sure it is increasing
           fp2 += (v -> joined)
           buffer.clear
         }

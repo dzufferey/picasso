@@ -1,5 +1,7 @@
 package picasso.model.integer
 
+import picasso.utils._
+
 class Transition(val sourcePC: String,
                  val targetPC: String,
                  val guard: Condition,
@@ -95,8 +97,33 @@ class Transition(val sourcePC: String,
    *  returns the set of variable that are equal afterward.
    *  This is not exact but a refinement of the actual equivalence classes.
    */
-  def equivalenceClasses(preEqClasses: Set[Set[Variable]]) = {
-    sys.error("TODO")
+  def equivalenceClasses(preEqClasses: Set[Set[Variable]], nonZeros: Map[String, Set[Variable]]): Set[Set[Variable]] = {
+    var subst = preEqClasses.toSeq.flatMap( set => set.map(x => (x -> set.head)) ).toMap
+    val updates2 = updates map ( Statement.alphaPre(_, subst) )
+    val simpleUpdates = updates2 flatMap (s => s match {
+      case Affect(v, rhs) => Some(v -> Expression.decompose(rhs))
+      case _ => None
+    })
+    val knowledge = preEqClasses.flatten
+    val byUpdate = simpleUpdates.groupBy(_._2).map{ case (k, v) => (k, v.map{_._1}.toSet) }
+    val informedChoice = byUpdate.filterKeys{ case (pos, neg, cst) => (pos forall knowledge) && (neg forall knowledge) }
+    val newClasses = informedChoice.values.toSet
+    val uv = updatedVars
+    //the frame is the variables that are not updated
+    val frame = preEqClasses.map( _.filterNot(uv contains) ).filterNot(_.isEmpty)
+    val unknown = uv.filterNot(v => newClasses.exists(_ contains v)).map(v => Set(v))
+    //use the knowledge of the zero values
+    val allVars = knowledge ++ uv
+    val zeros = allVars -- nonZeros(targetPC)
+    val res = frame ++ newClasses ++ unknown
+    val (zeroUpdate, nonZeroUpdate) = res.partition(_ exists zeros)
+    val res2 = nonZeroUpdate + zeroUpdate.flatten
+    //TODO connection between old an new variables (more than just the 0 case)
+    //println("XXX: " + this)
+    //println("XXX: simpleUpdates\n" + simpleUpdates.mkString("\n"))
+    //println("XXX: before " + preEqClasses)
+    //println("XXX: after " + res2)
+    res2
   }
   
   //TODO can we have a method to eliminate the transient vars ?
@@ -127,19 +154,14 @@ class Transition(val sourcePC: String,
   /** Return a transitions s.t. only one variable is used for the group 
    *  This method assumes that only one variable of the group can be nonZeros at the time (except for the initial state).
    */
-  def mergeVariables(group: Set[Variable], newVar: Variable, nonZeros: Map[String, Set[Variable]]): Transition = {
-    val liveBefore = nonZeros(sourcePC)
-    val liveAfter = nonZeros(targetPC)
-    val zeroBefore = group.filterNot( liveBefore contains _ )
-    val zeroAfter = group.filterNot( liveAfter contains _ )
-    //the first idea is replace the zero vars by zero
-    val beforeSubst = zeroBefore.map(v => (v -> Constant(0))).toMap
-    val guard2 = Condition.alpha(guard, beforeSubst)
-    val updates2 = updates.map(Statement.alphaPre(_, beforeSubst))
-    val afterSubst = zeroAfter.map(v => (v -> Constant(0))).toMap
-    val updates3 = updates2.map(Statement.alphaPost(_, afterSubst))
-    
-    //then merge / replace what it left
+  def mergeVariables(group: Set[Variable], newVar: Variable): Transition = {
+    //need to look which var is assigned to 0:
+    val anz = assignedToNonZero().filter(group contains _)
+    //println("XXX tr: " + this)
+    //println("XXX group: " + group)
+    //println("XXX newVar: " + newVar)
+    //println("XXX anz: " + anz)
+    assert(anz.size <= 1)
 
     def mergeInExpression(e: Expression): Expression = {
       val (pos, neg, cst) = Expression.decompose(e)
@@ -151,7 +173,7 @@ class Transition(val sourcePC: String,
         val neg2 = newVar :: neg.filterNot(group contains _)
         Expression.recompose(pos, neg2, cst)
       } else {
-        e
+        Expression.recompose(pos, neg, cst)
       }
     }
  
@@ -165,15 +187,36 @@ class Transition(val sourcePC: String,
       case Not(c) => Not(mergeInCondition(c))
       case l @ Literal(_) => l
     }
-    
-    //TODO there should be some more sanity checks ?
-    def mergeInStatement(s: Statement): Statement = s match {
-      case Relation(n, o) => Statement.simplify(Relation(mergeInExpression(n), mergeInExpression(o)))
+
+    //look at all the left hand side, gather the ones with the variables in group
+    //TODO checks that they are not involved with something else ...
+    val (thingsThatMatter, affectingOther) = updates.partition(s => Statement.getUpdatedVars(s).exists(group contains _))
+    val (affectThatMatter, assumeThatMatters) = thingsThatMatter.partition{ case Relation(_,_) => true case _ => false }
+    val (lhsAcc, rhsAcc) = ((Constant(0): Expression, Constant(0): Expression) /: affectThatMatter)( (acc, stmt) => stmt match {
+      case Relation(x, y) => (Plus(x, acc._1), Plus(y, acc._2))
+      case other => Logger.logAndThrow("integer.Transition", LogError, "Expected Relation, found: " + other)
+    })
+    val mergedAffect = Relation(mergeInExpression(lhsAcc), mergeInExpression(rhsAcc))
+    val mergedAssumes = assumeThatMatters map {
       case Assume(c) => Statement.simplify(Assume(mergeInCondition(c)))
+      case other => Logger.logAndThrow("integer.Transition", LogError, "Expected Assume, found: " + other)
+    }
+    val affectingOtherMerged = affectingOther.map{
+      case Relation(x, y) =>
+        assert(Expression.variables(x).forall(v => !group.contains(v)))
+        Relation(x, mergeInExpression(y))
+      case a @ Assume(c) =>
+        assert(Condition.variables(c).forall(v => !group.contains(v)))
+        a
       case other => other
     }
+    
+    val guard2 = mergeInCondition(guard)
+    //println("XXX guard2: " + guard2)
+    val updates2 = mergedAffect +: (mergedAssumes ++ affectingOtherMerged)
+    //println("XXX updates2: " + updates2)
 
-    val t2 = new Transition(sourcePC, targetPC, mergeInCondition(guard2), updates3 map mergeInStatement, comment)
+    val t2 = new Transition(sourcePC, targetPC, guard2, updates2, comment)
     t2.leaner
   }
 

@@ -57,10 +57,11 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     Logger("integer.Program", LogDebug, "unsimplified program:\n" + this.printForQARMC)
     val p2 = this.propagateZeros
     Logger("integer.Program", LogDebug, "removing 0s:\n" + p2.printForQARMC)
-    val p3 = p2.reduceNumberOfVariables
-    Logger("integer.Program", LogDebug, "merging variables:\n" + p3.printForQARMC)
-    p3
-    //TODO for variables that are equals all the time -> keep only one
+    val p3 = p2.removeEqualsVariables
+    Logger("integer.Program", LogDebug, "equal variables:\n" + p3.printForQARMC)
+    val p4 = p3.reduceNumberOfVariables
+    Logger("integer.Program", LogDebug, "merging variables:\n" + p4.printForQARMC)
+    p4
     //TODO remove strictly increasing 'sink' variables
     //TODO compact the transitions
     //TODO transition in sequence that operates on disjoint set of variable might be merged (if the control flow is linear)
@@ -96,14 +97,17 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
 
   /** If two variables are always equal, we can keep only one */
   def removeEqualsVariables = {
-    val equiv = computeEqualsVariable
-    val substs = equiv.map{ case (pc, classes) =>
-      val subst = classes.flatMap(x => x.map(y => (y -> x.head)) ).toMap
-      (pc, subst)
+    val eqClasses = computeEqualsVariable
+    def join(a: Set[Set[Variable]], b: Set[Set[Variable]]): Set[Set[Variable]] = {
+      val product = for (ec1 <- a; ec2 <- b) yield ec1 intersect ec2
+      product.filterNot(_.isEmpty)
     }
-    val trs2 = transitions.map( t => {
-      t.alphaPre(substs(t.sourcePC)).alphaPost(substs(t.targetPC))
-    })
+    val alwaysEqual = (eqClasses - initPC).values.reduceLeft(join)
+    def classesToSubst(classes: Set[Set[Variable]]) = classes.toSeq.flatMap( set => set.map(x => (x -> set.head)) ).toMap
+    //val substMap = eqClasses.map{ case (k, v) => (k -> classesToSubst(v))}
+    val subst = classesToSubst(alwaysEqual).filter{ case (k,v) => k != v }
+    Logger("integer.Program", LogDebug, "removeEqualsVariables is merging: " + subst)
+    val trs2 = transitions.map(t => t.alpha(subst).leaner)
     new Program(initPC, trs2)
   }
 
@@ -178,24 +182,37 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
       trs
     } else {
       val newVar = Variable("Merge_" + group.map(_.name).mkString("_"))
-      trs.map( _.mergeVariables(group, newVar, nonZeroVariable) )
+      trs.map( _.mergeVariables(group, newVar) )
     }
   }
   
   protected def computeEqualsVariable: Map[String, Set[Set[Variable]]] = {
+    //TODO this approach does not work
+    //need to differentiate bewteen different from has not information
+    //otherwise, the back edges prevent the equality information from propagating
     val emp = EdgeLabeledDiGraph.empty[GT.ELGT{type V = String; type EL = Transition}]
     val cfa = emp ++ (transitions.map(t => (t.sourcePC, t, t.targetPC)).seq)
 
     //the AI elements are sets of equivalence class (set of variables)
 
-    def default(pc: String) = Set(nonZeroVariable(pc)) //TODO all the other are difference ?
+    def default(pc: String): Set[Set[Variable]] = {
+      val allVars = variables
+      val zeros = allVars -- nonZeroVariable(pc)
+      if (pc == initPC) {
+        val rest = nonZeroVariable(pc)
+        (Set(zeros) /: rest)( (acc, v) => acc + Set(v) ).filterNot(_.isEmpty)
+      } else {
+        Set(zeros)
+      }
+    }
 
     def transfer(eqClasses: Set[Set[Variable]], t: Transition) = {
-      t.equivalenceClasses(eqClasses)
+      t.equivalenceClasses(eqClasses, nonZeroVariable)
     }
 
     def join(a: Set[Set[Variable]], b: Set[Set[Variable]]): Set[Set[Variable]] = {
       //the join is a refinement of a and b
+      //println("join of " + a + " and " + b)
       val product = for (ec1 <- a; ec2 <- b) yield ec1 intersect ec2
       product.filterNot(_.isEmpty)
     }
