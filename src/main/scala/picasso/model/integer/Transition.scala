@@ -111,7 +111,7 @@ class Transition(val sourcePC: String,
     val uv = updatedVars
     //the frame is the variables that are not updated
     val frame = preEqClasses.map( _.filterNot(uv contains) ).filterNot(_.isEmpty)
-    val unknown = uv.filterNot(v => newClasses.exists(_ contains v)).map(v => Set(v))
+    val unknown = uv.filterNot(v => newClasses.exists(_ contains v)).map(v => Set(v)) //TODO this contradict the point of the informedChoice!
     //use the knowledge of the zero values
     val allVars = knowledge ++ uv
     val zeros = allVars -- nonZeros(targetPC)
@@ -120,7 +120,9 @@ class Transition(val sourcePC: String,
     val res2 = nonZeroUpdate + zeroUpdate.flatten
     //TODO connection between old an new variables (more than just the 0 case)
     //println("XXX: " + this)
-    //println("XXX: simpleUpdates\n" + simpleUpdates.mkString("\n"))
+    //println("XXX: knowledge: " + knowledge.map(_.name).mkString(", "))
+    //println("XXX: byUpdate\n" + byUpdate.mkString("\n"))
+    //println("XXX: informedChoice\n" + informedChoice.mkString("\n"))
     //println("XXX: before " + preEqClasses)
     //println("XXX: after " + res2)
     res2
