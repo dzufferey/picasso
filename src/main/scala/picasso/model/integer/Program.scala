@@ -202,7 +202,7 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
         val rest = nonZeroVariable(pc)
         (Set(zeros) /: rest)( (acc, v) => acc + Set(v) ).filterNot(_.isEmpty)
       } else {
-        Set(zeros)
+        Set()
       }
     }
 
@@ -210,6 +210,7 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
       t.equivalenceClasses(eqClasses, nonZeroVariable)
     }
 
+    //TODO the join should be more complex since the equivalence classes do not contains all the nodes ...
     def join(a: Set[Set[Variable]], b: Set[Set[Variable]]): Set[Set[Variable]] = {
       //the join is a refinement of a and b
       //println("join of " + a + " and " + b)

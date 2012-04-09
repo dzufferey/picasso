@@ -102,16 +102,24 @@ class Transition(val sourcePC: String,
     val updates2 = updates map ( Statement.alphaPre(_, subst) )
     val simpleUpdates = updates2 flatMap (s => s match {
       case Affect(v, rhs) => Some(v -> Expression.decompose(rhs))
+      case Relation(Plus(v @ Variable(_), Constant(c)), rhs) =>
+        val (p,n,c2) = Expression.decompose(rhs)
+        Some(v -> (p,n,Constant(c2.i - c)))
       case _ => None
     })
     val knowledge = preEqClasses.flatten
     val byUpdate = simpleUpdates.groupBy(_._2).map{ case (k, v) => (k, v.map{_._1}.toSet) }
-    val informedChoice = byUpdate.filterKeys{ case (pos, neg, cst) => (pos forall knowledge) && (neg forall knowledge) }
+    val tv = transientVariables
+    val informedChoice = byUpdate.filterKeys{ case (pos, neg, cst) => 
+      val vars = pos ++ neg
+      vars forall (v => knowledge(v) || tv(v) )
+    }
     val newClasses = informedChoice.values.toSet
     val uv = updatedVars
     //the frame is the variables that are not updated
     val frame = preEqClasses.map( _.filterNot(uv contains) ).filterNot(_.isEmpty)
-    val unknown = uv.filterNot(v => newClasses.exists(_ contains v)).map(v => Set(v)) //TODO this contradict the point of the informedChoice!
+    val simplyUpdated = simpleUpdates.map(_._1).toSet
+    val unknown = uv.filterNot(v => simplyUpdated contains v).map(v => Set(v))
     //use the knowledge of the zero values
     val allVars = knowledge ++ uv
     val zeros = allVars -- nonZeros(targetPC)
@@ -123,6 +131,9 @@ class Transition(val sourcePC: String,
     //println("XXX: knowledge: " + knowledge.map(_.name).mkString(", "))
     //println("XXX: byUpdate\n" + byUpdate.mkString("\n"))
     //println("XXX: informedChoice\n" + informedChoice.mkString("\n"))
+    //println("XXX: updated vars: " + uv.mkString(", "))
+    //println("XXX: simple updates: " + simpleUpdates.map(_._1).mkString(", "))
+    //println("XXX: unknown: " + unknown.mkString(", "))
     //println("XXX: before " + preEqClasses)
     //println("XXX: after " + res2)
     res2
