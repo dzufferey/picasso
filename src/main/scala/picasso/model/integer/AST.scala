@@ -126,8 +126,9 @@ object Expression {
 
 //TODO the new vs old variable convention needs to be made cleaner ...
 abstract class Statement 
-case class Transient(v: Variable) extends Statement //declare a local variable
+case class Transient(v: Variable) extends Statement //declare a local variable (used only in the initialization)
 case class Relation(_new: Expression, _old: Expression) extends Statement //eqality between an expr on new variables and an expr on old variables
+case class Variance(_new: Variable, _old: Variable, greater: Boolean = true, strict: Boolean = false) extends Statement //When a variable change and we need to force a 'direction' (used in the unfolding)
 case object Skip extends Statement
 case class Assume(c: Condition) extends Statement //one the transient and new variables
 
@@ -144,6 +145,7 @@ object Statement {
   def getAllVariables(s: Statement): Set[Variable] = s match {
     case Relation(n, o) => Expression.variables(n) ++ Expression.variables(o)
     case Assume(c) => Condition.variables(c)
+    case Variance(n, o, _, _) => Set(n, o)
     case _ => Set()
   }
 
@@ -155,6 +157,7 @@ object Statement {
   def getUpdatedVars(s: Statement): Set[Variable] = s match {
     case Relation(n, _) => Expression.variables(n)
     case Assume(c) => Condition.variables(c)
+    case Variance(v, _, _, _) => Set(v)
     case _ => Set()
   }
 
@@ -163,25 +166,74 @@ object Statement {
     case Relation(_new, _old) => Expression.print(_new) + "=" + Expression.print(_old)
     case Skip => "skip"
     case Assume(c) => "assume("+Condition.print(c)+")"
+    case Variance(v1, v2, geq, strict) => v1.name + (if (geq) " is greater " else " is smaller ") + (if (strict) "(strictly) " else "") + "than " + v2.name
   }
 
   def alpha(s: Statement, subst: Map[Variable, Expression]): Statement = s match {
     case Relation(n, o) => Relation(Expression.alpha(n, subst), Expression.alpha(o, subst))
     case Assume(c) => Assume(Condition.alpha(c, subst))
-    case Transient(t) => assert(!subst.contains(t)); Transient(t)
+    case tr @ Transient(t) => assert(!subst.contains(t)); tr
+    case vr @ Variance(v1, v2, geq, strict) =>
+      if (subst.contains(v1)) {
+        subst(v1) match {
+          case v3 @ Variable(_) =>
+            subst.get(v2) match {
+              case Some(v4 @ Variable(_)) => Variance(v3, v4, geq, strict)
+              case Some(c @ Constant(_)) =>
+                val (small, big) = if (geq) (c, v3) else (v3, c)
+                val cond = if (strict) Lt(small, big) else Leq(small, big)
+                Assume(cond)
+              case Some(other) => Logger.logAndThrow("integer.AST", LogError, "alpha of Variance (new), expected Variable or Constant, found: " + other)
+              case None => Variance(v3, v2, geq, strict)
+            }
+          case other => Logger.logAndThrow("integer.AST", LogError, "alpha of Variance (new), expected Variable, found: " + other)
+        }
+      } else if (subst.contains(v2)) {
+        subst(v2) match {
+          case v3 @ Variable(_) => Variance(v1, v3, geq, strict)
+          case c @ Constant(_) =>
+            val (small, big) = if (geq) (c, v1) else (v1, c)
+            val cond = if (strict) Lt(small, big) else Leq(small, big)
+            Assume(cond)
+          case other => Logger.logAndThrow("integer.AST", LogError, "alpha of Variance (old), expected Variable or Constant, found: " + other)
+        }
+      } else {
+        vr
+      }
     case Skip => Skip
   }
 
   def alphaPre(s: Statement, subst: Map[Variable, Expression]): Statement = s match {
     case Relation(n, o) => Relation(n, Expression.alpha(o, subst))
-    case Transient(t) => assert(!subst.contains(t)); Transient(t)
+    case tr @ Transient(t) => assert(!subst.contains(t)); tr
+    case vr @ Variance(v3, v, geq, strict) =>
+      if (subst.contains(v)) {
+        subst(v) match {
+          case v2 @ Variable(_) => Variance(v2, v3, geq, strict)
+          case c @ Constant(_) =>
+            if (geq && strict) Assume(Lt(c, v))
+            else if (geq && !strict) Assume(Leq(c, v))
+            else if (!geq && strict) Assume(Lt(v, c))
+            else Assume(Leq(v, c))
+          case other => Logger.logAndThrow("integer.AST", LogError, "alphaPre of Variance, expected Variable or Constant, found: " + other)
+        }
+      } else {
+        vr
+      }
     case other => other
   }
 
   def alphaPost(s: Statement, subst: Map[Variable, Expression]): Statement = s match {
     case Relation(n, o) => Relation(Expression.alpha(n, subst), o)
     case Assume(c) => Assume(Condition.alpha(c, subst))
-    case Transient(t) => assert(!subst.contains(t)); Transient(t)
+    case tr @ Transient(t) => assert(!subst.contains(t)); tr
+    case vr @ Variance(v, v2, geq, strict) =>
+      if (subst.contains(v2)) {
+        subst(v2) match {
+          case v3 @ Variable(_) => Variance(v, v3, geq, strict)
+          case other => Logger.logAndThrow("integer.AST", LogError, "alphaPost of Variance, expected Variable, found: " + other)
+        }
+      } else vr
     case other => other
   }
 

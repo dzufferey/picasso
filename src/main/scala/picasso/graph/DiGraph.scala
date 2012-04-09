@@ -693,8 +693,11 @@ extends Traceable[P#V,P#EL] {
       fp2 += (v -> defaultValue(v)) //initialize fp2
       fpTemp += (v -> scala.collection.mutable.ListBuffer[D]()) //initialize fpTemp
     }
+    var iteration = 0
     do {
       //TODO some output like the status at the beginning of the iteration
+      iteration += 1
+      Logger("graph", LogDebug, "AI, status at begining of iteration " + iteration + ":\n" + fp2.mkString("\n"))
       //(1) copy fp2 into fp1
       for (v <- vertices) fp1 += (v -> fp2(v))
       //(2) compute the next iteration

@@ -199,7 +199,11 @@ class Transition(val sourcePC: String,
     val mergedAffect = Relation(mergeInExpression(lhsAcc), mergeInExpression(rhsAcc))
     val mergedAssumes = assumeThatMatters map {
       case Assume(c) => Statement.simplify(Assume(mergeInCondition(c)))
-      case other => Logger.logAndThrow("integer.Transition", LogError, "Expected Assume, found: " + other)
+      case vr @ Variance(v1, v2, _, _) =>
+        assert(group(v1) || group(v2));
+        Logger("integer.Transition", LogWarning, "mergeVariables changing: " + vr + ", dropping the constraint")
+        Skip
+      case other => Logger.logAndThrow("integer.Transition", LogError, "Expected Assume or Variance, found: " + other)
     }
     val affectingOtherMerged = affectingOther.map{
       case Relation(x, y) =>
@@ -208,6 +212,14 @@ class Transition(val sourcePC: String,
       case a @ Assume(c) =>
         assert(Condition.variables(c).forall(v => !group.contains(v)))
         a
+      case vr @ Variance(v1, v2, _, _) =>
+        assert(!group(v1))
+        if (group(v2)) {
+          Logger("integer.Transition", LogWarning, "mergeVariables changing: " + vr + ", dropping the constraint")
+          Skip
+        } else {
+          vr
+        }
       case other => other
     }
     

@@ -80,6 +80,12 @@ class PrologLikePrinter {
       case Skip | Transient(_) => Seq()
       case Relation(n, o) => makeConditionNice(Eq(primeNotTransient(n, transient), o))
       case Assume(c) => makeConditionNice(primeNotTransient(c, transient))
+      case Variance(v, v2, geq, strict) =>
+        val v3 = primeNotTransient(v, transient)
+        if (geq && strict) Seq(Lt(v2, v3))
+        else if (geq && !strict) Seq(Leq(v2, v3))
+        else if (!geq && strict) Seq(Lt(v3, v2))
+        else Seq(Leq(v3, v2))
     })
   }
 

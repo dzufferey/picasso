@@ -289,57 +289,6 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     t1 +: trs2.toSeq
   }
 
-  //XXX
-  //this should be for thomas' improved version of the widening (i.e self loop)
-  //another simpler version would be to just have a back edges that transform transfer some of the counters
-  protected def replicating(from: S, replicating: Map[P#V,P#V], to: S): Transition = {
-    sys.error("TODO: this is wrong -> nothing ever decreasing ! (nor is it a loop)")  //TODO
-    //the thing is that we are starting with a small configuration and replicating nodes give a bigger config.
-    //for depth 1, we are adding to the replicated nodes x > 0 ,
-    //for depth 2, the increase is y >= x
-    //for depth 3, z >= y
-    // ...
-    val (pc1, map1) = getPC(from)
-    val (pc2, map2) = getPC(to)
-    val frame = from.vertices -- replicating.keys
-    //we need to get the components in 'to' to know the inequalities between increases
-    val components: DiGraph[GT.ULGT{type V = Set[P#V]}] = to.decomposeInDisjointComponents
-    val cmpId = components.vertices.zipWithIndex.toMap
-    val nodeToCmpId = (cmpId.flatMap{ case (seq, id) => seq.map(x => (x, id)) } : Iterable[(P#V, Int)]).toMap
-    val accelerationVariables = cmpId.map{ case (k,v) => (v, Variable("widen_" + v)) }
-    //now make the statments
-    val declare = accelerationVariables.values.map( v => Transient(v) )
-    val assumes1 = for ( (_,v) <- accelerationVariables) yield Assume(Leq(Constant(0), v))
-    val edges: Iterable[(Set[P#V],Unit,Set[P#V])] = components.edges
-    val assumes2 = for ( (c1, _, c2) <- edges ) yield {
-      val v1 = accelerationVariables(cmpId(c1))
-      val v2 = accelerationVariables(cmpId(c2))
-      Assume(Leq(v1, v2))
-    }
-    val stmts1 = for ( (n1, n2) <- replicating) yield {
-      getCardinality(map2, n2) match {
-        case v @ Variable(_) => Affect(v, Plus(v, Plus( accelerationVariables(nodeToCmpId(n2)), getCardinality(map1, n1))))
-        case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
-      }
-    }
-    val stmts2 = for ( (n1, _) <- replicating) yield {
-      getCardinality(map1, n1) match {
-        case v @ Variable(_) => Affect(v, Constant(0))
-        case Constant(c) => Skip
-        case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
-      }
-    }
-    val stmts3 = for (node <- frame ) yield {
-       getCardinality(map2, node) match {
-         case v @ Variable(_) => Affect(v, Plus(v, getCardinality(map1, node)))
-         case Constant(c) => Skip
-         case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
-       }
-    }
-    val stmts = (declare ++ assumes1 ++ assumes2 ++ stmts1 ++ stmts2 ++ stmts3).toSeq
-    new Transition(pc1, pc2, Literal(true), stmts, "replicating")
-  }
-
   // replicated nodes that disappear are set to 0
   // node from 'from' should be either in 'to' or in 'inhibited'
   protected def inhibiting(from: S, inhibited: Set[P#V], to: S): Transition = {
@@ -420,25 +369,23 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     val decreases = varies.map{ case (node, lst) =>
       val candidates = lst.filter(n2 => n2.depth >= node.depth)
       assert(candidates.size == 1)
-      candidates.head
+      (node, candidates.head)
     }
-    val variance1 = increases.zipWithIndex.flatMap{ case (n, idx) => 
+    val variance1 = increases.map( n => {
       getCardinality(map2, n) match {
-         case v1 @ Variable(_) =>
-            val v2 = Variable("variance_increase_" + idx)
-            Seq(
-              Transient(v2),
-              Assume(Leq(Constant(0), v2)),
-              Relation(v1, Plus(v1, v2))
-            )
-         case Constant(c) => Seq()
+         case v1 @ Variable(_) => Variance(v1, v1, true, false)
+         case Constant(c) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
       }
-    }
-    val variance2 = decreases.zipWithIndex.map{ case (n, idx) => 
-      getCardinality(map2, n) match {
-         case v1 @ Variable(_) => Assume(Leq(Constant(0), v1))
-         case Constant(c) => Skip
+    })
+    val variance2 = decreases.flatMap{ case (nOld, nNew) => 
+      getCardinality(map2, nNew) match {
+         case v1 @ Variable(_) =>
+           getCardinality(map1, nOld) match {
+             case v2 @ Variable(_) => Seq( Assume(Leq(Constant(0), v1)), Variance(v1, v2, false, false) )
+             case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+           }
+         case Constant(c) => Seq()
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
       }
     }
@@ -606,7 +553,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     val backwardTrs = backwardEdges.flatMap{ case (a,b) => covering(a,b) }
     val nodesWithBackEdge = backwardEdges.map( p => getPC(p._1)._1 ).toSet
     //if there is a covering edge from a config, we can drop the acceleration edge !
-    val forwardTrs2 = forwardTrs.filterNot(t => nodesWithBackEdge(t.sourcePC) && t.comment == "replicating 2" )
+    val forwardTrs2 = forwardTrs.filterNot(t => /*nodesWithBackEdge(t.sourcePC) &&*/ t.comment == "replicating 2" )
     val allTransitions = forwardTrs2 ++ backwardTrs
     //TODO build a graph, get all the simple paths and try to compact the transitions
     //need an initialisation transition (from nothing to the init state)
