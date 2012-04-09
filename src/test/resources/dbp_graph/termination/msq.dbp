@@ -1,0 +1,17 @@
+/* Michael-Scott queue */
+
+init
+  (s, SPAWN)
+  (q, queue)
+
+transition "spawn"
+pre
+  (q, queue)
+post
+  (q, queue) -> (e, enq0) [enq]
+  (e, enq0) -> (x, x) [x]
+==>
+  q -> q
+<==
+
+
