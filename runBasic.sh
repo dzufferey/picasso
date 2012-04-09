@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 export JAVA_OPTS="-Xmx1536M -Xms256M -Xss64M"
 scala_version=scala-2.9.1
 BASEDIR=`dirname $0`
