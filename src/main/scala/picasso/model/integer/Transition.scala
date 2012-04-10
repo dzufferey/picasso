@@ -307,11 +307,16 @@ object Transition {
       case Skip => None
       case other => Logger.logAndThrow("integer.Transition", LogError, "not compactable: " + other)
     }).toMap
-    val newTr2 = tr2.alphaPre(updatesMap).leaner
+    val newTr2 = tr2.alphaPre(updatesMap)
     val frame2 = updatesMap -- newTr2.updatedVars //things to add to the second trs
     val resultGuard = And(tr1.guard, newTr2.guard)
     val resultUpdates = newTr2.updates ++ frame2.map{ case (v, e) => Affect(v, e) }
-    new Transition(tr1.sourcePC, tr2.targetPC, resultGuard, resultUpdates, tr1.comment + "; " + tr2.comment)
+    //println("compactLeft:" +
+    //        tr1.updates.filter(_ != Skip).mkString("\n","\n","\n---------") +
+    //        tr2.updates.filter(_ != Skip).mkString("\n","\n","\n---------") +
+    //        resultUpdates.filter(_ != Skip).mkString("\n","\n","\n========="))
+    val res = new Transition(tr1.sourcePC, tr2.targetPC, resultGuard, resultUpdates, tr1.comment + "; " + tr2.comment)
+    res.leaner
   }
   
   //TODO this can be made much better
@@ -349,10 +354,14 @@ object Transition {
         case other => Logger.logAndThrow("integer.Transition", LogError, "not compactable: " + other)
       }).toMap
 
-      val newTr1 = tr1.alphaPost(updatesMap).leaner
+      val newTr1 = tr1.alphaPost(updatesMap)
       val resultUpdates = newTr1.updates ++ frame
       val resultTr = new Transition(tr1.sourcePC, tr2.targetPC, tr1.guard, resultUpdates, tr1.comment + "; " + tr2.comment)
-      Some(resultTr)
+      //println("compactRight:" +
+      //        tr1.updates.filter(_ != Skip).mkString("\n","\n","\n---------") +
+      //        tr2.updates.filter(_ != Skip).mkString("\n","\n","\n---------") +
+      //        resultTr.updates.filter(_ != Skip).mkString("\n","\n","\n========="))
+      Some(resultTr.leaner)
     } else {
       None
     }
