@@ -568,7 +568,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     val (_, tree) = computeTree(initState)
     populateWitnessesMap
     val program1 = makeIntegerProgram(tree)
-    val program2 = program1.simplifyForTermination
+    val program2 = program1.simplifyForTermination.simplifyForTermination
     (tree, program2)
     //sys.error("TODO print and call ARMC")
   }

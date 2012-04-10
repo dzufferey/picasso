@@ -63,8 +63,9 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     Logger("integer.Program", LogDebug, "merging variables:\n" + p4.printForQARMC)
     val p5 = p4.compactPath
     Logger("integer.Program", LogDebug, "compacting transitions:\n" + p5.printForQARMC)
-    p5
-    //TODO test lookForUselessSplitting
+    val p6 = p5.lookForUselessSplitting
+    Logger("integer.Program", LogDebug, "looking for useless splitting:\n" + p6.printForQARMC)
+    p6
     //TODO remove (strictly increasing) 'sink' variables
     //TODO transition in sequence that operates on disjoint set of variable might be merged (if the control flow is linear)
   }
@@ -301,15 +302,19 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
                       ): List[Transition] = trs match {
       case t :: ts =>
         val (newInProgress, confirmed2) = confirmed.partition(_._1 == t.sourcePC)
+        val (remains, lastMerge) = inProgress.partition(_._2 != t.targetPC)
+        //splitting (newInProgress)
         //for newInProgress -> set the unused to 0
         val unusedVars = newInProgress.flatMap( _._2.tail.map(v => Affect(v, Constant(0))) )
-        val inProgress2 = newInProgress.map{ case (a,b,c) => (b,c) } ++ inProgress
-        //apply inProgress ++ newInProgress
-        val t2 = (t /: inProgress2)( (tAcc, toMerge) => t.mergeVariables(toMerge._1.toSet, toMerge._1.head) )
-        //remove the ones that are done
-        val remains = inProgress2.filter(_._2 != t.targetPC)
-        val t3 = new Transition(t2.sourcePC, t2.targetPC, t2.guard, t2.updates ++ unusedVars, t2.comment)
-        mergeConfirmed(ts, confirmed2, remains, t3::acc)
+        val t2 = (t /: newInProgress)( (tAcc, toMerge) => tAcc.mergePostVariablesDangerous(toMerge._2.toSet, toMerge._2.head) )
+        //nothing changes (remains)
+        val t3 = (t2 /: remains)( (tAcc, toMerge) => tAcc.mergeVariablesDangerous(toMerge._1.toSet, toMerge._1.head) )
+        //merging (lastMerge)
+        val t4 = (t3 /: lastMerge)( (tAcc, toMerge) => tAcc.mergePreVariablesDangerous(toMerge._1.toSet, toMerge._1.head) )
+        //result
+        val t5 = new Transition(t4.sourcePC, t4.targetPC, t4.guard, t4.updates ++ unusedVars, t4.comment)
+        val inProgress2 = newInProgress.map{ case (_,a,b) => (a,b) } ++ remains
+        mergeConfirmed(ts, confirmed2, inProgress2, t5::acc)
       case Nil =>
         assert(confirmed.isEmpty && inProgress.isEmpty)
         acc.reverse

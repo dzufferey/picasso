@@ -170,42 +170,45 @@ class Transition(val sourcePC: String,
     t2
   }
 
+  protected def mergeInExpression(group: Set[Variable], newVar: Variable, e: Expression): Expression = {
+    val (pos, neg, cst) = Expression.decompose(e)
+    if (pos.exists(group contains _)) {
+      assert(! neg.exists(group contains _))
+      val pos2 = newVar :: pos.filterNot(group contains _)
+      Expression.recompose(pos2, neg, cst)
+    } else if (neg.exists(group contains _)) {
+      val neg2 = newVar :: neg.filterNot(group contains _)
+      Expression.recompose(pos, neg2, cst)
+    } else {
+      Expression.recompose(pos, neg, cst)
+    }
+  }
+
+  protected def mergeInCondition(group: Set[Variable], newVar: Variable, c: Condition): Condition = c match {
+    case Eq(l,r) => Eq(mergeInExpression(group, newVar, l), mergeInExpression(group, newVar, r))
+    case Lt(l,r) => Lt(mergeInExpression(group, newVar, l), mergeInExpression(group, newVar, r))
+    case Leq(l,r) => Leq(mergeInExpression(group, newVar, l), mergeInExpression(group, newVar, r))
+    case And(l,r) => And(mergeInCondition(group, newVar, l), mergeInCondition(group, newVar, r))
+    case Or(l,r) => Or(mergeInCondition(group, newVar, l), mergeInCondition(group, newVar, r))
+    case Not(c) => Not(mergeInCondition(group, newVar, c))
+    case l @ Literal(_) => l
+  }
+  
+
   /** Return a transitions s.t. only one variable is used for the group 
    *  This method assumes that only one variable of the group can be nonZeros at the time (except for the initial state).
    */
   def mergeVariables(group: Set[Variable], newVar: Variable): Transition = {
     //need to look which var is assigned to 0:
     val anz = assignedToNonZero().filter(group contains _)
+    assert(anz.size <= 1)
     //println("XXX tr: " + this)
     //println("XXX group: " + group)
     //println("XXX newVar: " + newVar)
     //println("XXX anz: " + anz)
-    assert(anz.size <= 1)
 
-    def mergeInExpression(e: Expression): Expression = {
-      val (pos, neg, cst) = Expression.decompose(e)
-      if (pos.exists(group contains _)) {
-        assert(! neg.exists(group contains _))
-        val pos2 = newVar :: pos.filterNot(group contains _)
-        Expression.recompose(pos2, neg, cst)
-      } else if (neg.exists(group contains _)) {
-        val neg2 = newVar :: neg.filterNot(group contains _)
-        Expression.recompose(pos, neg2, cst)
-      } else {
-        Expression.recompose(pos, neg, cst)
-      }
-    }
  
     //TODO there should be some more sanity checks ?
-    def mergeInCondition(c: Condition): Condition = c match {
-      case Eq(l,r) => Eq(mergeInExpression(l), mergeInExpression(r))
-      case Lt(l,r) => Lt(mergeInExpression(l), mergeInExpression(r))
-      case Leq(l,r) => Leq(mergeInExpression(l), mergeInExpression(r))
-      case And(l,r) => And(mergeInCondition(l), mergeInCondition(r))
-      case Or(l,r) => Or(mergeInCondition(l), mergeInCondition(r))
-      case Not(c) => Not(mergeInCondition(c))
-      case l @ Literal(_) => l
-    }
 
     //look at all the left hand side, gather the ones with the variables in group
     //TODO checks that they are not involved with something else ...
@@ -215,9 +218,9 @@ class Transition(val sourcePC: String,
       case Relation(x, y) => (Plus(x, acc._1), Plus(y, acc._2))
       case other => Logger.logAndThrow("integer.Transition", LogError, "Expected Relation, found: " + other)
     })
-    val mergedAffect = Relation(mergeInExpression(lhsAcc), mergeInExpression(rhsAcc))
+    val mergedAffect = Relation(mergeInExpression(group, newVar, lhsAcc), mergeInExpression(group, newVar, rhsAcc))
     val mergedAssumes = assumeThatMatters map {
-      case Assume(c) => Statement.simplify(Assume(mergeInCondition(c)))
+      case Assume(c) => Statement.simplify(Assume(mergeInCondition(group, newVar, c)))
       case vr @ Variance(v1, v2, _, _) =>
         assert(group(v1) || group(v2));
         Logger("integer.Transition", LogWarning, "mergeVariables changing: " + vr + ", dropping the constraint")
@@ -227,7 +230,7 @@ class Transition(val sourcePC: String,
     val affectingOtherMerged = affectingOther.map{
       case Relation(x, y) =>
         assert(Expression.variables(x).forall(v => !group.contains(v)))
-        Relation(x, mergeInExpression(y))
+        Relation(x, mergeInExpression(group, newVar, y))
       case a @ Assume(c) =>
         assert(Condition.variables(c).forall(v => !group.contains(v)))
         a
@@ -242,13 +245,46 @@ class Transition(val sourcePC: String,
       case other => other
     }
     
-    val guard2 = mergeInCondition(guard)
+    val guard2 = mergeInCondition(group, newVar, guard)
     //println("XXX guard2: " + guard2)
     val updates2 = mergedAffect +: (mergedAssumes ++ affectingOtherMerged)
     //println("XXX updates2: " + updates2)
 
     val t2 = new Transition(sourcePC, targetPC, guard2, updates2, comment)
     t2.leaner
+  }
+  
+  //HACK: works only in the context of lookForUselessSplitting
+  def mergePreVariablesDangerous(group: Set[Variable], newVar: Variable): Transition = {
+    val guard2 = mergeInCondition(group, newVar, guard)
+    val updates2 = updates.map( s => s match {
+      case Relation(x, y) => Relation(x, mergeInExpression(group, newVar, y))
+      case vr @ Variance(v1, v2, g, s) => if (group(v2)) Variance(v1, newVar, g, s) else vr
+      case other => other
+    })
+    //println("mergePreVariablesDangerous " + group + ", " + newVar +
+    //        updates.mkString("\n","\n","\n---------") + updates2.mkString("\n","\n","\n========="))
+    val t2 = new Transition(sourcePC, targetPC, guard2, updates2, comment)
+    t2.leaner
+  }
+
+  //HACK: works only in the context of lookForUselessSplitting
+  def mergePostVariablesDangerous(group: Set[Variable], newVar: Variable): Transition = {
+    val updates2 = updates.map( s => s match {
+      case Relation(x, y) => Relation(mergeInExpression(group, newVar, x), y)
+      case Assume(c) => Assume(mergeInCondition(group, newVar, c))
+      case vr @ Variance(v1, v2, g, s) => if (group(v1)) Variance(newVar, v2, g, s) else vr
+      case other => other
+    })
+    //println("mergePostVariablesDangerous " + group + ", " + newVar +
+    //        updates.mkString("\n","\n","\n---------") + updates2.mkString("\n","\n","\n========="))
+    val t2 = new Transition(sourcePC, targetPC, guard, updates2, comment)
+    t2.leaner
+  }
+  
+  //HACK: works only in the context of lookForUselessSplitting
+  def mergeVariablesDangerous(group: Set[Variable], newVar: Variable): Transition = {
+    mergePreVariablesDangerous(group, newVar).mergePostVariablesDangerous(group, newVar)
   }
 
 
