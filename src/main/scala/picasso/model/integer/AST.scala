@@ -161,6 +161,12 @@ object Statement {
     case _ => Set()
   }
 
+  def getReadVariables(s: Statement): Set[Variable] = s match {
+    case Relation(_, o) => Expression.variables(o)
+    case Variance(_, v, _, _) => Set(v)
+    case _ => Set()
+  }
+
   def print(s: Statement): String = s match {
     case Transient(v) => "transient("+v.name+")"
     case Relation(_new, _old) => Expression.print(_new) + "=" + Expression.print(_old)

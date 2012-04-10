@@ -45,6 +45,12 @@ class Transition(val sourcePC: String,
     val transient = (Set[Variable]() /: updates)(_ ++ Statement.getTransientVariables(_))
     updated -- transient
   }
+
+  def readVariables: Set[Variable] = {
+    val read = (Set[Variable]() /: updates)(_ ++ Statement.getReadVariables(_))
+    val transient = (Set[Variable]() /: updates)(_ ++ Statement.getTransientVariables(_))
+    read -- transient
+  }
     
   //is not exact but a superset
   def assignedToNonZero(preNonZero: Set[Variable] = Set()): Set[Variable] = {
@@ -265,23 +271,57 @@ object Transition {
       case Skip => None
       case other => Logger.logAndThrow("integer.Transition", LogError, "not compactable: " + other)
     }).toMap
-    val frame2 = updatesMap -- tr2.updatedVars //things to add to the second trs
     val newTr2 = tr2.alphaPre(updatesMap).leaner
+    val frame2 = updatesMap -- newTr2.updatedVars //things to add to the second trs
     val resultGuard = And(tr1.guard, newTr2.guard)
     val resultUpdates = newTr2.updates ++ frame2.map{ case (v, e) => Affect(v, e) }
     new Transition(tr1.sourcePC, tr2.targetPC, resultGuard, resultUpdates, tr1.comment + "; " + tr2.comment)
   }
   
-  /*
-  private def compactRight(tr1: Transition, tr2: Transition): Transition = {
-    val updatesMap = tr2.updates.flatMap( s => s match {
-      case Affect(v, e) => Some(v -> e)
-      case Skip => None
-      case other => Logger.logAndThrow("integer.Transition", LogError, "not compactable: " + other)
-    }).toMap
-    sys.error("TODO")
+  //TODO this can be made much better
+  private def compactRight(tr1: Transition, tr2: Transition): Option[Transition] = {
+    assert(tr1.targetPC == tr2.sourcePC, "tr1, tr2 are not connected: " + tr1 + ", " + tr2)
+    assert(tr1.sourcePC != tr1.targetPC && tr2.sourcePC != tr2.targetPC, "removing self loop")
+    //part 1: check that the two transitions are mergable
+    val guardOK = tr2.guard == Literal(true) 
+    val updatesOK = tr2.updates forall {
+      case Relation(Variable(_), Variable(_))
+         | Relation(Variable(_), Plus(Variable(_), Constant(_)))
+         | Relation(Variable(_), Minus(Variable(_), Constant(_)))
+         | Skip => true
+      case _ => false
+    }
+    val changedIn1 = tr1.updatedVars
+    val compatible = tr2.updates.forall(s => {
+      val updating = Statement.getUpdatedVars(s)
+      val dependsOn = Statement.getReadVariables(s)
+      //each update can either be substituted or put as a frame.
+      (updating subsetOf changedIn1) || (dependsOn intersect changedIn1).isEmpty
+    })
+
+    if (guardOK && updatesOK && compatible) {
+      val (substitution, frame) = tr2.updates.partition( s => {
+        val updating = Statement.getUpdatedVars(s)
+        updating subsetOf changedIn1
+      })
+
+      val updatesMap = substitution.flatMap( s => s match {
+        case Relation(e, v @ Variable(_)) => Some(v -> e)
+        case Relation(e, Plus(v @ Variable(_), c @ Constant(_))) => Some(v -> Minus(e, c))
+        case Relation(e, Minus(v @ Variable(_), c @ Constant(_))) => Some(v -> Plus(e, c))
+        case Skip => None
+        case other => Logger.logAndThrow("integer.Transition", LogError, "not compactable: " + other)
+      }).toMap
+
+      val newTr1 = tr1.alphaPost(updatesMap).leaner
+      val resultUpdates = newTr1.updates ++ frame
+      val resultTr = new Transition(tr1.sourcePC, tr2.targetPC, tr1.guard, resultUpdates, tr1.comment + "; " + tr2.comment)
+      Some(resultTr)
+    } else {
+      None
+    }
+
   }
-  */
 
   //try to remove intermediate state (substitution / constrains propagation) while preserving the termination
   def compact(trs: Seq[Transition]): Seq[Transition] = {
@@ -291,10 +331,20 @@ object Transition {
     if (trs.length <= 1) {
       trs
     } else {
+      //first pass: compactLeft
       val (revAcc, last) = ( (List[Transition](), trs.head) /: trs.tail)( ( acc, t2) => {
         val (revAcc, t1) = acc
         if (compactableLeft(t1)) (revAcc, compactLeft(t1, t2))
         else (t1::revAcc, t2)
+      })
+      //println(last::revAcc)
+      //second pass: compactRight
+      val (acc, head) = ((List[Transition](), last) /: revAcc)( (acc, t2) => {
+        val (acc2, t1) = acc
+        compactRight(t2, t1) match {
+          case Some(t3) => (acc2, t3)
+          case None => (t1::revAcc, t2)
+        }
       })
       (last :: revAcc).reverse
     }
