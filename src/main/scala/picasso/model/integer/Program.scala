@@ -241,4 +241,12 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     p2
   }
 
+  //the unfold+fold might generate useless split+merge of some variable
+  protected def lookForUselessSplitting = {
+    //TODO
+    //take a look at the var that gets split
+    //look at the ID
+    //take a look at the var that gets merge
+  }
+
 }

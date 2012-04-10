@@ -73,19 +73,24 @@ object ARMCPrinter extends PrologLikePrinter {
     val additionalCstr = frame.map(v => Affect(v, v))
     val readyToPrint = transitionConstraints(t, additionalCstr)
     writer.write(readyToPrint.map(printCondition).mkString("[ ",", ","]"))
-    writer.newLine
   }
 
   protected def r(t: Transition, idx: Int, vars: Seq[Variable])(implicit writer: BufferedWriter) {
     val vars2 = vars map primeVar
     writer.write("% " + t.comment); writer.newLine
-    writer.write("r( ")
+    writer.write("r(  ")
     loc(t.sourcePC, vars)
-    writer.write(", ")
+    writer.write(",")
+    writer.newLine
+    writer.write("    ")
     loc(t.targetPC, vars2)
-    writer.write(", ")
+    writer.write(",")
+    writer.newLine
+    writer.write("    ")
     constraints(t, vars)
-    writer.write(", [], " + idx + ")." )
+    writer.write(",")
+    writer.newLine
+    writer.write("    [], " + idx + ")." )
   }
 
   def apply(implicit writer: BufferedWriter, prog: Program) {
