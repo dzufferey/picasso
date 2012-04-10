@@ -244,7 +244,10 @@ object Statement {
       val se2 = Expression.simplify(e2)
       (se1, se2) match {
         case (Constant(c1), Constant(c2)) => assert(c1 == c2); Skip
-        case _ => Relation(se1, se2)
+        case _ =>
+          val (p1,n1,c1) = Expression.decompose(se1)
+          val (p2,n2,c2) = Expression.decompose(se2)
+          Relation(Expression.recompose(p1,n1,Constant(0)), Expression.recompose(p2,n2, Constant(c2.i - c1.i)))
       }
     case Assume(c) =>
       Condition.simplify(c) match {

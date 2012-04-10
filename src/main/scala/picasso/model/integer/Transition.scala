@@ -250,14 +250,54 @@ class Transition(val sourcePC: String,
 
 object Transition {
 
+  private def compactableLeft(tr: Transition): Boolean = {
+    tr.updates forall {
+      case Affect(_, _) | Skip => true
+      case _ => false
+    }
+  }
+
+  private def compactLeft(tr1: Transition, tr2: Transition): Transition = {
+    assert(tr1.targetPC == tr2.sourcePC, "tr1, tr2 are not connected")
+    assert(tr1.sourcePC != tr1.targetPC && tr2.sourcePC != tr2.targetPC, "removing self loop")
+    val updatesMap = tr1.updates.flatMap( s => s match {
+      case Affect(v, e) => Some(v -> e)
+      case Skip => None
+      case other => Logger.logAndThrow("integer.Transition", LogError, "not compactable: " + other)
+    }).toMap
+    val frame2 = updatesMap -- tr2.updatedVars //things to add to the second trs
+    val newTr2 = tr2.alphaPre(updatesMap).leaner
+    val resultGuard = And(tr1.guard, newTr2.guard)
+    val resultUpdates = newTr2.updates ++ frame2.map{ case (v, e) => Affect(v, e) }
+    new Transition(tr1.sourcePC, tr2.targetPC, resultGuard, resultUpdates, tr1.comment + "; " + tr2.comment)
+  }
+  
+  /*
+  private def compactRight(tr1: Transition, tr2: Transition): Transition = {
+    val updatesMap = tr2.updates.flatMap( s => s match {
+      case Affect(v, e) => Some(v -> e)
+      case Skip => None
+      case other => Logger.logAndThrow("integer.Transition", LogError, "not compactable: " + other)
+    }).toMap
+    sys.error("TODO")
+  }
+  */
+
   //try to remove intermediate state (substitution / constrains propagation) while preserving the termination
   def compact(trs: Seq[Transition]): Seq[Transition] = {
     for (i <- 0 until (trs.length -1) ) {
       assert(trs(i).targetPC == trs(i+1).sourcePC)
     }
-    //substitution are easy and can be used for affectation
-    //for equalities -> projection using an LP solver ?! 
-    sys.error("TODO")
+    if (trs.length <= 1) {
+      trs
+    } else {
+      val (revAcc, last) = ( (List[Transition](), trs.head) /: trs.tail)( ( acc, t2) => {
+        val (revAcc, t1) = acc
+        if (compactableLeft(t1)) (revAcc, compactLeft(t1, t2))
+        else (t1::revAcc, t2)
+      })
+      (last :: revAcc).reverse
+    }
   }
 
 }

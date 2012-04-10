@@ -53,7 +53,7 @@ post
   s -> s
 <==
 no
-  (w2, worker) -> (j, job) [job]
+  (w2, worker) -> (j, _) [job]
 ==>
   w2 -> w2
 

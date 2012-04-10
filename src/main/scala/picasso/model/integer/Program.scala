@@ -61,9 +61,10 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     Logger("integer.Program", LogDebug, "equal variables:\n" + p3.printForQARMC)
     val p4 = p3.reduceNumberOfVariables
     Logger("integer.Program", LogDebug, "merging variables:\n" + p4.printForQARMC)
-    p4
-    //TODO remove strictly increasing 'sink' variables
-    //TODO compact the transitions
+    val p5 = p4.compactPath
+    Logger("integer.Program", LogDebug, "compacting transitions:\n" + p5.printForQARMC)
+    p5
+    //TODO remove (strictly increasing) 'sink' variables
     //TODO transition in sequence that operates on disjoint set of variable might be merged (if the control flow is linear)
   }
 
@@ -84,6 +85,7 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     val groups = computeVariableMergeApprox
     val trs2 = (transitions /: groups)( (trs, grp) => mergeVariables(grp, trs) )
     val p2 = new Program(initPC, trs2)
+    Logger("integer.Program", LogInfo, "reduceNumberOfVariables: #variables before = " + variables.size + ", after = " + p2.variables.size)
     p2.renameVariables
   }
 
@@ -226,6 +228,17 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     val map = cfa.aiFixpoint( transfer, join, cover, default)
     Logger("integer.Program", LogDebug, "equivalenceClasses: " + map)
     map
+  }
+
+  protected def compactPath = {
+    val emp = EdgeLabeledDiGraph.empty[GT.ELGT{type V = String; type EL = Transition}]
+    val cfa = emp ++ (transitions.map(t => (t.sourcePC, t, t.targetPC)).seq)
+    val trs2 = cfa.simplePaths.flatMap( path => {
+      Transition.compact(path.labels)
+    })
+    val p2 = new Program(initPC, trs2)
+    Logger("integer.Program", LogInfo, "compactPath: #transitions before = " + transitions.size + ", after = " + p2.transitions.size)
+    p2
   }
 
 }

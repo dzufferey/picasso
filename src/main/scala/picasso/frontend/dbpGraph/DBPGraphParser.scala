@@ -19,7 +19,10 @@ object DBPGraphParser extends StandardTokenParsers {
     n
   }
   private def nodeInGraph(node: NodeId, graph: DepthBoundedConf[DBCGraph]): DBCGraph#V = {
-    graph.vertices.find( n => n.state._1 == node ).get
+    graph.vertices.find( n => n.state._1 == node ) match {
+      case Some(n) => n
+      case None => Logger.logAndThrow("dbpGraph", LogError, "cannot find node with id " + node)
+    }
   }
 
   def node1: Parser[Node] = 
