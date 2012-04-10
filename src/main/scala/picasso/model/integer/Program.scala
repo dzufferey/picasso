@@ -64,6 +64,7 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     val p5 = p4.compactPath
     Logger("integer.Program", LogDebug, "compacting transitions:\n" + p5.printForQARMC)
     p5
+    //TODO test lookForUselessSplitting
     //TODO remove (strictly increasing) 'sink' variables
     //TODO transition in sequence that operates on disjoint set of variable might be merged (if the control flow is linear)
   }
@@ -243,10 +244,89 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
 
   //the unfold+fold might generate useless split+merge of some variable
   protected def lookForUselessSplitting = {
-    //TODO
     //take a look at the var that gets split
-    //look at the ID
+    def split(s: Statement): Option[(Variable, List[Variable])] = s match {
+      case Relation(lhs, rhs) =>
+        val (lpos, lneg, lcst) = Expression.decompose(lhs)
+        val (rpos, rneg, rcst) = Expression.decompose(rhs)
+        if (lpos.size > 1 && lneg.isEmpty && rpos.size == 1 && rneg.isEmpty) Some(rpos.head -> lpos)
+        else None
+      case _ => None
+    }
     //take a look at the var that gets merge
+    def merge(s: Statement): Option[(List[Variable], Variable)] = s match {
+      case Relation(lhs, rhs) =>
+        val (lpos, lneg, lcst) = Expression.decompose(lhs)
+        val (rpos, rneg, rcst) = Expression.decompose(rhs)
+        if(lpos.size == 1 && lneg.isEmpty && rneg.isEmpty && rpos.size > 1) Some(rpos -> lpos.head)
+        else None
+      case _ => None
+    }
+    //look at what changes
+    def change(t: Transition): Set[Variable] = {
+      val ids = t.updates flatMap {
+        case Affect(v1, v2 @ Variable(_)) if v1 == v2 => Some(v1)
+        case _ => None
+      }
+      t.updatedVars -- ids
+    }
+    //
+    def lookForCandidates(trs: List[Transition],
+                          candidates: List[(String, List[Variable])],
+                          confirmed: List[(String, List[Variable], String)]
+                         ):List[(String, List[Variable], String)] = trs match {
+      case t :: ts =>
+        val splitted: Seq[(Variable, List[Variable])] = t.updates flatMap split
+        val merged: Seq[(List[Variable], Variable)] = t.updates flatMap merge
+        val changed: Set[Variable] = change(t)
+        val (confirmedCandidates, candidates2) = candidates.partition{ case (_, vars) =>
+          val ms1 = MultiSet(vars)
+          merged.exists{ case (vars2, _) => 
+            val ms2 = MultiSet(vars2)
+            (ms1 -- ms2).isEmpty && (ms2 -- ms1).isEmpty //TODO: poor man's multiset equality
+          }
+        }
+        val candidates3 = candidates2.filter{ case (_, vars) => vars forall (v => !changed(v)) }
+        val newCandidates = splitted.map{ case (_, vars) => (t.sourcePC, vars) }
+        val candidates4 = newCandidates.toList ++ candidates3
+        val confirmed2 = confirmedCandidates.map{ case (src, vars) => (src, vars, t.targetPC) } ++ confirmed
+        lookForCandidates(ts, candidates4, confirmed2)
+      case Nil => confirmed
+    }
+    //
+    def mergeConfirmed(trs: List[Transition],
+                       confirmed: List[(String, List[Variable], String)],
+                       inProgress: List[(List[Variable], String)],
+                       acc: List[Transition]
+                      ): List[Transition] = trs match {
+      case t :: ts =>
+        val (newInProgress, confirmed2) = confirmed.partition(_._1 == t.sourcePC)
+        //for newInProgress -> set the unused to 0
+        val unusedVars = newInProgress.flatMap( _._2.tail.map(v => Affect(v, Constant(0))) )
+        val inProgress2 = newInProgress.map{ case (a,b,c) => (b,c) } ++ inProgress
+        //apply inProgress ++ newInProgress
+        val t2 = (t /: inProgress2)( (tAcc, toMerge) => t.mergeVariables(toMerge._1.toSet, toMerge._1.head) )
+        //remove the ones that are done
+        val remains = inProgress2.filter(_._2 != t.targetPC)
+        val t3 = new Transition(t2.sourcePC, t2.targetPC, t2.guard, t2.updates ++ unusedVars, t2.comment)
+        mergeConfirmed(ts, confirmed2, remains, t3::acc)
+      case Nil =>
+        assert(confirmed.isEmpty && inProgress.isEmpty)
+        acc.reverse
+    }
+    //look for split+merge within simple paths.
+    val emp = EdgeLabeledDiGraph.empty[GT.ELGT{type V = String; type EL = Transition}]
+    val cfa = emp ++ (transitions.map(t => (t.sourcePC, t, t.targetPC)).seq)
+    val trs2 = cfa.simplePaths.flatMap( path => {
+      val trs = path.labels
+      val uselessSplits = lookForCandidates(trs, Nil, Nil)
+      for ( (src, lst, trgt) <- uselessSplits ) {
+        Logger("integer.Program", LogInfo, "merging " + lst.mkString(", ") + " on the path from " + src + " to " + trgt )
+      }
+      mergeConfirmed(trs, uselessSplits, Nil, Nil)
+    })
+    //
+    new Program(initPC, trs2)
   }
 
 }
