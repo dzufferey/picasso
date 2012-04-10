@@ -1,7 +1,55 @@
 // Treiber with stack size
 
 init
-  (s, stack) -> (m, emp) [head]
-  (o, push1)* -> (s, stack) [push]
-  (o, pop1)* -> (s, stack) [pop]
+  node (n, SPAWN)
+  (s, stack) -> (e, emp) [H]
+
+transition "spawn push"
+pre
+  node (n, SPAWN)
+  node (s, stack)
+post
+  node (n, SPAWN)
+  (s, stack) -> (p, push0) [op]
+  (p, push0) -> (x, x) [x]
+==>
+  n -> n
+  s -> s
+<==
+
+
+transition "spawn pop"
+pre
+  node (n, SPAWN)
+  node (s, stack)
+post
+  node (n, SPAWN)
+  (s, stack) -> (p, pop0) [op]
+==>
+  n -> n
+  s -> s
+<==
+
+// ****************************************************************
+// STOP SPAWN
+
+transition "nwaps"
+pre
+  node (s, SPAWN)
+post
+  node (s, NWAPS)
+==>
+  s -> s
+<==
+
+// ****************************************************************
+
+transition "push read"
+pre
+  node (n, NWAPS)
+post
+  node (n, NWAPS)
+==>
+  n -> n
+<==
 
