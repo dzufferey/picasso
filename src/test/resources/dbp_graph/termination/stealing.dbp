@@ -1,0 +1,72 @@
+// Work stealing. 3 workers
+
+init
+  node (s, SPAWN)
+ 
+transition "spawn worker"
+pre
+  node (s, SPAWN)
+post
+  node (s, SPAWN)
+  node (w1, worker)
+==>
+  s -> s
+<==
+
+transition "spawn job"
+pre
+  node (s, SPAWN)
+  node (w1, worker)
+post
+  node (s, SPAWN)
+  (w1, worker) -> (j, job) [job]
+==>
+  s -> s
+  w1 -> w1
+<==
+
+
+transition "stop spawn"
+pre
+  node (s, SPAWN)
+post
+  node (s, NWAPS)
+==>
+  s -> s
+<==
+
+// *****************************************************************************
+
+transition "steal"
+pre
+  node (s, NWAPS)
+  (w1, worker) -> (j, job) [job]
+  node (w2, worker)
+post
+  node (s, NWAPS)
+  node (w1, worker)
+  (w2, worker) -> (j, stolen) [job]
+==>
+  w1 -> w1
+  w2 -> w2
+  j -> j
+  s -> s
+<==
+no
+  (w2, worker) -> (j, job) [job]
+==>
+  w2 -> w2
+
+transition "consume"
+pre
+  node (s, NWAPS)
+  (w1, worker) -> (j, _) [job]
+post
+  node (s, NWAPS)
+  node (w1, worker)
+==>
+  w1 -> w1
+  s -> s
+<==
+
+// *****************************************************************************

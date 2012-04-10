@@ -1,0 +1,7 @@
+// Treiber with stack size
+
+init
+  (s, stack) -> (m, emp) [head]
+  (o, push1)* -> (s, stack) [push]
+  (o, pop1)* -> (s, stack) [pop]
+
