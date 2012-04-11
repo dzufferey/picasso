@@ -1,0 +1,95 @@
+[[33mWarning[0m] @ integer.Transition: mergeVariables changing: Variance(Variable(job$2),Variable(job$1),false,false), dropping the constraint
+[[33mWarning[0m] @ integer.Transition: mergeVariables changing: Variance(Variable(job$4),Variable(job$1),false,false), dropping the constraint
+[[33mWarning[0m] @ integer.Transition: mergeVariables changing: Variance(Variable(job$6),Variable(job$1),false,false), dropping the constraint
+% BEGIN FIXED PREAMBLE
+:- multifile r/5,implicit_updates/0,var2names/2,preds/2,trans_preds/3,
+cube_size/1,start/1,error/1,refinement/1,cutpoint/1,invgen_template/2,
+ invgen_template/1,cfg_exit_relation/1,stmtsrc/2,strengthening/2,globals/3,
+ bound_var/2,bounding_vars/2,transition_access/2,atomic/3.
+refinement(inter).
+cube_size(1).
+% END FIXED PREAMBLE
+
+var2names( p(_, data(X_1)), [(X_1, 'X$1')]).
+
+preds( p(_, data(X_1)), []).
+
+start( pc(s__8)).
+cutpoint(pc(s__1)).
+
+% initialize
+r( p(pc(s__8), data(X_1)), p(pc(s__1), data(X_1_prime)), [ X_1_prime = Init_1, 0 =< Init_0, 0 =< Init_1, Init_0 =< Init_1]
+, [], 0).
+% unfolding
+r( p(pc(s__1), data(X_1)), p(pc(s__2), data(X_1_prime)), [ 1 =< X_1, X_1_prime + 1 = X_1, 0 =< X_1_prime]
+, [], 1).
+% morphing, consume
+r( p(pc(s__2), data(X_1)), p(pc(s__3), data(X_1_prime)), [ X_1_prime = X_1]
+, [], 2).
+% unfolding
+r( p(pc(s__1), data(X_1)), p(pc(s__4), data(X_1_prime)), [ 1 =< X_1, X_1_prime + 1 = X_1, 0 =< X_1_prime]
+, [], 3).
+% morphing, consume
+r( p(pc(s__4), data(X_1)), p(pc(s__5), data(X_1_prime)), [ X_1_prime = X_1]
+, [], 4).
+% unfolding
+r( p(pc(s__1), data(X_1)), p(pc(s__6), data(X_1_prime)), [ 1 =< X_1, X_1_prime + 1 = X_1, 0 =< X_1_prime]
+, [], 5).
+% morphing, consume
+r( p(pc(s__6), data(X_1)), p(pc(s__7), data(X_1_prime)), [ X_1_prime = X_1]
+, [], 6).
+% covering
+r( p(pc(s__3), data(X_1)), p(pc(s__1), data(X_1_prime)), [ X_1_prime = X_1]
+, [], 7).
+% covering
+r( p(pc(s__3), data(X_1)), p(pc(s__1), data(X_1_prime)), [ X_1_prime = X_1]
+, [], 8).
+% covering
+r( p(pc(s__3), data(X_1)), p(pc(s__1), data(X_1_prime)), [ X_1_prime = X_1]
+, [], 9).
+% covering
+r( p(pc(s__3), data(X_1)), p(pc(s__1), data(X_1_prime)), [ X_1_prime = X_1]
+, [], 10).
+% covering
+r( p(pc(s__3), data(X_1)), p(pc(s__1), data(X_1_prime)), [ X_1_prime = X_1]
+, [], 11).
+% covering
+r( p(pc(s__3), data(X_1)), p(pc(s__1), data(X_1_prime)), [ X_1_prime = X_1]
+, [], 12).
+% covering
+r( p(pc(s__5), data(X_1)), p(pc(s__1), data(X_1_prime)), [ X_1_prime = X_1]
+, [], 13).
+% covering
+r( p(pc(s__5), data(X_1)), p(pc(s__1), data(X_1_prime)), [ X_1_prime = X_1]
+, [], 14).
+% covering
+r( p(pc(s__5), data(X_1)), p(pc(s__1), data(X_1_prime)), [ X_1_prime = X_1]
+, [], 15).
+% covering
+r( p(pc(s__5), data(X_1)), p(pc(s__1), data(X_1_prime)), [ X_1_prime = X_1]
+, [], 16).
+% covering
+r( p(pc(s__5), data(X_1)), p(pc(s__1), data(X_1_prime)), [ X_1_prime = X_1]
+, [], 17).
+% covering
+r( p(pc(s__5), data(X_1)), p(pc(s__1), data(X_1_prime)), [ X_1_prime = X_1]
+, [], 18).
+% covering
+r( p(pc(s__7), data(X_1)), p(pc(s__1), data(X_1_prime)), [ X_1_prime = X_1]
+, [], 19).
+% covering
+r( p(pc(s__7), data(X_1)), p(pc(s__1), data(X_1_prime)), [ X_1_prime = X_1]
+, [], 20).
+% covering
+r( p(pc(s__7), data(X_1)), p(pc(s__1), data(X_1_prime)), [ X_1_prime = X_1]
+, [], 21).
+% covering
+r( p(pc(s__7), data(X_1)), p(pc(s__1), data(X_1_prime)), [ X_1_prime = X_1]
+, [], 22).
+% covering
+r( p(pc(s__7), data(X_1)), p(pc(s__1), data(X_1_prime)), [ X_1_prime = X_1]
+, [], 23).
+% covering
+r( p(pc(s__7), data(X_1)), p(pc(s__1), data(X_1_prime)), [ X_1_prime = X_1]
+, [], 24).
+
