@@ -287,6 +287,108 @@ class Transition(val sourcePC: String,
     mergePreVariablesDangerous(group, newVar).mergePostVariablesDangerous(group, newVar)
   }
 
+  def pruneAssume = {
+    //lowerBounds
+    def getLowerBound(c: Condition): Seq[(Variable, Int)] = c match {
+      case Eq(v @ Variable(_), Constant(c)) => Seq(v -> c)
+      case Eq(Constant(c), v @ Variable(_)) => Seq(v -> c)
+      case Leq(Constant(c), v @ Variable(_)) => Seq(v -> c)
+      case Lt(Constant(c), v @ Variable(_)) => Seq(v -> (c+1))
+      case And(c1, c2) => getLowerBound(c1) ++ getLowerBound(c2)
+      case _ => Seq()
+    }
+    val lowerBounds = (Map[Variable, Int]() /: getLowerBound(guard))( (acc, lb) => {
+      if (acc contains lb._1) acc + (lb._1 -> math.max(acc(lb._1), lb._2))
+      else acc + lb
+    })
+    //upperBounds
+    def getUpperBound(c: Condition): Seq[(Variable, Int)] = c match {
+      case Eq(v @ Variable(_), Constant(c)) => Seq(v -> c)
+      case Eq(Constant(c), v @ Variable(_)) => Seq(v -> c)
+      case Leq(v @ Variable(_), Constant(c)) => Seq(v -> c)
+      case Lt(v @ Variable(_), Constant(c)) => Seq(v -> (c-1))
+      case And(c1, c2) => getLowerBound(c1) ++ getLowerBound(c2)
+      case _ => Seq()
+    }
+    val upperBounds = (Map[Variable, Int]() /: getUpperBound(guard))( (acc, lb) => {
+      if (acc contains lb._1) acc + (lb._1 -> math.min(acc(lb._1), lb._2))
+      else acc + lb
+    })
+    //updates
+    val postLowerBounds = (Map[Variable, Int]() /: updates)( (acc, s) => s match {
+      case Relation(e1, e2) =>
+        val (p1, n1, c1) = Expression.decompose(e1)
+        if (p1.size != 1 || !n1.isEmpty) {
+          acc //cannot say anything
+        } else {
+          val (p2, n2, c2) = Expression.decompose(e2)
+          if (p2.forall(lowerBounds contains _) && n2.forall(upperBounds contains _)) {
+            val lb2 = (0 /: p2.map(lowerBounds))(_ + _) - (0 /: n2.map(upperBounds))(_ + _) - c1.i + c2.i
+            val v1 = p1.head
+            if (acc contains v1) acc + (v1 -> math.max(acc(v1), lb2))
+            else acc + (v1 -> lb2)
+          } else {
+            acc
+          }
+        }
+      case Variance(v1, v2, g, s) if g && lowerBounds.contains(v2) =>
+        val lb2 = if (s) lowerBounds(v2) + 1 else lowerBounds(v2)
+        if (acc contains v1) acc + (v1 -> math.max(acc(v1), lb2))
+        else acc + (v1 -> lb2)
+      case _ => acc
+    })
+    val postUpperBounds = (Map[Variable, Int]() /: updates)( (acc, s) => s match {
+      case Relation(e1, e2) =>
+        val (p1, n1, c1) = Expression.decompose(e1)
+        if (p1.size != 1 || !n1.isEmpty) {
+          acc //cannot say anything
+        } else {
+          val (p2, n2, c2) = Expression.decompose(e2)
+          if (p2.forall(upperBounds contains _) && n2.forall(lowerBounds contains _)) {
+            val lb2 = (0 /: p2.map(upperBounds))(_ + _) - (0 /: n2.map(lowerBounds))(_ + _) - c1.i + c2.i
+            val v1 = p1.head
+            if (acc contains v1) acc + (v1 -> math.min(acc(v1), lb2))
+            else acc + (v1 -> lb2)
+          } else {
+            acc
+          }
+        }
+      case Variance(v1, v2, g, s) if !g && upperBounds.contains(v2) =>
+        val lb2 = if (s) upperBounds(v2) - 1 else upperBounds(v2)
+        if (acc contains v1) acc + (v1 -> math.min(acc(v1), lb2))
+        else acc + (v1 -> lb2)
+      case _ => acc
+    })
+    //prune
+    def canProveExpr(e1: Expression, e2: Expression, strict: Boolean) = {
+      //upper bound of e1 is less than lowerbound of e2
+      val (p1, n1, c1) = Expression.decompose(e1)
+      val (p2, n2, c2) = Expression.decompose(e2)
+      try {
+        val upper1 = (0 /: p1)(_ + postUpperBounds(_))  - (0 /: n1)(_ + postLowerBounds(_)) + c1.i
+        val lower2 = (0 /: p2)(_ + postLowerBounds(_))  - (0 /: n2)(_ + postUpperBounds(_)) + c2.i
+        if (strict) upper1 < lower2 else upper1 <= lower2
+      } catch {
+        case _ => false
+      }
+    }
+    def canProve(c: Condition): Boolean = c match {
+      case Eq(e1, e2) => canProve(Leq(e1, e2)) && canProve(Leq(e2, e1))
+      case Leq(e1, e2) => canProveExpr(e1, e2, false)
+      case Lt(e1, e2) => canProveExpr(e1, e2, true)
+      case And(c1, c2) => canProve(c1) && canProve(c2)
+      case Or(c1, c2) => canProve(c1) || canProve(c2)
+      case _ => false
+    }
+    val updates2 = updates.map( s => s match {
+      case a @ Assume(c) if canProve(c) =>
+        Logger("integer.Transition", LogInfo, "pruneAssume could prove: " + a + ", dropping it safely")
+        Skip
+      case other => other
+    })
+    new Transition(sourcePC, targetPC, guard, updates2, comment)
+  }
+
 
 }
 

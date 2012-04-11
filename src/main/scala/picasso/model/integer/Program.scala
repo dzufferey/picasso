@@ -65,7 +65,9 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     Logger("integer.Program", LogDebug, "compacting transitions:\n" + p5.printForQARMC)
     val p6 = p5.lookForUselessSplitting
     Logger("integer.Program", LogDebug, "looking for useless splitting:\n" + p6.printForQARMC)
-    p6
+    val p7 = p6.pruneAssumes
+    Logger("integer.Program", LogDebug, "looking for useless splitting:\n" + p7.printForQARMC)
+    p7
     //TODO remove (strictly increasing) 'sink' variables
     //TODO transition in sequence that operates on disjoint set of variable might be merged (if the control flow is linear)
   }
@@ -331,6 +333,11 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
       mergeConfirmed(trs, uselessSplits, Nil, Nil)
     })
     //
+    new Program(initPC, trs2)
+  }
+
+  def pruneAssumes = {
+    val trs2 = transitions.map(_.pruneAssume)
     new Program(initPC, trs2)
   }
 
