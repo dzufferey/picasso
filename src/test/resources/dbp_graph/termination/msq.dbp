@@ -3,6 +3,8 @@
 init
   node (s, SPAWN)
   node (q, queue)
+  (q, queue) -> (e, emp) [H]
+  (q, queue) -> (e, emp) [T]
 
 transition "spawn enq"
 pre
