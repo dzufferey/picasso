@@ -55,7 +55,11 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
   /** try to simplify the program while preserving (non)termination. */
   def simplifyForTermination = {
     //repeat a few time ...
-    simplifyForTermination1.simplifyForTermination1.simplifyForTermination1
+    var p = this
+    for (i <- 0 until 3) {
+      p = p.simplifyForTermination1
+    }
+    p
   }
   
   def simplifyForTermination1 = {
@@ -294,10 +298,14 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
         val merged: Seq[(List[Variable], Variable)] = t.updates flatMap merge
         val changed: Set[Variable] = change(t)
         val (confirmedCandidates, candidates2) = candidates.partition{ case (_, vars) =>
-          val ms1 = MultiSet(vars)
+          val ms1 = MultiSet(vars:_*)
           merged.exists{ case (vars2, _) => 
-            val ms2 = MultiSet(vars2)
-            (ms1 -- ms2).isEmpty && (ms2 -- ms1).isEmpty //TODO: poor man's multiset equality
+            val ms2 = MultiSet(vars2:_*)
+            val res = (ms1 -- ms2).isEmpty && (ms2 -- ms1).isEmpty //TODO: poor man's multiset equality
+            //println("comparing: " + vars + " and " + vars2 + " -> " + res)
+            //println("ms1: " + ms1 + ", ms2: " + ms2)
+            //println("ms1 -- ms2: " + (ms1 -- ms2) + ", ms2 -- ms1: " + (ms2 -- ms1) )
+            res
           }
         }
         //println("dropping because changed: " + candidates2.filterNot{ case (_, vars) => vars forall (v => !changed(v)) })
