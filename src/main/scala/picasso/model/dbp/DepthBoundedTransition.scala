@@ -1,6 +1,6 @@
 package picasso.model.dbp
 
-import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger, Misc}
+import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger, Misc, Namer}
 import picasso.math._
 import picasso.math.WellPartialOrdering._
 import picasso.graph._
@@ -168,7 +168,38 @@ extends Transition[DepthBoundedConf[P]]
     prefix :: " " :: name2 :: " {" :: nest(4, body) :/: text("}")
   }
 
-  override def toString = Misc.docToString(toGraphviz("DBT"))
+  override def toString = {
+    //give id to nodes
+    /*
+    val allVertices = lhs.vertices ++ rhs.vertices ++ inh.map(_._1.vertices).getOrElse(Set[P#V]())
+    val namer = new Namer
+    val nodeIds = allVertices.map(v => (v, namer("n"))).toMap
+    def printGraph(g: DepthBoundedConf[P]) = {
+      var vertices = g.vertices
+      for ( (a,b,c) <- g.edges ) {
+        vertices = vertices - a - c
+        ...
+      }
+      // ...
+    }
+    def printMap(g: Map[P#V, P#V]) = {
+      // ...
+    }
+    "transition " + id + "\n" +
+    "pre\n" + printGraph(lhs)
+    "post\n" + printGraph(rhs)
+    "==>\n" + printMap(hr)
+    "<==\n" + printMap(hk)
+    (inh match {
+      case Some((inGraph, inMap)) => 
+        "no\n" + printGraph(inGraph)
+        "==>\n" + printMap(inMap)
+      case None => ""
+    })
+    */
+    Misc.docToString(toGraphviz("DBT"))
+  }
+
 }
 
 object DepthBoundedTransition {
