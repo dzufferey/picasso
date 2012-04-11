@@ -1,0 +1,2371 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Analysis report for Computing Cover of ./ttt</title>
+<style type="text/css">
+</style>
+</head>
+<body>
+<a name="Ref_"> <h1>Computing Cover of ./ttt</h1> </a>
+<li><a href="#Ref_"> <span></span> <span>Computing Cover of ./ttt</span> </a>
+<ul>
+<li><a href="#Ref_0"> <span>0</span> <span>Input</span> </a></li>
+<li><a href="#Ref_1"> <span>1</span> <span>Graph rewriting system</span> </a>
+<ul>
+<li><a href="#Ref_1_0"> <span>1.0</span> <span>Initial Configuration</span> </a></li>
+<li><a href="#Ref_1_1"> <span>1.1</span> <span>Transitions</span> </a>
+<ul>
+<li><a href="#Ref_1_1_0"> <span>1.1.0</span> <span>spawn enq</span> </a></li>
+<li><a href="#Ref_1_1_1"> <span>1.1.1</span> <span>spawn deq</span> </a></li>
+<li><a href="#Ref_1_1_2"> <span>1.1.2</span> <span>nwaps</span> </a></li>
+<li><a href="#Ref_1_1_3"> <span>1.1.3</span> <span>enq read</span> </a></li>
+<li><a href="#Ref_1_1_4"> <span>1.1.4</span> <span>enq ok</span> </a></li>
+<li><a href="#Ref_1_1_5"> <span>1.1.5</span> <span>enq ok, but H!=T</span> </a></li>
+<li><a href="#Ref_1_1_6"> <span>1.1.6</span> <span>swing/true</span> </a></li>
+<li><a href="#Ref_1_1_7"> <span>1.1.7</span> <span>swing/false</span> </a></li>
+<li><a href="#Ref_1_1_8"> <span>1.1.8</span> <span>eqn term</span> </a></li>
+<li><a href="#Ref_1_1_9"> <span>1.1.9</span> <span>deq step1: read H</span> </a></li>
+<li><a href="#Ref_1_1_10"> <span>1.1.10</span> <span>deq step2: read T SHLD HAVE ANOTHER CASE</span> </a></li>
+<li><a href="#Ref_1_1_11"> <span>1.1.11</span> <span>deq succeed</span> </a></li>
+<li><a href="#Ref_1_1_12"> <span>1.1.12</span> <span>deq swing/true</span> </a></li>
+<li><a href="#Ref_1_1_13"> <span>1.1.13</span> <span>deq swing/false</span> </a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#Ref_2"> <span>2</span> <span>KM Tree</span> </a></li>
+<li><a href="#Ref_3"> <span>3</span> <span>Cover</span> </a>
+<ul>
+<li><a href="#Ref_3_0"> <span>3.0</span> <span>cover element 0</span> </a></li>
+<li><a href="#Ref_3_1"> <span>3.1</span> <span>cover element 1</span> </a></li>
+</ul>
+</li>
+</ul>
+</li>
+<a name="Ref_0"> <h2>Input</h2> </a>
+<pre>// Michael scott queue
+
+init
+  node (s, SPAWN)
+  node (q, queue)
+
+transition &quot;spawn enq&quot;
+pre
+  node (s, SPAWN)
+  node (q, queue)
+post
+  node (s, SPAWN)
+  (q, queue) -&gt; (e, enq0) [enq]
+  (e, enq0) -&gt; (x, x) [x]
+==&gt;
+  q -&gt; q
+  s -&gt; s
+&lt;==
+
+
+transition &quot;spawn deq&quot;
+pre
+  node (s, SPAWN)
+  node (q, queue)
+post
+  node (s, SPAWN)
+  (q, queue) -&gt; (d, deq0) [deq]
+  (d, deq0) -&gt; (x, x) [x]
+==&gt;
+  q -&gt; q
+  s -&gt; s
+&lt;==
+
+// ****************************************************************
+// STOP SPAWN
+
+transition &quot;nwaps&quot;
+pre
+  node (s, SPAWN)
+post
+  node (s, NWAPS)
+==&gt;
+  s -&gt; s
+&lt;==
+
+// ****************************************************************
+// READ
+
+transition &quot;enq read&quot;
+pre
+  node (n, NWAPS)
+  (q, queue) -&gt; (w, _) [T]
+  (q, queue) -&gt; (e, enq0) [enq]
+  (e, enq0) -&gt; (x, x) [x]
+post
+  node (n, NWAPS)
+  (q, queue) -&gt; (w, _) [T]
+  (q, queue) -&gt; (e, enq1) [enq]
+  (e, enq1) -&gt; (w, _) [T] 
+  (e, enq1) -&gt; (x, x) [x]
+==&gt;
+  n -&gt; n
+  q -&gt; q
+  e -&gt; e
+  w -&gt; w
+  x -&gt; x
+&lt;==
+
+// ****************************************************************
+// enq succeeds
+
+transition &quot;enq ok&quot;
+pre
+  node (n, NWAPS)
+  (q, queue) -&gt; (m, emp) [T]
+  (q, queue) -&gt; (m, emp) [H]
+  (q, queue) -&gt; (e, enq1) [enq]
+  (e, enq1) -&gt; (m, emp) [T]
+  (e, enq1) -&gt; (x, x) [x]
+post
+  node (n, NWAPS)
+  (q, queue) -&gt; (m, emp) [A]
+  (q, queue) -&gt; (x, x) [H]
+  (q, queue) -&gt; (x, x) [T]
+  (q, queue) -&gt; (e, enq1) [enq]
+  (e, enq1) -&gt; (x, x) [T]
+==&gt;
+  n -&gt; n
+  q -&gt; q
+  e -&gt; e
+  m -&gt; m
+  x -&gt; x
+&lt;==
+
+
+
+
+transition &quot;enq ok, but H!=T&quot;
+pre
+  node (n, NWAPS)
+  (q, queue) -&gt; (m, emp) [T]
+  (q, queue) -&gt; (w, _) [H]
+  (q, queue) -&gt; (e, enq1) [enq]
+  (e, enq1) -&gt; (m, emp) [T]
+  (e, enq1) -&gt; (x, x) [x]
+post
+  node (n, NWAPS)
+  (q, queue) -&gt; (m, emp) [A]
+  (q, queue) -&gt; (w, _) [H]
+  (q, queue) -&gt; (x, x) [T]
+  (q, queue) -&gt; (e, enq1) [enq]
+  (e, enq1) -&gt; (x, x) [T]
+==&gt;
+  n -&gt; n
+  q -&gt; q
+  e -&gt; e
+  m -&gt; m
+  x -&gt; x
+  w -&gt; w
+&lt;==
+
+
+
+
+// ****************************************************************
+transition &quot;swing/true&quot;
+pre
+  node (n, NWAPS)
+  (q, queue) -&gt; (m, emp) [A]
+  (q, queue) -&gt; (w, _) [T]
+  (q, queue) -&gt; (e, enq1) [enq]
+  (e, enq1) -&gt; (w, _) [T]
+post
+  node (n, NWAPS)
+  (q, queue) -&gt; (m, emp) [T]
+  (q, queue) -&gt; (w, _) [M]
+  (q, queue) -&gt; (e, enq0) [enq]
+==&gt;
+  n -&gt; n
+  q -&gt; q
+  e -&gt; e
+  m -&gt; m
+  w -&gt; w
+&lt;==
+
+// ****************************************************************
+transition &quot;swing/false&quot;
+pre
+  node (n, NWAPS)
+  (q, queue) -&gt; (w, _) [T]
+  (q, queue) -&gt; (e, enq1) [enq]
+  (e, enq1) -&gt; (w2, _) [T]
+post
+  node (n, NWAPS)
+  node (w2, _)
+  (q, queue) -&gt; (w, _) [T]
+  (q, queue) -&gt; (e, enq1) [enq]
+==&gt;
+  n -&gt; n
+  q -&gt; q
+  e -&gt; e
+  w -&gt; w
+  w2 -&gt; w2
+&lt;==
+
+
+
+// ****************************************************************
+transition &quot;eqn term&quot;
+pre
+  node (n, NWAPS)
+  node (e, enq0)
+post
+  node (n, NWAPS)
+  node (e, enq0done)
+==&gt;
+  n -&gt; n
+  e -&gt; e
+&lt;==
+no
+  (e, enq0) -&gt; (x, x) [x]
+
+
+// ****************************************************************
+// DEQ READ 
+
+transition &quot;deq step1: read H&quot;
+pre
+  node (n, NWAPS)
+  (q, queue) -&gt; (d, deq0) [deq]
+  (q, queue) -&gt; (w, _) [H]
+post
+  node (n, NWAPS)
+  (q, queue) -&gt; (d, deq1) [deq]
+  (q, queue) -&gt; (w, _) [H]
+  (d, deq1) -&gt; (w, _) [H]
+==&gt;
+  n -&gt; n
+  q -&gt; q
+  w -&gt; w
+  d -&gt; d
+&lt;==
+
+
+
+// ****************************************************************
+// DEQ READ 2
+
+transition &quot;deq step2: read T SHLD HAVE ANOTHER CASE&quot;
+pre
+  node (n, NWAPS)
+  (q, queue) -&gt; (d, deq1) [deq]
+  (q, queue) -&gt; (w, _) [T]
+  (d, deq1) -&gt; (w, _) [H]
+post
+  node (n, NWAPS)
+  (q, queue) -&gt; (d, deq2) [deq]
+  (q, queue) -&gt; (w, _) [T]
+  (d, deq2) -&gt; (w, _) [H]
+  (d, deq2) -&gt; (w, _) [T]
+==&gt;
+  n -&gt; n
+  q -&gt; q
+  w -&gt; w
+  d -&gt; d
+&lt;==
+
+
+// ****************************************************************
+// DEQ OK
+
+transition &quot;deq succeed&quot;
+pre
+  node (n, NWAPS)
+  (q, queue) -&gt; (d, deq2) [deq]
+  (q, queue) -&gt; (w1, _) [H]
+  (q, queue) -&gt; (w2, _) [M]
+  (q, queue) -&gt; (w3, _) [T]
+  (d, deq2) -&gt; (w1, _) [H]
+  (d, deq2) -&gt; (w3, _) [T]
+post
+  node (n, NWAPS)
+  node (d, deq2done)
+  node (w1, _)
+  (q, queue) -&gt; (w2, _) [H]
+  (q, queue) -&gt; (w3, _) [T]
+==&gt;
+  n -&gt; n
+  q -&gt; q
+  d -&gt; d
+  w1 -&gt; w1
+  w2 -&gt; w2
+  w3 -&gt; w3
+&lt;==
+
+
+// ****************************************************************
+// Dequeuer swings tail pointer
+
+transition &quot;deq swing/true&quot;
+pre
+  node (n, NWAPS)
+  (q, queue) -&gt; (d, deq2) [deq]
+  (q, queue) -&gt; (w2, _) [A]
+  (q, queue) -&gt; (w1, _) [T]
+  (d, deq2) -&gt; (w1, _) [H]
+  (d, deq2) -&gt; (w1, _) [T]
+post
+  node (n, NWAPS)
+  (q, queue) -&gt; (d, deq0) [deq]
+  (q, queue) -&gt; (w1, _) [M]
+  (q, queue) -&gt; (w2, _) [T]
+==&gt;
+  n -&gt; n
+  q -&gt; q
+  d -&gt; d
+  w1 -&gt; w1
+  w2 -&gt; w2
+&lt;==
+
+
+transition &quot;deq swing/false&quot;
+pre
+  node (n, NWAPS)
+  (q, queue) -&gt; (d, deq2) [deq]
+  (q, queue) -&gt; (w1, _) [T]
+  (d, deq2) -&gt; (w2, _) [H]
+  (d, deq2) -&gt; (w2, _) [T]
+post
+  node (n, NWAPS)
+  node (w2, _)
+  (q, queue) -&gt; (d, deq0) [deq]
+  (q, queue) -&gt; (w1, _) [T]
+==&gt;
+  n -&gt; n
+  q -&gt; q
+  d -&gt; d
+  w1 -&gt; w1
+  w2 -&gt; w2
+&lt;==
+
+// ****************************************************************
+
+
+</pre>
+<a name="Ref_1"> <h2>Graph rewriting system</h2> </a>
+<ul>
+<li>
+<a name="Ref_1_0"> <h3>Initial Configuration</h3> </a>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd" [
+ <!ATTLIST svg xmlns:xlink CDATA #FIXED "http://www.w3.org/1999/xlink">
+]>
+<!-- Generated by dot version 2.6 (Tue Dec  6 13:53:08 GMT 2005)
+     For user: (ejk) Eric Koskinen -->
+<!-- Title: init Pages: 1 -->
+<svg width="160pt" height="90pt"
+ viewBox = "0 0 160 90"
+ xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" style="font-family:Times-Roman;font-size:14.00;">
+<title>init</title>
+<!-- 0 -->
+<g id="node1" class="node"><title>0</title>
+<ellipse style="fill:none;stroke:black;" cx="115" cy="24" rx="39" ry="18"/>
+<text text-anchor="middle" x="115" y="29">(queue,0)</text>
+</g>
+<!-- 1 -->
+<g id="node2" class="node"><title>1</title>
+<ellipse style="fill:none;stroke:black;" cx="53" cy="66" rx="46" ry="18"/>
+<text text-anchor="middle" x="53" y="71">(SPAWN,0)</text>
+</g>
+</g>
+</svg>
+
+</li>
+<li>
+<a name="Ref_1_1"> <h3>Transitions</h3> </a>
+<ul>
+<li>
+<a name="Ref_1_1_0"> <h4>spawn enq</h4> </a>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd" [
+ <!ATTLIST svg xmlns:xlink CDATA #FIXED "http://www.w3.org/1999/xlink">
+]>
+<!-- Generated by dot version 2.6 (Tue Dec  6 13:53:08 GMT 2005)
+     For user: (ejk) Eric Koskinen -->
+<!-- Title: trs Pages: 1 -->
+<svg width="232pt" height="382pt"
+ viewBox = "0 0 232 382"
+ xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" style="font-family:Times-Roman;font-size:14.00;">
+<title>trs</title>
+<g id="graph2" class="cluster"><title>cluster_trslhs</title>
+<polygon style="fill:none;stroke:black;" points="13,89 219,89 219,13 13,13 13,89"/>
+<text text-anchor="middle" x="116" y="30">LHS</text>
+</g>
+<g id="graph3" class="cluster"><title>cluster_trsrhs</title>
+<polygon style="fill:none;stroke:black;" points="13,361 219,361 219,109 13,109 13,361"/>
+<text text-anchor="middle" x="116" y="126">RHS</text>
+</g>
+<!-- trslhs0 -->
+<g id="node2" class="node"><title>trslhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="60" cy="63" rx="39" ry="18"/>
+<text text-anchor="middle" x="60" y="68">(queue,0)</text>
+</g>
+<!-- trsrhs2 -->
+<g id="node7" class="node"><title>trsrhs2</title>
+<ellipse style="fill:none;stroke:black;" cx="60" cy="159" rx="39" ry="18"/>
+<text text-anchor="middle" x="60" y="164">(queue,0)</text>
+</g>
+<!-- trslhs0&#45;&gt;trsrhs2 -->
+<g id="edge8" class="edge"><title>trslhs0&#45;&gt;trsrhs2</title>
+<path style="fill:none;stroke:#0000aa;" d="M60,81C60,95 60,115 60,131"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="64,131 60,141 57,131 64,131"/>
+</g>
+<!-- trslhs1 -->
+<g id="node3" class="node"><title>trslhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="164" cy="63" rx="46" ry="18"/>
+<text text-anchor="middle" x="164" y="68">(SPAWN,0)</text>
+</g>
+<!-- trsrhs3 -->
+<g id="node8" class="node"><title>trsrhs3</title>
+<ellipse style="fill:none;stroke:black;" cx="164" cy="159" rx="46" ry="18"/>
+<text text-anchor="middle" x="164" y="164">(SPAWN,0)</text>
+</g>
+<!-- trslhs1&#45;&gt;trsrhs3 -->
+<g id="edge10" class="edge"><title>trslhs1&#45;&gt;trsrhs3</title>
+<path style="fill:none;stroke:#0000aa;" d="M164,81C164,95 164,115 164,131"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="168,131 164,141 161,131 168,131"/>
+</g>
+<!-- trsrhs0 -->
+<g id="node5" class="node"><title>trsrhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="60" cy="335" rx="27" ry="18"/>
+<text text-anchor="middle" x="60" y="340">(x,0)</text>
+</g>
+<!-- trsrhs1 -->
+<g id="node6" class="node"><title>trsrhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="60" cy="247" rx="36" ry="18"/>
+<text text-anchor="middle" x="60" y="252">(enq0,0)</text>
+</g>
+<!-- trsrhs1&#45;&gt;trsrhs0 -->
+<g id="edge4" class="edge"><title>trsrhs1&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:black;" d="M60,265C60,277 60,293 60,307"/>
+<polygon style="fill:black;stroke:black;" points="64,307 60,317 57,307 64,307"/>
+<text text-anchor="middle" x="64" y="296">x</text>
+</g>
+<!-- trsrhs2&#45;&gt;trsrhs1 -->
+<g id="edge6" class="edge"><title>trsrhs2&#45;&gt;trsrhs1</title>
+<path style="fill:none;stroke:black;" d="M60,177C60,189 60,205 60,219"/>
+<polygon style="fill:black;stroke:black;" points="64,219 60,229 57,219 64,219"/>
+<text text-anchor="middle" x="71" y="208">enq</text>
+</g>
+</g>
+</svg>
+
+</li>
+<li>
+<a name="Ref_1_1_1"> <h4>spawn deq</h4> </a>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd" [
+ <!ATTLIST svg xmlns:xlink CDATA #FIXED "http://www.w3.org/1999/xlink">
+]>
+<!-- Generated by dot version 2.6 (Tue Dec  6 13:53:08 GMT 2005)
+     For user: (ejk) Eric Koskinen -->
+<!-- Title: trs Pages: 1 -->
+<svg width="232pt" height="382pt"
+ viewBox = "0 0 232 382"
+ xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" style="font-family:Times-Roman;font-size:14.00;">
+<title>trs</title>
+<g id="graph2" class="cluster"><title>cluster_trslhs</title>
+<polygon style="fill:none;stroke:black;" points="13,89 219,89 219,13 13,13 13,89"/>
+<text text-anchor="middle" x="116" y="30">LHS</text>
+</g>
+<g id="graph3" class="cluster"><title>cluster_trsrhs</title>
+<polygon style="fill:none;stroke:black;" points="13,361 219,361 219,109 13,109 13,361"/>
+<text text-anchor="middle" x="116" y="126">RHS</text>
+</g>
+<!-- trslhs0 -->
+<g id="node2" class="node"><title>trslhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="60" cy="63" rx="39" ry="18"/>
+<text text-anchor="middle" x="60" y="68">(queue,0)</text>
+</g>
+<!-- trsrhs2 -->
+<g id="node7" class="node"><title>trsrhs2</title>
+<ellipse style="fill:none;stroke:black;" cx="60" cy="159" rx="39" ry="18"/>
+<text text-anchor="middle" x="60" y="164">(queue,0)</text>
+</g>
+<!-- trslhs0&#45;&gt;trsrhs2 -->
+<g id="edge8" class="edge"><title>trslhs0&#45;&gt;trsrhs2</title>
+<path style="fill:none;stroke:#0000aa;" d="M60,81C60,95 60,115 60,131"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="64,131 60,141 57,131 64,131"/>
+</g>
+<!-- trslhs1 -->
+<g id="node3" class="node"><title>trslhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="164" cy="63" rx="46" ry="18"/>
+<text text-anchor="middle" x="164" y="68">(SPAWN,0)</text>
+</g>
+<!-- trsrhs3 -->
+<g id="node8" class="node"><title>trsrhs3</title>
+<ellipse style="fill:none;stroke:black;" cx="164" cy="159" rx="46" ry="18"/>
+<text text-anchor="middle" x="164" y="164">(SPAWN,0)</text>
+</g>
+<!-- trslhs1&#45;&gt;trsrhs3 -->
+<g id="edge10" class="edge"><title>trslhs1&#45;&gt;trsrhs3</title>
+<path style="fill:none;stroke:#0000aa;" d="M164,81C164,95 164,115 164,131"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="168,131 164,141 161,131 168,131"/>
+</g>
+<!-- trsrhs0 -->
+<g id="node5" class="node"><title>trsrhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="60" cy="335" rx="27" ry="18"/>
+<text text-anchor="middle" x="60" y="340">(x,0)</text>
+</g>
+<!-- trsrhs1 -->
+<g id="node6" class="node"><title>trsrhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="60" cy="247" rx="36" ry="18"/>
+<text text-anchor="middle" x="60" y="252">(deq0,0)</text>
+</g>
+<!-- trsrhs1&#45;&gt;trsrhs0 -->
+<g id="edge4" class="edge"><title>trsrhs1&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:black;" d="M60,265C60,277 60,293 60,307"/>
+<polygon style="fill:black;stroke:black;" points="64,307 60,317 57,307 64,307"/>
+<text text-anchor="middle" x="64" y="296">x</text>
+</g>
+<!-- trsrhs2&#45;&gt;trsrhs1 -->
+<g id="edge6" class="edge"><title>trsrhs2&#45;&gt;trsrhs1</title>
+<path style="fill:none;stroke:black;" d="M60,177C60,189 60,205 60,219"/>
+<polygon style="fill:black;stroke:black;" points="64,219 60,229 57,219 64,219"/>
+<text text-anchor="middle" x="71" y="208">deq</text>
+</g>
+</g>
+</svg>
+
+</li>
+<li>
+<a name="Ref_1_1_2"> <h4>nwaps</h4> </a>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd" [
+ <!ATTLIST svg xmlns:xlink CDATA #FIXED "http://www.w3.org/1999/xlink">
+]>
+<!-- Generated by dot version 2.6 (Tue Dec  6 13:53:08 GMT 2005)
+     For user: (ejk) Eric Koskinen -->
+<!-- Title: trs Pages: 1 -->
+<svg width="136pt" height="194pt"
+ viewBox = "0 0 136 194"
+ xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" style="font-family:Times-Roman;font-size:14.00;">
+<title>trs</title>
+<g id="graph2" class="cluster"><title>cluster_trslhs</title>
+<polygon style="fill:none;stroke:black;" points="13,89 123,89 123,13 13,13 13,89"/>
+<text text-anchor="middle" x="68" y="30">LHS</text>
+</g>
+<g id="graph3" class="cluster"><title>cluster_trsrhs</title>
+<polygon style="fill:none;stroke:black;" points="13,173 123,173 123,97 13,97 13,173"/>
+<text text-anchor="middle" x="68" y="114">RHS</text>
+</g>
+<!-- trslhs0 -->
+<g id="node2" class="node"><title>trslhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="68" cy="63" rx="46" ry="18"/>
+<text text-anchor="middle" x="68" y="68">(SPAWN,0)</text>
+</g>
+<!-- trsrhs0 -->
+<g id="node4" class="node"><title>trsrhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="68" cy="147" rx="46" ry="18"/>
+<text text-anchor="middle" x="68" y="152">(NWAPS,0)</text>
+</g>
+<!-- trslhs0&#45;&gt;trsrhs0 -->
+<g id="edge4" class="edge"><title>trslhs0&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:#0000aa;" d="M68,81C68,92 68,106 68,119"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="72,119 68,129 65,119 72,119"/>
+</g>
+</g>
+</svg>
+
+</li>
+<li>
+<a name="Ref_1_1_3"> <h4>enq read</h4> </a>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd" [
+ <!ATTLIST svg xmlns:xlink CDATA #FIXED "http://www.w3.org/1999/xlink">
+]>
+<!-- Generated by dot version 2.6 (Tue Dec  6 13:53:08 GMT 2005)
+     For user: (ejk) Eric Koskinen -->
+<!-- Title: trs Pages: 1 -->
+<svg width="446pt" height="396pt"
+ viewBox = "0 0 446 396"
+ xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" style="font-family:Times-Roman;font-size:14.00;">
+<title>trs</title>
+<g id="graph2" class="cluster"><title>cluster_trslhs</title>
+<polygon style="fill:none;stroke:black;" points="13,287 219,287 219,13 13,13 13,287"/>
+<text text-anchor="middle" x="116" y="30">LHS</text>
+</g>
+<g id="graph3" class="cluster"><title>cluster_trsrhs</title>
+<polygon style="fill:none;stroke:black;" points="227,375 433,375 433,123 227,123 227,375"/>
+<text text-anchor="middle" x="330" y="140">RHS</text>
+</g>
+<!-- trslhs0 -->
+<g id="node2" class="node"><title>trslhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="60" cy="63" rx="39" ry="18"/>
+<text text-anchor="middle" x="60" y="68">(queue,0)</text>
+</g>
+<!-- trslhs4 -->
+<g id="node3" class="node"><title>trslhs4</title>
+<ellipse style="fill:none;stroke:black;" cx="86" cy="173" rx="27" ry="18"/>
+<text text-anchor="middle" x="86" y="178">(_,0)</text>
+</g>
+<!-- trslhs0&#45;&gt;trslhs4 -->
+<g id="edge5" class="edge"><title>trslhs0&#45;&gt;trslhs4</title>
+<path style="fill:none;stroke:black;" d="M64,81C68,98 75,125 80,145"/>
+<polygon style="fill:black;stroke:black;" points="83,145 82,155 77,146 83,145"/>
+<text text-anchor="middle" x="77" y="112">T</text>
+</g>
+<!-- trslhs2 -->
+<g id="node5" class="node"><title>trslhs2</title>
+<ellipse style="fill:none;stroke:black;" cx="175" cy="173" rx="36" ry="18"/>
+<text text-anchor="middle" x="175" y="178">(enq0,0)</text>
+</g>
+<!-- trslhs0&#45;&gt;trslhs2 -->
+<g id="edge3" class="edge"><title>trslhs0&#45;&gt;trslhs2</title>
+<path style="fill:none;stroke:black;" d="M77,79C97,98 128,129 151,150"/>
+<polygon style="fill:black;stroke:black;" points="153,147 158,157 148,152 153,147"/>
+<text text-anchor="middle" x="123" y="112">enq</text>
+</g>
+<!-- trsrhs3 -->
+<g id="node15" class="node"><title>trsrhs3</title>
+<ellipse style="fill:none;stroke:black;" cx="274" cy="173" rx="39" ry="18"/>
+<text text-anchor="middle" x="274" y="178">(queue,0)</text>
+</g>
+<!-- trslhs0&#45;&gt;trsrhs3 -->
+<g id="edge18" class="edge"><title>trslhs0&#45;&gt;trsrhs3</title>
+<path style="fill:none;stroke:#0000aa;" d="M87,76C102,83 120,91 136,99 150,106 152,111 166,115 191,123 201,112 223,123 235,129 246,139 254,148"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="257,146 261,156 252,151 257,146"/>
+</g>
+<!-- trsrhs4 -->
+<g id="node14" class="node"><title>trsrhs4</title>
+<ellipse style="fill:none;stroke:black;" cx="334" cy="349" rx="27" ry="18"/>
+<text text-anchor="middle" x="334" y="354">(_,0)</text>
+</g>
+<!-- trslhs4&#45;&gt;trsrhs4 -->
+<g id="edge26" class="edge"><title>trslhs4&#45;&gt;trsrhs4</title>
+<path style="fill:none;stroke:#0000aa;" d="M90,191C98,216 114,262 145,287 200,332 233,306 298,331 300,332 302,333 304,334"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="305,331 313,338 302,337 305,331"/>
+</g>
+<!-- trslhs3 -->
+<g id="node4" class="node"><title>trslhs3</title>
+<ellipse style="fill:none;stroke:black;" cx="181" cy="261" rx="27" ry="18"/>
+<text text-anchor="middle" x="181" y="266">(x,0)</text>
+</g>
+<!-- trsrhs1 -->
+<g id="node11" class="node"><title>trsrhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="262" cy="349" rx="27" ry="18"/>
+<text text-anchor="middle" x="262" y="354">(x,0)</text>
+</g>
+<!-- trslhs3&#45;&gt;trsrhs1 -->
+<g id="edge24" class="edge"><title>trslhs3&#45;&gt;trsrhs1</title>
+<path style="fill:none;stroke:#0000aa;" d="M195,277C208,291 226,310 241,325"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="244,323 248,333 239,328 244,323"/>
+</g>
+<!-- trslhs2&#45;&gt;trslhs3 -->
+<g id="edge7" class="edge"><title>trslhs2&#45;&gt;trslhs3</title>
+<path style="fill:none;stroke:black;" d="M176,191C177,203 178,219 179,233"/>
+<polygon style="fill:black;stroke:black;" points="182,233 180,243 176,233 182,233"/>
+<text text-anchor="middle" x="184" y="222">x</text>
+</g>
+<!-- trsrhs0 -->
+<g id="node13" class="node"><title>trsrhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="271" cy="261" rx="36" ry="18"/>
+<text text-anchor="middle" x="271" y="266">(enq1,0)</text>
+</g>
+<!-- trslhs2&#45;&gt;trsrhs0 -->
+<g id="edge22" class="edge"><title>trslhs2&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:#0000aa;" d="M193,189C208,203 229,222 245,238"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="248,236 253,245 243,241 248,236"/>
+</g>
+<!-- trslhs1 -->
+<g id="node6" class="node"><title>trslhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="164" cy="63" rx="46" ry="18"/>
+<text text-anchor="middle" x="164" y="68">(NWAPS,0)</text>
+</g>
+<!-- trsrhs2 -->
+<g id="node12" class="node"><title>trsrhs2</title>
+<ellipse style="fill:none;stroke:black;" cx="378" cy="173" rx="46" ry="18"/>
+<text text-anchor="middle" x="378" y="178">(NWAPS,0)</text>
+</g>
+<!-- trslhs1&#45;&gt;trsrhs2 -->
+<g id="edge20" class="edge"><title>trslhs1&#45;&gt;trsrhs2</title>
+<path style="fill:none;stroke:#0000aa;" d="M202,73C235,84 284,100 322,123 333,130 344,140 354,149"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="356,146 361,156 351,151 356,146"/>
+</g>
+<!-- trsrhs0&#45;&gt;trsrhs1 -->
+<g id="edge10" class="edge"><title>trsrhs0&#45;&gt;trsrhs1</title>
+<path style="fill:none;stroke:black;" d="M269,279C267,291 266,307 265,321"/>
+<polygon style="fill:black;stroke:black;" points="268,321 264,331 262,321 268,321"/>
+<text text-anchor="middle" x="273" y="310">x</text>
+</g>
+<!-- trsrhs0&#45;&gt;trsrhs4 -->
+<g id="edge12" class="edge"><title>trsrhs0&#45;&gt;trsrhs4</title>
+<path style="fill:none;stroke:black;" d="M283,278C292,291 306,310 316,325"/>
+<polygon style="fill:black;stroke:black;" points="319,323 322,333 313,327 319,323"/>
+<text text-anchor="middle" x="310" y="310">T</text>
+</g>
+<!-- trsrhs3&#45;&gt;trsrhs0 -->
+<g id="edge14" class="edge"><title>trsrhs3&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:black;" d="M273,191C272,203 272,219 272,233"/>
+<polygon style="fill:black;stroke:black;" points="275,233 271,243 269,233 275,233"/>
+<text text-anchor="middle" x="285" y="222">enq</text>
+</g>
+<!-- trsrhs3&#45;&gt;trsrhs4 -->
+<g id="edge16" class="edge"><title>trsrhs3&#45;&gt;trsrhs4</title>
+<path style="fill:none;stroke:black;" d="M286,190C290,196 295,203 298,209 306,224 310,227 316,243 325,269 329,299 332,321"/>
+<polygon style="fill:black;stroke:black;" points="335,321 333,331 329,321 335,321"/>
+<text text-anchor="middle" x="329" y="266">T</text>
+</g>
+</g>
+</svg>
+
+</li>
+<li>
+<a name="Ref_1_1_4"> <h4>enq ok</h4> </a>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd" [
+ <!ATTLIST svg xmlns:xlink CDATA #FIXED "http://www.w3.org/1999/xlink">
+]>
+<!-- Generated by dot version 2.6 (Tue Dec  6 13:53:08 GMT 2005)
+     For user: (ejk) Eric Koskinen -->
+<!-- Title: trs Pages: 1 -->
+<svg width="506pt" height="484pt"
+ viewBox = "0 0 506 484"
+ xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" style="font-family:Times-Roman;font-size:14.00;">
+<title>trs</title>
+<g id="graph2" class="cluster"><title>cluster_trslhs</title>
+<polygon style="fill:none;stroke:black;" points="13,287 219,287 219,13 13,13 13,287"/>
+<text text-anchor="middle" x="116" y="30">LHS</text>
+</g>
+<g id="graph3" class="cluster"><title>cluster_trsrhs</title>
+<polygon style="fill:none;stroke:black;" points="227,463 493,463 493,211 227,211 227,463"/>
+<text text-anchor="middle" x="360" y="228">RHS</text>
+</g>
+<!-- trslhs3 -->
+<g id="node2" class="node"><title>trslhs3</title>
+<ellipse style="fill:none;stroke:black;" cx="60" cy="63" rx="39" ry="18"/>
+<text text-anchor="middle" x="60" y="68">(queue,0)</text>
+</g>
+<!-- trslhs0 -->
+<g id="node3" class="node"><title>trslhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="172" cy="261" rx="34" ry="18"/>
+<text text-anchor="middle" x="172" y="266">(emp,0)</text>
+</g>
+<!-- trslhs3&#45;&gt;trslhs0 -->
+<g id="edge5" class="edge"><title>trslhs3&#45;&gt;trslhs0</title>
+<path style="fill:none;stroke:black;" d="M77,79C83,86 89,93 95,99 109,114 114,117 123,133 142,166 156,206 164,233"/>
+<polygon style="fill:black;stroke:black;" points="167,232 167,243 161,234 167,232"/>
+<text text-anchor="middle" x="147" y="156">H</text>
+</g>
+<!-- trslhs3&#45;&gt;trslhs0 -->
+<g id="edge7" class="edge"><title>trslhs3&#45;&gt;trslhs0</title>
+<path style="fill:none;stroke:black;" d="M88,76C110,87 140,107 155,133 174,164 176,206 175,233"/>
+<polygon style="fill:black;stroke:black;" points="178,233 174,243 172,233 178,233"/>
+<text text-anchor="middle" x="175" y="156">T</text>
+</g>
+<!-- trslhs4 -->
+<g id="node6" class="node"><title>trslhs4</title>
+<ellipse style="fill:none;stroke:black;" cx="78" cy="151" rx="36" ry="18"/>
+<text text-anchor="middle" x="78" y="156">(enq1,0)</text>
+</g>
+<!-- trslhs3&#45;&gt;trslhs4 -->
+<g id="edge3" class="edge"><title>trslhs3&#45;&gt;trslhs4</title>
+<path style="fill:none;stroke:black;" d="M64,81C66,93 69,109 72,123"/>
+<polygon style="fill:black;stroke:black;" points="75,123 74,133 69,124 75,123"/>
+<text text-anchor="middle" x="82" y="112">enq</text>
+</g>
+<!-- trsrhs1 -->
+<g id="node16" class="node"><title>trsrhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="304" cy="261" rx="39" ry="18"/>
+<text text-anchor="middle" x="304" y="266">(queue,0)</text>
+</g>
+<!-- trslhs3&#45;&gt;trsrhs1 -->
+<g id="edge30" class="edge"><title>trslhs3&#45;&gt;trsrhs1</title>
+<path style="fill:none;stroke:#0000aa;" d="M90,75C105,81 123,90 138,99 154,109 245,181 250,187 264,202 277,220 287,235"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="290,233 293,243 284,237 290,233"/>
+</g>
+<!-- trsrhs0 -->
+<g id="node15" class="node"><title>trsrhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="270" cy="349" rx="34" ry="18"/>
+<text text-anchor="middle" x="270" y="354">(emp,0)</text>
+</g>
+<!-- trslhs0&#45;&gt;trsrhs0 -->
+<g id="edge24" class="edge"><title>trslhs0&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:#0000aa;" d="M187,278C196,288 209,302 222,313 227,318 234,324 240,328"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="243,326 249,334 239,331 243,326"/>
+</g>
+<!-- trslhs1 -->
+<g id="node4" class="node"><title>trslhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="164" cy="63" rx="46" ry="18"/>
+<text text-anchor="middle" x="164" y="68">(NWAPS,0)</text>
+</g>
+<!-- trsrhs3 -->
+<g id="node17" class="node"><title>trsrhs3</title>
+<ellipse style="fill:none;stroke:black;" cx="408" cy="261" rx="46" ry="18"/>
+<text text-anchor="middle" x="408" y="266">(NWAPS,0)</text>
+</g>
+<!-- trslhs1&#45;&gt;trsrhs3 -->
+<g id="edge26" class="edge"><title>trslhs1&#45;&gt;trsrhs3</title>
+<path style="fill:none;stroke:#0000aa;" d="M206,71C241,78 285,88 300,99 348,134 381,198 397,234"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="400,232 401,243 394,235 400,232"/>
+</g>
+<!-- trslhs2 -->
+<g id="node5" class="node"><title>trslhs2</title>
+<ellipse style="fill:none;stroke:black;" cx="90" cy="261" rx="27" ry="18"/>
+<text text-anchor="middle" x="90" y="266">(x,0)</text>
+</g>
+<!-- trsrhs2 -->
+<g id="node13" class="node"><title>trsrhs2</title>
+<ellipse style="fill:none;stroke:black;" cx="413" cy="437" rx="27" ry="18"/>
+<text text-anchor="middle" x="413" y="442">(x,0)</text>
+</g>
+<!-- trslhs2&#45;&gt;trsrhs2 -->
+<g id="edge28" class="edge"><title>trslhs2&#45;&gt;trsrhs2</title>
+<path style="fill:none;stroke:#0000aa;" d="M106,276C130,298 179,341 226,367 276,395 340,416 378,427"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="379,424 388,430 377,430 379,424"/>
+</g>
+<!-- trslhs4&#45;&gt;trslhs0 -->
+<g id="edge11" class="edge"><title>trslhs4&#45;&gt;trslhs0</title>
+<path style="fill:none;stroke:black;" d="M92,168C108,186 133,216 151,236"/>
+<polygon style="fill:black;stroke:black;" points="154,234 158,244 149,239 154,234"/>
+<text text-anchor="middle" x="126" y="200">T</text>
+</g>
+<!-- trslhs4&#45;&gt;trslhs2 -->
+<g id="edge9" class="edge"><title>trslhs4&#45;&gt;trslhs2</title>
+<path style="fill:none;stroke:black;" d="M80,169C82,186 85,212 87,233"/>
+<polygon style="fill:black;stroke:black;" points="90,233 88,243 84,233 90,233"/>
+<text text-anchor="middle" x="88" y="200">x</text>
+</g>
+<!-- trsrhs4 -->
+<g id="node14" class="node"><title>trsrhs4</title>
+<ellipse style="fill:none;stroke:black;" cx="359" cy="349" rx="36" ry="18"/>
+<text text-anchor="middle" x="359" y="354">(enq1,0)</text>
+</g>
+<!-- trslhs4&#45;&gt;trsrhs4 -->
+<g id="edge32" class="edge"><title>trslhs4&#45;&gt;trsrhs4</title>
+<path style="fill:none;stroke:#0000aa;" d="M105,163C110,165 114,167 119,169 163,188 182,180 216,211 244,237 234,257 256,287 266,301 269,304 282,313 289,318 306,326 321,333"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="323,330 331,337 320,337 323,330"/>
+</g>
+<!-- trsrhs4&#45;&gt;trsrhs2 -->
+<g id="edge22" class="edge"><title>trsrhs4&#45;&gt;trsrhs2</title>
+<path style="fill:none;stroke:black;" d="M370,366C377,379 388,397 397,411"/>
+<polygon style="fill:black;stroke:black;" points="400,410 403,420 395,414 400,410"/>
+<text text-anchor="middle" x="392" y="398">T</text>
+</g>
+<!-- trsrhs1&#45;&gt;trsrhs2 -->
+<g id="edge16" class="edge"><title>trsrhs1&#45;&gt;trsrhs2</title>
+<path style="fill:none;stroke:black;" d="M329,275C355,291 395,316 404,331 417,355 418,387 417,409"/>
+<polygon style="fill:black;stroke:black;" points="420,409 416,419 414,409 420,409"/>
+<text text-anchor="middle" x="417" y="354">T</text>
+</g>
+<!-- trsrhs1&#45;&gt;trsrhs2 -->
+<g id="edge18" class="edge"><title>trsrhs1&#45;&gt;trsrhs2</title>
+<path style="fill:none;stroke:black;" d="M329,275C336,279 344,283 352,287 386,304 407,298 425,331 437,356 431,388 424,410"/>
+<polygon style="fill:black;stroke:black;" points="427,411 421,420 421,409 427,411"/>
+<text text-anchor="middle" x="436" y="354">H</text>
+</g>
+<!-- trsrhs1&#45;&gt;trsrhs4 -->
+<g id="edge14" class="edge"><title>trsrhs1&#45;&gt;trsrhs4</title>
+<path style="fill:none;stroke:black;" d="M315,278C323,291 334,309 343,323"/>
+<polygon style="fill:black;stroke:black;" points="346,322 348,332 340,325 346,322"/>
+<text text-anchor="middle" x="344" y="310">enq</text>
+</g>
+<!-- trsrhs1&#45;&gt;trsrhs0 -->
+<g id="edge20" class="edge"><title>trsrhs1&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:black;" d="M297,279C292,291 286,308 281,322"/>
+<polygon style="fill:black;stroke:black;" points="284,323 277,331 278,320 284,323"/>
+<text text-anchor="middle" x="297" y="310">A</text>
+</g>
+</g>
+</svg>
+
+</li>
+<li>
+<a name="Ref_1_1_5"> <h4>enq ok, but H!=T</h4> </a>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd" [
+ <!ATTLIST svg xmlns:xlink CDATA #FIXED "http://www.w3.org/1999/xlink">
+]>
+<!-- Generated by dot version 2.6 (Tue Dec  6 13:53:08 GMT 2005)
+     For user: (ejk) Eric Koskinen -->
+<!-- Title: trs Pages: 1 -->
+<svg width="532pt" height="484pt"
+ viewBox = "0 0 532 484"
+ xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" style="font-family:Times-Roman;font-size:14.00;">
+<title>trs</title>
+<g id="graph2" class="cluster"><title>cluster_trslhs</title>
+<polygon style="fill:none;stroke:black;" points="13,287 219,287 219,13 13,13 13,287"/>
+<text text-anchor="middle" x="116" y="30">LHS</text>
+</g>
+<g id="graph3" class="cluster"><title>cluster_trsrhs</title>
+<polygon style="fill:none;stroke:black;" points="227,463 519,463 519,211 227,211 227,463"/>
+<text text-anchor="middle" x="373" y="228">RHS</text>
+</g>
+<!-- trslhs3 -->
+<g id="node2" class="node"><title>trslhs3</title>
+<ellipse style="fill:none;stroke:black;" cx="176" cy="261" rx="34" ry="18"/>
+<text text-anchor="middle" x="176" y="266">(emp,0)</text>
+</g>
+<!-- trsrhs5 -->
+<g id="node14" class="node"><title>trsrhs5</title>
+<ellipse style="fill:none;stroke:black;" cx="270" cy="349" rx="34" ry="18"/>
+<text text-anchor="middle" x="270" y="354">(emp,0)</text>
+</g>
+<!-- trslhs3&#45;&gt;trsrhs5 -->
+<g id="edge30" class="edge"><title>trslhs3&#45;&gt;trsrhs5</title>
+<path style="fill:none;stroke:#0000aa;" d="M192,277C203,288 216,301 229,313 234,318 239,322 244,326"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="247,324 252,333 242,329 247,324"/>
+</g>
+<!-- trslhs4 -->
+<g id="node3" class="node"><title>trslhs4</title>
+<ellipse style="fill:none;stroke:black;" cx="164" cy="63" rx="46" ry="18"/>
+<text text-anchor="middle" x="164" y="68">(NWAPS,0)</text>
+</g>
+<!-- trsrhs3 -->
+<g id="node18" class="node"><title>trsrhs3</title>
+<ellipse style="fill:none;stroke:black;" cx="455" cy="261" rx="46" ry="18"/>
+<text text-anchor="middle" x="455" y="266">(NWAPS,0)</text>
+</g>
+<!-- trslhs4&#45;&gt;trsrhs3 -->
+<g id="edge32" class="edge"><title>trslhs4&#45;&gt;trsrhs3</title>
+<path style="fill:none;stroke:#0000aa;" d="M209,68C255,74 322,85 343,99 393,133 428,197 444,233"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="448,232 448,243 441,235 448,232"/>
+</g>
+<!-- trslhs1 -->
+<g id="node4" class="node"><title>trslhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="96" cy="261" rx="27" ry="18"/>
+<text text-anchor="middle" x="96" y="266">(x,0)</text>
+</g>
+<!-- trsrhs0 -->
+<g id="node16" class="node"><title>trsrhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="359" cy="437" rx="27" ry="18"/>
+<text text-anchor="middle" x="359" y="442">(x,0)</text>
+</g>
+<!-- trslhs1&#45;&gt;trsrhs0 -->
+<g id="edge26" class="edge"><title>trslhs1&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:#0000aa;" d="M112,276C136,297 182,338 226,367 259,388 299,409 327,423"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="328,420 336,427 325,426 328,420"/>
+</g>
+<!-- trslhs0 -->
+<g id="node5" class="node"><title>trslhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="103" cy="151" rx="36" ry="18"/>
+<text text-anchor="middle" x="103" y="156">(enq1,0)</text>
+</g>
+<!-- trslhs0&#45;&gt;trslhs3 -->
+<g id="edge5" class="edge"><title>trslhs0&#45;&gt;trslhs3</title>
+<path style="fill:none;stroke:black;" d="M114,168C126,186 145,215 159,236"/>
+<polygon style="fill:black;stroke:black;" points="162,234 165,244 156,238 162,234"/>
+<text text-anchor="middle" x="141" y="200">T</text>
+</g>
+<!-- trslhs0&#45;&gt;trslhs1 -->
+<g id="edge3" class="edge"><title>trslhs0&#45;&gt;trslhs1</title>
+<path style="fill:none;stroke:black;" d="M102,169C101,186 100,212 98,233"/>
+<polygon style="fill:black;stroke:black;" points="101,233 97,243 95,233 101,233"/>
+<text text-anchor="middle" x="106" y="200">x</text>
+</g>
+<!-- trsrhs2 -->
+<g id="node19" class="node"><title>trsrhs2</title>
+<ellipse style="fill:none;stroke:black;" cx="359" cy="349" rx="36" ry="18"/>
+<text text-anchor="middle" x="359" y="354">(enq1,0)</text>
+</g>
+<!-- trslhs0&#45;&gt;trsrhs2 -->
+<g id="edge24" class="edge"><title>trslhs0&#45;&gt;trsrhs2</title>
+<path style="fill:none;stroke:#0000aa;" d="M130,163C161,176 207,198 220,211 256,248 233,279 269,313 270,314 296,324 321,334"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="322,331 330,338 319,337 322,331"/>
+</g>
+<!-- trslhs5 -->
+<g id="node6" class="node"><title>trslhs5</title>
+<ellipse style="fill:none;stroke:black;" cx="60" cy="63" rx="39" ry="18"/>
+<text text-anchor="middle" x="60" y="68">(queue,0)</text>
+</g>
+<!-- trslhs5&#45;&gt;trslhs3 -->
+<g id="edge11" class="edge"><title>trslhs5&#45;&gt;trslhs3</title>
+<path style="fill:none;stroke:black;" d="M53,81C45,103 36,141 50,169 62,192 74,193 97,203 112,210 119,203 132,211 143,217 151,227 159,235"/>
+<polygon style="fill:black;stroke:black;" points="162,233 165,243 156,237 162,233"/>
+<text text-anchor="middle" x="55" y="156">T</text>
+</g>
+<!-- trslhs5&#45;&gt;trslhs0 -->
+<g id="edge7" class="edge"><title>trslhs5&#45;&gt;trslhs0</title>
+<path style="fill:none;stroke:black;" d="M69,81C75,93 83,110 90,124"/>
+<polygon style="fill:black;stroke:black;" points="93,122 94,133 87,125 93,122"/>
+<text text-anchor="middle" x="96" y="112">enq</text>
+</g>
+<!-- trslhs2 -->
+<g id="node7" class="node"><title>trslhs2</title>
+<ellipse style="fill:none;stroke:black;" cx="184" cy="151" rx="27" ry="18"/>
+<text text-anchor="middle" x="184" y="156">(_,0)</text>
+</g>
+<!-- trslhs5&#45;&gt;trslhs2 -->
+<g id="edge9" class="edge"><title>trslhs5&#45;&gt;trslhs2</title>
+<path style="fill:none;stroke:black;" d="M81,78C102,93 134,116 157,132"/>
+<polygon style="fill:black;stroke:black;" points="159,129 165,138 155,135 159,129"/>
+<text text-anchor="middle" x="136" y="112">H</text>
+</g>
+<!-- trsrhs1 -->
+<g id="node17" class="node"><title>trsrhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="351" cy="261" rx="39" ry="18"/>
+<text text-anchor="middle" x="351" y="266">(queue,0)</text>
+</g>
+<!-- trslhs5&#45;&gt;trsrhs1 -->
+<g id="edge34" class="edge"><title>trslhs5&#45;&gt;trsrhs1</title>
+<path style="fill:none;stroke:#0000aa;" d="M89,75C105,82 126,91 144,99 178,114 190,113 220,133 265,163 307,208 331,236"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="334,234 337,244 328,238 334,234"/>
+</g>
+<!-- trsrhs4 -->
+<g id="node15" class="node"><title>trsrhs4</title>
+<ellipse style="fill:none;stroke:black;" cx="440" cy="349" rx="27" ry="18"/>
+<text text-anchor="middle" x="440" y="354">(_,0)</text>
+</g>
+<!-- trslhs2&#45;&gt;trsrhs4 -->
+<g id="edge28" class="edge"><title>trslhs2&#45;&gt;trsrhs4</title>
+<path style="fill:none;stroke:#0000aa;" d="M202,165C216,176 236,193 249,211 281,252 262,283 303,313 340,340 360,317 404,331 406,332 408,332 410,333"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="411,330 419,337 408,336 411,330"/>
+</g>
+<!-- trsrhs1&#45;&gt;trsrhs5 -->
+<g id="edge20" class="edge"><title>trsrhs1&#45;&gt;trsrhs5</title>
+<path style="fill:none;stroke:black;" d="M335,278C323,292 306,310 292,325"/>
+<polygon style="fill:black;stroke:black;" points="294,328 285,333 289,323 294,328"/>
+<text text-anchor="middle" x="325" y="310">A</text>
+</g>
+<!-- trsrhs1&#45;&gt;trsrhs4 -->
+<g id="edge18" class="edge"><title>trsrhs1&#45;&gt;trsrhs4</title>
+<path style="fill:none;stroke:black;" d="M368,278C383,292 402,311 418,327"/>
+<polygon style="fill:black;stroke:black;" points="420,324 425,334 415,329 420,324"/>
+<text text-anchor="middle" x="405" y="310">H</text>
+</g>
+<!-- trsrhs1&#45;&gt;trsrhs0 -->
+<g id="edge16" class="edge"><title>trsrhs1&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:black;" d="M376,275C412,295 474,329 476,331 500,373 435,408 392,425"/>
+<polygon style="fill:black;stroke:black;" points="394,428 383,429 391,422 394,428"/>
+<text text-anchor="middle" x="484" y="354">T</text>
+</g>
+<!-- trsrhs1&#45;&gt;trsrhs2 -->
+<g id="edge14" class="edge"><title>trsrhs1&#45;&gt;trsrhs2</title>
+<path style="fill:none;stroke:black;" d="M353,279C354,291 355,307 356,321"/>
+<polygon style="fill:black;stroke:black;" points="359,321 357,331 353,321 359,321"/>
+<text text-anchor="middle" x="365" y="310">enq</text>
+</g>
+<!-- trsrhs2&#45;&gt;trsrhs0 -->
+<g id="edge22" class="edge"><title>trsrhs2&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:black;" d="M359,367C359,379 359,395 359,409"/>
+<polygon style="fill:black;stroke:black;" points="363,409 359,419 356,409 363,409"/>
+<text text-anchor="middle" x="363" y="398">T</text>
+</g>
+</g>
+</svg>
+
+</li>
+<li>
+<a name="Ref_1_1_6"> <h4>swing/true</h4> </a>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd" [
+ <!ATTLIST svg xmlns:xlink CDATA #FIXED "http://www.w3.org/1999/xlink">
+]>
+<!-- Generated by dot version 2.6 (Tue Dec  6 13:53:08 GMT 2005)
+     For user: (ejk) Eric Koskinen -->
+<!-- Title: trs Pages: 1 -->
+<svg width="502pt" height="396pt"
+ viewBox = "0 0 502 396"
+ xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" style="font-family:Times-Roman;font-size:14.00;">
+<title>trs</title>
+<g id="graph2" class="cluster"><title>cluster_trslhs</title>
+<polygon style="fill:none;stroke:black;" points="13,287 233,287 233,13 13,13 13,287"/>
+<text text-anchor="middle" x="123" y="30">LHS</text>
+</g>
+<g id="graph3" class="cluster"><title>cluster_trsrhs</title>
+<polygon style="fill:none;stroke:black;" points="241,375 489,375 489,211 241,211 241,375"/>
+<text text-anchor="middle" x="365" y="228">RHS</text>
+</g>
+<!-- trslhs3 -->
+<g id="node2" class="node"><title>trslhs3</title>
+<ellipse style="fill:none;stroke:black;" cx="190" cy="151" rx="34" ry="18"/>
+<text text-anchor="middle" x="190" y="156">(emp,0)</text>
+</g>
+<!-- trsrhs4 -->
+<g id="node16" class="node"><title>trsrhs4</title>
+<ellipse style="fill:none;stroke:black;" cx="446" cy="349" rx="34" ry="18"/>
+<text text-anchor="middle" x="446" y="354">(emp,0)</text>
+</g>
+<!-- trslhs3&#45;&gt;trsrhs4 -->
+<g id="edge24" class="edge"><title>trslhs3&#45;&gt;trsrhs4</title>
+<path style="fill:none;stroke:#0000aa;" d="M193,169C198,198 211,252 240,287 288,345 331,312 402,331 405,332 407,333 410,334"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="411,331 419,337 408,337 411,331"/>
+</g>
+<!-- trslhs1 -->
+<g id="node3" class="node"><title>trslhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="57" cy="151" rx="36" ry="18"/>
+<text text-anchor="middle" x="57" y="156">(enq1,0)</text>
+</g>
+<!-- trslhs0 -->
+<g id="node6" class="node"><title>trslhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="129" cy="261" rx="27" ry="18"/>
+<text text-anchor="middle" x="129" y="266">(_,0)</text>
+</g>
+<!-- trslhs1&#45;&gt;trslhs0 -->
+<g id="edge3" class="edge"><title>trslhs1&#45;&gt;trslhs0</title>
+<path style="fill:none;stroke:black;" d="M68,168C79,186 98,215 112,236"/>
+<polygon style="fill:black;stroke:black;" points="115,234 118,244 109,238 115,234"/>
+<text text-anchor="middle" x="95" y="200">T</text>
+</g>
+<!-- trsrhs2 -->
+<g id="node12" class="node"><title>trsrhs2</title>
+<ellipse style="fill:none;stroke:black;" cx="285" cy="349" rx="36" ry="18"/>
+<text text-anchor="middle" x="285" y="354">(enq0,0)</text>
+</g>
+<!-- trslhs1&#45;&gt;trsrhs2 -->
+<g id="edge20" class="edge"><title>trslhs1&#45;&gt;trsrhs2</title>
+<path style="fill:none;stroke:#0000aa;" d="M57,169C58,198 64,254 93,287 113,309 191,329 241,340"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="242,337 251,342 241,343 242,337"/>
+</g>
+<!-- trslhs4 -->
+<g id="node4" class="node"><title>trslhs4</title>
+<ellipse style="fill:none;stroke:black;" cx="178" cy="63" rx="46" ry="18"/>
+<text text-anchor="middle" x="178" y="68">(NWAPS,0)</text>
+</g>
+<!-- trsrhs0 -->
+<g id="node15" class="node"><title>trsrhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="392" cy="261" rx="46" ry="18"/>
+<text text-anchor="middle" x="392" y="266">(NWAPS,0)</text>
+</g>
+<!-- trslhs4&#45;&gt;trsrhs0 -->
+<g id="edge26" class="edge"><title>trslhs4&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:#0000aa;" d="M198,79C216,93 240,114 261,133 300,168 343,211 369,237"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="371,234 376,244 366,239 371,234"/>
+</g>
+<!-- trslhs2 -->
+<g id="node5" class="node"><title>trslhs2</title>
+<ellipse style="fill:none;stroke:black;" cx="74" cy="63" rx="39" ry="18"/>
+<text text-anchor="middle" x="74" y="68">(queue,0)</text>
+</g>
+<!-- trslhs2&#45;&gt;trslhs3 -->
+<g id="edge9" class="edge"><title>trslhs2&#45;&gt;trslhs3</title>
+<path style="fill:none;stroke:black;" d="M99,77C110,83 123,91 134,99 146,108 158,118 167,128"/>
+<polygon style="fill:black;stroke:black;" points="169,125 174,135 164,130 169,125"/>
+<text text-anchor="middle" x="158" y="112">A</text>
+</g>
+<!-- trslhs2&#45;&gt;trslhs1 -->
+<g id="edge5" class="edge"><title>trslhs2&#45;&gt;trslhs1</title>
+<path style="fill:none;stroke:black;" d="M70,81C68,93 65,109 62,123"/>
+<polygon style="fill:black;stroke:black;" points="65,124 60,133 59,123 65,124"/>
+<text text-anchor="middle" x="79" y="112">enq</text>
+</g>
+<!-- trslhs2&#45;&gt;trslhs0 -->
+<g id="edge7" class="edge"><title>trslhs2&#45;&gt;trslhs0</title>
+<path style="fill:none;stroke:black;" d="M84,81C87,86 90,93 92,99 110,144 121,200 126,233"/>
+<polygon style="fill:black;stroke:black;" points="129,233 127,243 123,233 129,233"/>
+<text text-anchor="middle" x="119" y="156">T</text>
+</g>
+<!-- trsrhs1 -->
+<g id="node14" class="node"><title>trsrhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="288" cy="261" rx="39" ry="18"/>
+<text text-anchor="middle" x="288" y="266">(queue,0)</text>
+</g>
+<!-- trslhs2&#45;&gt;trsrhs1 -->
+<g id="edge22" class="edge"><title>trslhs2&#45;&gt;trsrhs1</title>
+<path style="fill:none;stroke:#0000aa;" d="M104,75C126,83 155,94 166,99 197,113 211,109 234,133 261,162 275,205 283,233"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="286,233 285,243 280,234 286,233"/>
+</g>
+<!-- trsrhs3 -->
+<g id="node13" class="node"><title>trsrhs3</title>
+<ellipse style="fill:none;stroke:black;" cx="366" cy="349" rx="27" ry="18"/>
+<text text-anchor="middle" x="366" y="354">(_,0)</text>
+</g>
+<!-- trslhs0&#45;&gt;trsrhs3 -->
+<g id="edge18" class="edge"><title>trslhs0&#45;&gt;trsrhs3</title>
+<path style="fill:none;stroke:#0000aa;" d="M143,277C155,289 172,305 191,313 249,339 271,313 330,331 332,332 334,332 336,333"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="337,330 345,337 334,336 337,330"/>
+</g>
+<!-- trsrhs1&#45;&gt;trsrhs2 -->
+<g id="edge12" class="edge"><title>trsrhs1&#45;&gt;trsrhs2</title>
+<path style="fill:none;stroke:black;" d="M287,279C286,291 286,307 286,321"/>
+<polygon style="fill:black;stroke:black;" points="289,321 285,331 283,321 289,321"/>
+<text text-anchor="middle" x="299" y="310">enq</text>
+</g>
+<!-- trsrhs1&#45;&gt;trsrhs3 -->
+<g id="edge14" class="edge"><title>trsrhs1&#45;&gt;trsrhs3</title>
+<path style="fill:none;stroke:black;" d="M303,278C315,291 332,311 345,325"/>
+<polygon style="fill:black;stroke:black;" points="348,323 352,333 343,328 348,323"/>
+<text text-anchor="middle" x="339" y="310">M</text>
+</g>
+<!-- trsrhs1&#45;&gt;trsrhs4 -->
+<g id="edge16" class="edge"><title>trsrhs1&#45;&gt;trsrhs4</title>
+<path style="fill:none;stroke:black;" d="M313,275C340,290 384,314 413,331"/>
+<polygon style="fill:black;stroke:black;" points="415,328 422,336 412,334 415,328"/>
+<text text-anchor="middle" x="380" y="310">T</text>
+</g>
+</g>
+</svg>
+
+</li>
+<li>
+<a name="Ref_1_1_7"> <h4>swing/false</h4> </a>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd" [
+ <!ATTLIST svg xmlns:xlink CDATA #FIXED "http://www.w3.org/1999/xlink">
+]>
+<!-- Generated by dot version 2.6 (Tue Dec  6 13:53:08 GMT 2005)
+     For user: (ejk) Eric Koskinen -->
+<!-- Title: trs Pages: 1 -->
+<svg width="385pt" height="470pt"
+ viewBox = "0 0 385 470"
+ xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" style="font-family:Times-Roman;font-size:14.00;">
+<title>trs</title>
+<g id="graph2" class="cluster"><title>cluster_trslhs</title>
+<polygon style="fill:none;stroke:black;" points="13,265 219,265 219,13 13,13 13,265"/>
+<text text-anchor="middle" x="116" y="30">LHS</text>
+</g>
+<g id="graph3" class="cluster"><title>cluster_trsrhs</title>
+<polygon style="fill:none;stroke:black;" points="94,449 372,449 372,285 94,285 94,449"/>
+<text text-anchor="middle" x="233" y="302">RHS</text>
+</g>
+<!-- trslhs2 -->
+<g id="node2" class="node"><title>trslhs2</title>
+<ellipse style="fill:none;stroke:black;" cx="60" cy="63" rx="39" ry="18"/>
+<text text-anchor="middle" x="60" y="68">(queue,0)</text>
+</g>
+<!-- trslhs0 -->
+<g id="node5" class="node"><title>trslhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="129" cy="151" rx="36" ry="18"/>
+<text text-anchor="middle" x="129" y="156">(enq1,0)</text>
+</g>
+<!-- trslhs2&#45;&gt;trslhs0 -->
+<g id="edge5" class="edge"><title>trslhs2&#45;&gt;trslhs0</title>
+<path style="fill:none;stroke:black;" d="M73,80C83,93 97,112 109,126"/>
+<polygon style="fill:black;stroke:black;" points="112,124 116,134 107,129 112,124"/>
+<text text-anchor="middle" x="111" y="112">enq</text>
+</g>
+<!-- trslhs1 -->
+<g id="node6" class="node"><title>trslhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="48" cy="151" rx="27" ry="18"/>
+<text text-anchor="middle" x="48" y="156">(_,0)</text>
+</g>
+<!-- trslhs2&#45;&gt;trslhs1 -->
+<g id="edge7" class="edge"><title>trslhs2&#45;&gt;trslhs1</title>
+<path style="fill:none;stroke:black;" d="M58,81C56,93 54,109 52,123"/>
+<polygon style="fill:black;stroke:black;" points="55,124 50,133 49,123 55,124"/>
+<text text-anchor="middle" x="61" y="112">T</text>
+</g>
+<!-- trsrhs0 -->
+<g id="node11" class="node"><title>trsrhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="213" cy="335" rx="39" ry="18"/>
+<text text-anchor="middle" x="213" y="340">(queue,0)</text>
+</g>
+<!-- trslhs2&#45;&gt;trsrhs0 -->
+<g id="edge18" class="edge"><title>trslhs2&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:#0000aa;" d="M87,76C117,92 163,117 174,133 209,187 214,265 214,307"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="218,307 214,317 211,307 218,307"/>
+</g>
+<!-- trslhs3 -->
+<g id="node3" class="node"><title>trslhs3</title>
+<ellipse style="fill:none;stroke:black;" cx="164" cy="63" rx="46" ry="18"/>
+<text text-anchor="middle" x="164" y="68">(NWAPS,0)</text>
+</g>
+<!-- trsrhs4 -->
+<g id="node14" class="node"><title>trsrhs4</title>
+<ellipse style="fill:none;stroke:black;" cx="317" cy="335" rx="46" ry="18"/>
+<text text-anchor="middle" x="317" y="340">(NWAPS,0)</text>
+</g>
+<!-- trslhs3&#45;&gt;trsrhs4 -->
+<g id="edge20" class="edge"><title>trslhs3&#45;&gt;trsrhs4</title>
+<path style="fill:none;stroke:#0000aa;" d="M174,81C200,127 271,253 302,308"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="305,307 307,317 299,310 305,307"/>
+</g>
+<!-- trslhs4 -->
+<g id="node4" class="node"><title>trslhs4</title>
+<ellipse style="fill:none;stroke:black;" cx="129" cy="239" rx="27" ry="18"/>
+<text text-anchor="middle" x="129" y="244">(_,0)</text>
+</g>
+<!-- trsrhs3 -->
+<g id="node13" class="node"><title>trsrhs3</title>
+<ellipse style="fill:none;stroke:black;" cx="129" cy="335" rx="27" ry="18"/>
+<text text-anchor="middle" x="129" y="340">(_,0)</text>
+</g>
+<!-- trslhs4&#45;&gt;trsrhs3 -->
+<g id="edge22" class="edge"><title>trslhs4&#45;&gt;trsrhs3</title>
+<path style="fill:none;stroke:#0000aa;" d="M129,257C129,271 129,291 129,307"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="133,307 129,317 126,307 133,307"/>
+</g>
+<!-- trslhs0&#45;&gt;trslhs4 -->
+<g id="edge3" class="edge"><title>trslhs0&#45;&gt;trslhs4</title>
+<path style="fill:none;stroke:black;" d="M129,169C129,181 129,197 129,211"/>
+<polygon style="fill:black;stroke:black;" points="133,211 129,221 126,211 133,211"/>
+<text text-anchor="middle" x="134" y="200">T</text>
+</g>
+<!-- trsrhs2 -->
+<g id="node15" class="node"><title>trsrhs2</title>
+<ellipse style="fill:none;stroke:black;" cx="211" cy="423" rx="36" ry="18"/>
+<text text-anchor="middle" x="211" y="428">(enq1,0)</text>
+</g>
+<!-- trslhs0&#45;&gt;trsrhs2 -->
+<g id="edge14" class="edge"><title>trslhs0&#45;&gt;trsrhs2</title>
+<path style="fill:none;stroke:#0000aa;" d="M117,168C109,182 98,202 93,221 80,279 64,303 93,353 103,369 144,391 175,407"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="176,404 184,411 173,410 176,404"/>
+</g>
+<!-- trsrhs1 -->
+<g id="node12" class="node"><title>trsrhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="130" cy="423" rx="27" ry="18"/>
+<text text-anchor="middle" x="130" y="428">(_,0)</text>
+</g>
+<!-- trslhs1&#45;&gt;trsrhs1 -->
+<g id="edge16" class="edge"><title>trslhs1&#45;&gt;trsrhs1</title>
+<path style="fill:none;stroke:#0000aa;" d="M47,169C46,206 47,290 74,353 81,371 95,388 107,401"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="109,398 114,408 104,403 109,398"/>
+</g>
+<!-- trsrhs0&#45;&gt;trsrhs1 -->
+<g id="edge12" class="edge"><title>trsrhs0&#45;&gt;trsrhs1</title>
+<path style="fill:none;stroke:black;" d="M197,352C184,366 166,385 151,400"/>
+<polygon style="fill:black;stroke:black;" points="153,403 144,408 148,398 153,403"/>
+<text text-anchor="middle" x="184" y="384">T</text>
+</g>
+<!-- trsrhs0&#45;&gt;trsrhs2 -->
+<g id="edge10" class="edge"><title>trsrhs0&#45;&gt;trsrhs2</title>
+<path style="fill:none;stroke:black;" d="M213,353C212,365 212,381 212,395"/>
+<polygon style="fill:black;stroke:black;" points="215,395 211,405 209,395 215,395"/>
+<text text-anchor="middle" x="221" y="384">enq</text>
+</g>
+</g>
+</svg>
+
+</li>
+<li>
+<a name="Ref_1_1_8"> <h4>eqn term</h4> </a>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd" [
+ <!ATTLIST svg xmlns:xlink CDATA #FIXED "http://www.w3.org/1999/xlink">
+]>
+<!-- Generated by dot version 2.6 (Tue Dec  6 13:53:08 GMT 2005)
+     For user: (ejk) Eric Koskinen -->
+<!-- Title: trs Pages: 1 -->
+<svg width="350pt" height="220pt"
+ viewBox = "0 0 350 220"
+ xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" style="font-family:Times-Roman;font-size:14.00;">
+<title>trs</title>
+<g id="graph2" class="cluster"><title>cluster_trsguard</title>
+<polygon style="fill:none;stroke:black;" points="13,199 101,199 101,13 13,13 13,199"/>
+<text text-anchor="middle" x="57" y="30">GUARD</text>
+</g>
+<g id="graph3" class="cluster"><title>cluster_trslhs</title>
+<polygon style="fill:none;stroke:black;" points="132,89 332,89 332,13 132,13 132,89"/>
+<text text-anchor="middle" x="232" y="30">LHS</text>
+</g>
+<g id="graph4" class="cluster"><title>cluster_trsrhs</title>
+<polygon style="fill:none;stroke:black;" points="109,199 337,199 337,123 109,123 109,199"/>
+<text text-anchor="middle" x="223" y="140">RHS</text>
+</g>
+<!-- trsguard0 -->
+<g id="node2" class="node"><title>trsguard0</title>
+<ellipse style="fill:none;stroke:black;" cx="57" cy="173" rx="27" ry="18"/>
+<text text-anchor="middle" x="57" y="178">(x,0)</text>
+</g>
+<!-- trsguard1 -->
+<g id="node3" class="node"><title>trsguard1</title>
+<ellipse style="fill:none;stroke:black;" cx="57" cy="63" rx="36" ry="18"/>
+<text text-anchor="middle" x="57" y="68">(enq0,0)</text>
+</g>
+<!-- trsguard1&#45;&gt;trsguard0 -->
+<g id="edge3" class="edge"><title>trsguard1&#45;&gt;trsguard0</title>
+<path style="fill:none;stroke:black;" d="M57,81C57,98 57,124 57,145"/>
+<polygon style="fill:black;stroke:black;" points="61,145 57,155 54,145 61,145"/>
+<text text-anchor="middle" x="61" y="112">x</text>
+</g>
+<!-- trslhs0 -->
+<g id="node6" class="node"><title>trslhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="176" cy="63" rx="36" ry="18"/>
+<text text-anchor="middle" x="176" y="68">(enq0,0)</text>
+</g>
+<!-- trsrhs0 -->
+<g id="node9" class="node"><title>trsrhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="167" cy="173" rx="50" ry="18"/>
+<text text-anchor="middle" x="167" y="178">(enq0done,0)</text>
+</g>
+<!-- trslhs0&#45;&gt;trsrhs0 -->
+<g id="edge9" class="edge"><title>trslhs0&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:#0000aa;" d="M175,81C173,98 171,124 170,145"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="173,145 169,155 167,145 173,145"/>
+</g>
+<!-- trslhs1 -->
+<g id="node7" class="node"><title>trslhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="277" cy="63" rx="46" ry="18"/>
+<text text-anchor="middle" x="277" y="68">(NWAPS,0)</text>
+</g>
+<!-- trsrhs1 -->
+<g id="node10" class="node"><title>trsrhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="282" cy="173" rx="46" ry="18"/>
+<text text-anchor="middle" x="282" y="178">(NWAPS,0)</text>
+</g>
+<!-- trslhs1&#45;&gt;trsrhs1 -->
+<g id="edge7" class="edge"><title>trslhs1&#45;&gt;trsrhs1</title>
+<path style="fill:none;stroke:#0000aa;" d="M278,81C279,98 280,124 281,145"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="285,145 281,155 278,145 285,145"/>
+</g>
+</g>
+</svg>
+
+</li>
+<li>
+<a name="Ref_1_1_9"> <h4>deq step1: read H</h4> </a>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd" [
+ <!ATTLIST svg xmlns:xlink CDATA #FIXED "http://www.w3.org/1999/xlink">
+]>
+<!-- Generated by dot version 2.6 (Tue Dec  6 13:53:08 GMT 2005)
+     For user: (ejk) Eric Koskinen -->
+<!-- Title: trs Pages: 1 -->
+<svg width="446pt" height="396pt"
+ viewBox = "0 0 446 396"
+ xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" style="font-family:Times-Roman;font-size:14.00;">
+<title>trs</title>
+<g id="graph2" class="cluster"><title>cluster_trslhs</title>
+<polygon style="fill:none;stroke:black;" points="13,199 219,199 219,13 13,13 13,199"/>
+<text text-anchor="middle" x="116" y="30">LHS</text>
+</g>
+<g id="graph3" class="cluster"><title>cluster_trsrhs</title>
+<polygon style="fill:none;stroke:black;" points="227,375 433,375 433,123 227,123 227,375"/>
+<text text-anchor="middle" x="330" y="140">RHS</text>
+</g>
+<!-- trslhs0 -->
+<g id="node2" class="node"><title>trslhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="85" cy="173" rx="27" ry="18"/>
+<text text-anchor="middle" x="85" y="178">(_,0)</text>
+</g>
+<!-- trsrhs0 -->
+<g id="node9" class="node"><title>trsrhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="271" cy="349" rx="27" ry="18"/>
+<text text-anchor="middle" x="271" y="354">(_,0)</text>
+</g>
+<!-- trslhs0&#45;&gt;trsrhs0 -->
+<g id="edge18" class="edge"><title>trslhs0&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:#0000aa;" d="M101,188C134,220 209,291 247,327"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="250,325 255,334 245,330 250,325"/>
+</g>
+<!-- trslhs1 -->
+<g id="node3" class="node"><title>trslhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="60" cy="63" rx="39" ry="18"/>
+<text text-anchor="middle" x="60" y="68">(queue,0)</text>
+</g>
+<!-- trslhs1&#45;&gt;trslhs0 -->
+<g id="edge3" class="edge"><title>trslhs1&#45;&gt;trslhs0</title>
+<path style="fill:none;stroke:black;" d="M64,81C68,98 74,125 79,145"/>
+<polygon style="fill:black;stroke:black;" points="82,145 81,155 76,146 82,145"/>
+<text text-anchor="middle" x="78" y="112">H</text>
+</g>
+<!-- trslhs2 -->
+<g id="node4" class="node"><title>trslhs2</title>
+<ellipse style="fill:none;stroke:black;" cx="170" cy="173" rx="36" ry="18"/>
+<text text-anchor="middle" x="170" y="178">(deq0,0)</text>
+</g>
+<!-- trslhs1&#45;&gt;trslhs2 -->
+<g id="edge5" class="edge"><title>trslhs1&#45;&gt;trslhs2</title>
+<path style="fill:none;stroke:black;" d="M77,80C89,92 107,109 121,123 130,132 139,141 147,150"/>
+<polygon style="fill:black;stroke:black;" points="149,147 154,157 144,152 149,147"/>
+<text text-anchor="middle" x="123" y="112">deq</text>
+</g>
+<!-- trsrhs2 -->
+<g id="node11" class="node"><title>trsrhs2</title>
+<ellipse style="fill:none;stroke:black;" cx="274" cy="173" rx="39" ry="18"/>
+<text text-anchor="middle" x="274" y="178">(queue,0)</text>
+</g>
+<!-- trslhs1&#45;&gt;trsrhs2 -->
+<g id="edge16" class="edge"><title>trslhs1&#45;&gt;trsrhs2</title>
+<path style="fill:none;stroke:#0000aa;" d="M90,75C96,77 102,79 108,81 160,100 177,94 223,123 234,130 244,140 253,149"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="255,146 260,156 250,151 255,146"/>
+</g>
+<!-- trsrhs1 -->
+<g id="node10" class="node"><title>trsrhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="271" cy="261" rx="36" ry="18"/>
+<text text-anchor="middle" x="271" y="266">(deq1,0)</text>
+</g>
+<!-- trslhs2&#45;&gt;trsrhs1 -->
+<g id="edge20" class="edge"><title>trslhs2&#45;&gt;trsrhs1</title>
+<path style="fill:none;stroke:#0000aa;" d="M188,189C204,203 227,223 245,238"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="248,236 253,245 243,241 248,236"/>
+</g>
+<!-- trslhs3 -->
+<g id="node5" class="node"><title>trslhs3</title>
+<ellipse style="fill:none;stroke:black;" cx="164" cy="63" rx="46" ry="18"/>
+<text text-anchor="middle" x="164" y="68">(NWAPS,0)</text>
+</g>
+<!-- trsrhs3 -->
+<g id="node12" class="node"><title>trsrhs3</title>
+<ellipse style="fill:none;stroke:black;" cx="378" cy="173" rx="46" ry="18"/>
+<text text-anchor="middle" x="378" y="178">(NWAPS,0)</text>
+</g>
+<!-- trslhs3&#45;&gt;trsrhs3 -->
+<g id="edge14" class="edge"><title>trslhs3&#45;&gt;trsrhs3</title>
+<path style="fill:none;stroke:#0000aa;" d="M202,73C235,84 284,100 322,123 333,130 344,140 354,149"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="356,146 361,156 351,151 356,146"/>
+</g>
+<!-- trsrhs1&#45;&gt;trsrhs0 -->
+<g id="edge8" class="edge"><title>trsrhs1&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:black;" d="M271,279C271,291 271,307 271,321"/>
+<polygon style="fill:black;stroke:black;" points="275,321 271,331 268,321 275,321"/>
+<text text-anchor="middle" x="277" y="310">H</text>
+</g>
+<!-- trsrhs2&#45;&gt;trsrhs0 -->
+<g id="edge10" class="edge"><title>trsrhs2&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:black;" d="M286,190C290,196 294,203 298,209 314,237 325,249 316,279 311,296 301,312 291,325"/>
+<polygon style="fill:black;stroke:black;" points="294,327 285,333 288,323 294,327"/>
+<text text-anchor="middle" x="323" y="266">H</text>
+</g>
+<!-- trsrhs2&#45;&gt;trsrhs1 -->
+<g id="edge12" class="edge"><title>trsrhs2&#45;&gt;trsrhs1</title>
+<path style="fill:none;stroke:black;" d="M273,191C272,203 272,219 272,233"/>
+<polygon style="fill:black;stroke:black;" points="275,233 271,243 269,233 275,233"/>
+<text text-anchor="middle" x="284" y="222">deq</text>
+</g>
+</g>
+</svg>
+
+</li>
+<li>
+<a name="Ref_1_1_10"> <h4>deq step2: read T SHLD HAVE ANOTHER CASE</h4> </a>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd" [
+ <!ATTLIST svg xmlns:xlink CDATA #FIXED "http://www.w3.org/1999/xlink">
+]>
+<!-- Generated by dot version 2.6 (Tue Dec  6 13:53:08 GMT 2005)
+     For user: (ejk) Eric Koskinen -->
+<!-- Title: trs Pages: 1 -->
+<svg width="446pt" height="396pt"
+ viewBox = "0 0 446 396"
+ xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" style="font-family:Times-Roman;font-size:14.00;">
+<title>trs</title>
+<g id="graph2" class="cluster"><title>cluster_trslhs</title>
+<polygon style="fill:none;stroke:black;" points="13,287 219,287 219,13 13,13 13,287"/>
+<text text-anchor="middle" x="116" y="30">LHS</text>
+</g>
+<g id="graph3" class="cluster"><title>cluster_trsrhs</title>
+<polygon style="fill:none;stroke:black;" points="227,375 433,375 433,123 227,123 227,375"/>
+<text text-anchor="middle" x="330" y="140">RHS</text>
+</g>
+<!-- trslhs0 -->
+<g id="node2" class="node"><title>trslhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="153" cy="261" rx="27" ry="18"/>
+<text text-anchor="middle" x="153" y="266">(_,0)</text>
+</g>
+<!-- trsrhs0 -->
+<g id="node10" class="node"><title>trsrhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="268" cy="349" rx="27" ry="18"/>
+<text text-anchor="middle" x="268" y="354">(_,0)</text>
+</g>
+<!-- trslhs0&#45;&gt;trsrhs0 -->
+<g id="edge22" class="edge"><title>trslhs0&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:#0000aa;" d="M171,275C190,289 220,313 242,329"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="244,326 250,335 240,332 244,326"/>
+</g>
+<!-- trslhs1 -->
+<g id="node3" class="node"><title>trslhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="153" cy="173" rx="36" ry="18"/>
+<text text-anchor="middle" x="153" y="178">(deq1,0)</text>
+</g>
+<!-- trslhs1&#45;&gt;trslhs0 -->
+<g id="edge3" class="edge"><title>trslhs1&#45;&gt;trslhs0</title>
+<path style="fill:none;stroke:black;" d="M153,191C153,203 153,219 153,233"/>
+<polygon style="fill:black;stroke:black;" points="157,233 153,243 150,233 157,233"/>
+<text text-anchor="middle" x="159" y="222">H</text>
+</g>
+<!-- trsrhs1 -->
+<g id="node11" class="node"><title>trsrhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="271" cy="261" rx="36" ry="18"/>
+<text text-anchor="middle" x="271" y="266">(deq2,0)</text>
+</g>
+<!-- trslhs1&#45;&gt;trsrhs1 -->
+<g id="edge24" class="edge"><title>trslhs1&#45;&gt;trsrhs1</title>
+<path style="fill:none;stroke:#0000aa;" d="M173,188C192,202 221,224 243,240"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="245,237 251,246 241,243 245,237"/>
+</g>
+<!-- trslhs2 -->
+<g id="node4" class="node"><title>trslhs2</title>
+<ellipse style="fill:none;stroke:black;" cx="60" cy="63" rx="39" ry="18"/>
+<text text-anchor="middle" x="60" y="68">(queue,0)</text>
+</g>
+<!-- trslhs2&#45;&gt;trslhs0 -->
+<g id="edge5" class="edge"><title>trslhs2&#45;&gt;trslhs0</title>
+<path style="fill:none;stroke:black;" d="M64,81C69,107 81,155 100,191 109,208 121,225 132,237"/>
+<polygon style="fill:black;stroke:black;" points="135,235 139,245 130,240 135,235"/>
+<text text-anchor="middle" x="105" y="178">T</text>
+</g>
+<!-- trslhs2&#45;&gt;trslhs1 -->
+<g id="edge7" class="edge"><title>trslhs2&#45;&gt;trslhs1</title>
+<path style="fill:none;stroke:black;" d="M75,80C90,98 115,128 132,148"/>
+<polygon style="fill:black;stroke:black;" points="135,146 139,156 130,151 135,146"/>
+<text text-anchor="middle" x="113" y="112">deq</text>
+</g>
+<!-- trsrhs2 -->
+<g id="node12" class="node"><title>trsrhs2</title>
+<ellipse style="fill:none;stroke:black;" cx="274" cy="173" rx="39" ry="18"/>
+<text text-anchor="middle" x="274" y="178">(queue,0)</text>
+</g>
+<!-- trslhs2&#45;&gt;trsrhs2 -->
+<g id="edge20" class="edge"><title>trslhs2&#45;&gt;trsrhs2</title>
+<path style="fill:none;stroke:#0000aa;" d="M90,75C96,77 102,79 108,81 160,100 177,94 223,123 234,130 244,140 253,149"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="255,146 260,156 250,151 255,146"/>
+</g>
+<!-- trslhs3 -->
+<g id="node5" class="node"><title>trslhs3</title>
+<ellipse style="fill:none;stroke:black;" cx="164" cy="63" rx="46" ry="18"/>
+<text text-anchor="middle" x="164" y="68">(NWAPS,0)</text>
+</g>
+<!-- trsrhs3 -->
+<g id="node13" class="node"><title>trsrhs3</title>
+<ellipse style="fill:none;stroke:black;" cx="378" cy="173" rx="46" ry="18"/>
+<text text-anchor="middle" x="378" y="178">(NWAPS,0)</text>
+</g>
+<!-- trslhs3&#45;&gt;trsrhs3 -->
+<g id="edge18" class="edge"><title>trslhs3&#45;&gt;trsrhs3</title>
+<path style="fill:none;stroke:#0000aa;" d="M202,73C235,84 284,100 322,123 333,130 344,140 354,149"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="356,146 361,156 351,151 356,146"/>
+</g>
+<!-- trsrhs1&#45;&gt;trsrhs0 -->
+<g id="edge10" class="edge"><title>trsrhs1&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:black;" d="M268,279C268,285 267,291 266,297 266,305 266,313 266,321"/>
+<polygon style="fill:black;stroke:black;" points="269,321 267,331 263,321 269,321"/>
+<text text-anchor="middle" x="274" y="310">T</text>
+</g>
+<!-- trsrhs1&#45;&gt;trsrhs0 -->
+<g id="edge12" class="edge"><title>trsrhs1&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:black;" d="M275,279C277,289 278,302 277,313 277,316 276,318 276,321"/>
+<polygon style="fill:black;stroke:black;" points="279,322 273,331 273,320 279,322"/>
+<text text-anchor="middle" x="286" y="310">H</text>
+</g>
+<!-- trsrhs2&#45;&gt;trsrhs0 -->
+<g id="edge14" class="edge"><title>trsrhs2&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:black;" d="M286,190C290,196 295,203 298,209 316,240 327,254 316,287 310,301 300,315 291,326"/>
+<polygon style="fill:black;stroke:black;" points="293,329 284,334 288,324 293,329"/>
+<text text-anchor="middle" x="323" y="266">T</text>
+</g>
+<!-- trsrhs2&#45;&gt;trsrhs1 -->
+<g id="edge16" class="edge"><title>trsrhs2&#45;&gt;trsrhs1</title>
+<path style="fill:none;stroke:black;" d="M273,191C272,203 272,219 272,233"/>
+<polygon style="fill:black;stroke:black;" points="275,233 271,243 269,233 275,233"/>
+<text text-anchor="middle" x="285" y="222">deq</text>
+</g>
+</g>
+</svg>
+
+</li>
+<li>
+<a name="Ref_1_1_11"> <h4>deq succeed</h4> </a>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd" [
+ <!ATTLIST svg xmlns:xlink CDATA #FIXED "http://www.w3.org/1999/xlink">
+]>
+<!-- Generated by dot version 2.6 (Tue Dec  6 13:53:08 GMT 2005)
+     For user: (ejk) Eric Koskinen -->
+<!-- Title: trs Pages: 1 -->
+<svg width="528pt" height="470pt"
+ viewBox = "0 0 528 470"
+ xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" style="font-family:Times-Roman;font-size:14.00;">
+<title>trs</title>
+<g id="graph2" class="cluster"><title>cluster_trslhs</title>
+<polygon style="fill:none;stroke:black;" points="13,265 263,265 263,13 13,13 13,265"/>
+<text text-anchor="middle" x="138" y="30">LHS</text>
+</g>
+<g id="graph3" class="cluster"><title>cluster_trsrhs</title>
+<polygon style="fill:none;stroke:black;" points="119,449 515,449 515,285 119,285 119,449"/>
+<text text-anchor="middle" x="317" y="302">RHS</text>
+</g>
+<!-- trslhs4 -->
+<g id="node2" class="node"><title>trslhs4</title>
+<ellipse style="fill:none;stroke:black;" cx="104" cy="63" rx="39" ry="18"/>
+<text text-anchor="middle" x="104" y="68">(queue,0)</text>
+</g>
+<!-- trslhs2 -->
+<g id="node3" class="node"><title>trslhs2</title>
+<ellipse style="fill:none;stroke:black;" cx="173" cy="151" rx="36" ry="18"/>
+<text text-anchor="middle" x="173" y="156">(deq2,0)</text>
+</g>
+<!-- trslhs4&#45;&gt;trslhs2 -->
+<g id="edge13" class="edge"><title>trslhs4&#45;&gt;trslhs2</title>
+<path style="fill:none;stroke:black;" d="M117,80C127,93 141,112 153,126"/>
+<polygon style="fill:black;stroke:black;" points="156,124 160,134 151,129 156,124"/>
+<text text-anchor="middle" x="155" y="112">deq</text>
+</g>
+<!-- trslhs5 -->
+<g id="node5" class="node"><title>trslhs5</title>
+<ellipse style="fill:none;stroke:black;" cx="109" cy="239" rx="27" ry="18"/>
+<text text-anchor="middle" x="109" y="244">(_,0)</text>
+</g>
+<!-- trslhs4&#45;&gt;trslhs5 -->
+<g id="edge7" class="edge"><title>trslhs4&#45;&gt;trslhs5</title>
+<path style="fill:none;stroke:black;" d="M105,81C106,112 108,174 109,211"/>
+<polygon style="fill:black;stroke:black;" points="113,211 109,221 106,211 113,211"/>
+<text text-anchor="middle" x="113" y="156">T</text>
+</g>
+<!-- trslhs0 -->
+<g id="node6" class="node"><title>trslhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="48" cy="151" rx="27" ry="18"/>
+<text text-anchor="middle" x="48" y="156">(_,0)</text>
+</g>
+<!-- trslhs4&#45;&gt;trslhs0 -->
+<g id="edge9" class="edge"><title>trslhs4&#45;&gt;trslhs0</title>
+<path style="fill:none;stroke:black;" d="M93,80C85,93 74,111 65,125"/>
+<polygon style="fill:black;stroke:black;" points="67,128 59,134 62,124 67,128"/>
+<text text-anchor="middle" x="89" y="112">M</text>
+</g>
+<!-- trslhs1 -->
+<g id="node7" class="node"><title>trslhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="181" cy="239" rx="27" ry="18"/>
+<text text-anchor="middle" x="181" y="244">(_,0)</text>
+</g>
+<!-- trslhs4&#45;&gt;trslhs1 -->
+<g id="edge11" class="edge"><title>trslhs4&#45;&gt;trslhs1</title>
+<path style="fill:none;stroke:black;" d="M132,76C162,91 209,116 218,133 232,160 216,193 200,215"/>
+<polygon style="fill:black;stroke:black;" points="203,217 194,223 197,213 203,217"/>
+<text text-anchor="middle" x="227" y="156">H</text>
+</g>
+<!-- trsrhs0 -->
+<g id="node15" class="node"><title>trsrhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="356" cy="335" rx="39" ry="18"/>
+<text text-anchor="middle" x="356" y="340">(queue,0)</text>
+</g>
+<!-- trslhs4&#45;&gt;trsrhs0 -->
+<g id="edge28" class="edge"><title>trslhs4&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:#0000aa;" d="M134,75C155,83 181,93 191,99 213,112 219,115 236,133 285,188 325,267 344,308"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="347,306 348,317 341,309 347,306"/>
+</g>
+<!-- trslhs2&#45;&gt;trslhs5 -->
+<g id="edge3" class="edge"><title>trslhs2&#45;&gt;trslhs5</title>
+<path style="fill:none;stroke:black;" d="M161,168C151,181 137,200 127,215"/>
+<polygon style="fill:black;stroke:black;" points="130,217 121,223 124,213 130,217"/>
+<text text-anchor="middle" x="153" y="200">T</text>
+</g>
+<!-- trslhs2&#45;&gt;trslhs1 -->
+<g id="edge5" class="edge"><title>trslhs2&#45;&gt;trslhs1</title>
+<path style="fill:none;stroke:black;" d="M175,169C176,181 177,197 178,211"/>
+<polygon style="fill:black;stroke:black;" points="181,211 179,221 175,211 181,211"/>
+<text text-anchor="middle" x="185" y="200">H</text>
+</g>
+<!-- trsrhs3 -->
+<g id="node16" class="node"><title>trsrhs3</title>
+<ellipse style="fill:none;stroke:black;" cx="249" cy="335" rx="50" ry="18"/>
+<text text-anchor="middle" x="249" y="340">(deq2done,0)</text>
+</g>
+<!-- trslhs2&#45;&gt;trsrhs3 -->
+<g id="edge24" class="edge"><title>trslhs2&#45;&gt;trsrhs3</title>
+<path style="fill:none;stroke:#0000aa;" d="M186,168C196,182 209,202 217,221 229,250 238,283 243,307"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="246,307 245,317 240,308 246,307"/>
+</g>
+<!-- trslhs3 -->
+<g id="node4" class="node"><title>trslhs3</title>
+<ellipse style="fill:none;stroke:black;" cx="208" cy="63" rx="46" ry="18"/>
+<text text-anchor="middle" x="208" y="68">(NWAPS,0)</text>
+</g>
+<!-- trsrhs2 -->
+<g id="node17" class="node"><title>trsrhs2</title>
+<ellipse style="fill:none;stroke:black;" cx="460" cy="335" rx="46" ry="18"/>
+<text text-anchor="middle" x="460" y="340">(NWAPS,0)</text>
+</g>
+<!-- trslhs3&#45;&gt;trsrhs2 -->
+<g id="edge26" class="edge"><title>trslhs3&#45;&gt;trsrhs2</title>
+<path style="fill:none;stroke:#0000aa;" d="M251,71C285,77 330,88 345,99 412,155 443,258 455,307"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="458,307 457,317 452,308 458,307"/>
+</g>
+<!-- trsrhs1 -->
+<g id="node19" class="node"><title>trsrhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="274" cy="423" rx="27" ry="18"/>
+<text text-anchor="middle" x="274" y="428">(_,0)</text>
+</g>
+<!-- trslhs5&#45;&gt;trsrhs1 -->
+<g id="edge30" class="edge"><title>trslhs5&#45;&gt;trsrhs1</title>
+<path style="fill:none;stroke:#0000aa;" d="M105,257C101,281 98,325 118,353 125,364 198,393 242,410"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="243,407 251,414 240,413 243,407"/>
+</g>
+<!-- trsrhs5 -->
+<g id="node20" class="node"><title>trsrhs5</title>
+<ellipse style="fill:none;stroke:black;" cx="186" cy="423" rx="27" ry="18"/>
+<text text-anchor="middle" x="186" y="428">(_,0)</text>
+</g>
+<!-- trslhs0&#45;&gt;trsrhs5 -->
+<g id="edge20" class="edge"><title>trslhs0&#45;&gt;trsrhs5</title>
+<path style="fill:none;stroke:#0000aa;" d="M49,169C51,207 60,295 99,353 114,375 137,394 156,406"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="158,403 165,411 155,409 158,403"/>
+</g>
+<!-- trsrhs4 -->
+<g id="node18" class="node"><title>trsrhs4</title>
+<ellipse style="fill:none;stroke:black;" cx="154" cy="335" rx="27" ry="18"/>
+<text text-anchor="middle" x="154" y="340">(_,0)</text>
+</g>
+<!-- trslhs1&#45;&gt;trsrhs4 -->
+<g id="edge22" class="edge"><title>trslhs1&#45;&gt;trsrhs4</title>
+<path style="fill:none;stroke:#0000aa;" d="M176,257C172,271 166,291 162,307"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="165,308 159,317 159,306 165,308"/>
+</g>
+<!-- trsrhs0&#45;&gt;trsrhs1 -->
+<g id="edge16" class="edge"><title>trsrhs0&#45;&gt;trsrhs1</title>
+<path style="fill:none;stroke:black;" d="M341,352C328,366 310,385 295,400"/>
+<polygon style="fill:black;stroke:black;" points="297,403 288,408 292,398 297,403"/>
+<text text-anchor="middle" x="325" y="384">T</text>
+</g>
+<!-- trsrhs0&#45;&gt;trsrhs5 -->
+<g id="edge18" class="edge"><title>trsrhs0&#45;&gt;trsrhs5</title>
+<path style="fill:none;stroke:black;" d="M330,349C299,364 248,391 216,407"/>
+<polygon style="fill:black;stroke:black;" points="217,410 207,412 214,404 217,410"/>
+<text text-anchor="middle" x="291" y="384">H</text>
+</g>
+</g>
+</svg>
+
+</li>
+<li>
+<a name="Ref_1_1_12"> <h4>deq swing/true</h4> </a>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd" [
+ <!ATTLIST svg xmlns:xlink CDATA #FIXED "http://www.w3.org/1999/xlink">
+]>
+<!-- Generated by dot version 2.6 (Tue Dec  6 13:53:08 GMT 2005)
+     For user: (ejk) Eric Koskinen -->
+<!-- Title: trs Pages: 1 -->
+<svg width="472pt" height="396pt"
+ viewBox = "0 0 472 396"
+ xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" style="font-family:Times-Roman;font-size:14.00;">
+<title>trs</title>
+<g id="graph2" class="cluster"><title>cluster_trslhs</title>
+<polygon style="fill:none;stroke:black;" points="13,287 219,287 219,13 13,13 13,287"/>
+<text text-anchor="middle" x="116" y="30">LHS</text>
+</g>
+<g id="graph3" class="cluster"><title>cluster_trsrhs</title>
+<polygon style="fill:none;stroke:black;" points="227,375 459,375 459,211 227,211 227,375"/>
+<text text-anchor="middle" x="343" y="228">RHS</text>
+</g>
+<!-- trslhs0 -->
+<g id="node2" class="node"><title>trslhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="164" cy="63" rx="46" ry="18"/>
+<text text-anchor="middle" x="164" y="68">(NWAPS,0)</text>
+</g>
+<!-- trsrhs3 -->
+<g id="node15" class="node"><title>trsrhs3</title>
+<ellipse style="fill:none;stroke:black;" cx="378" cy="261" rx="46" ry="18"/>
+<text text-anchor="middle" x="378" y="266">(NWAPS,0)</text>
+</g>
+<!-- trslhs0&#45;&gt;trsrhs3 -->
+<g id="edge20" class="edge"><title>trslhs0&#45;&gt;trsrhs3</title>
+<path style="fill:none;stroke:#0000aa;" d="M206,71C227,76 252,85 270,99 317,136 350,198 367,234"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="370,232 371,243 364,235 370,232"/>
+</g>
+<!-- trslhs2 -->
+<g id="node3" class="node"><title>trslhs2</title>
+<ellipse style="fill:none;stroke:black;" cx="60" cy="63" rx="39" ry="18"/>
+<text text-anchor="middle" x="60" y="68">(queue,0)</text>
+</g>
+<!-- trslhs4 -->
+<g id="node4" class="node"><title>trslhs4</title>
+<ellipse style="fill:none;stroke:black;" cx="150" cy="261" rx="27" ry="18"/>
+<text text-anchor="middle" x="150" y="266">(_,0)</text>
+</g>
+<!-- trslhs2&#45;&gt;trslhs4 -->
+<g id="edge3" class="edge"><title>trslhs2&#45;&gt;trslhs4</title>
+<path style="fill:none;stroke:black;" d="M68,81C84,116 119,193 138,235"/>
+<polygon style="fill:black;stroke:black;" points="141,233 142,244 135,236 141,233"/>
+<text text-anchor="middle" x="112" y="156">T</text>
+</g>
+<!-- trslhs3 -->
+<g id="node5" class="node"><title>trslhs3</title>
+<ellipse style="fill:none;stroke:black;" cx="175" cy="151" rx="36" ry="18"/>
+<text text-anchor="middle" x="175" y="156">(deq2,0)</text>
+</g>
+<!-- trslhs2&#45;&gt;trslhs3 -->
+<g id="edge7" class="edge"><title>trslhs2&#45;&gt;trslhs3</title>
+<path style="fill:none;stroke:black;" d="M85,77C95,83 108,91 118,99 130,108 142,118 152,128"/>
+<polygon style="fill:black;stroke:black;" points="154,125 159,135 149,130 154,125"/>
+<text text-anchor="middle" x="147" y="112">deq</text>
+</g>
+<!-- trslhs1 -->
+<g id="node6" class="node"><title>trslhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="50" cy="151" rx="27" ry="18"/>
+<text text-anchor="middle" x="50" y="156">(_,0)</text>
+</g>
+<!-- trslhs2&#45;&gt;trslhs1 -->
+<g id="edge5" class="edge"><title>trslhs2&#45;&gt;trslhs1</title>
+<path style="fill:none;stroke:black;" d="M58,81C56,93 55,109 53,123"/>
+<polygon style="fill:black;stroke:black;" points="56,123 52,133 50,123 56,123"/>
+<text text-anchor="middle" x="63" y="112">A</text>
+</g>
+<!-- trsrhs2 -->
+<g id="node16" class="node"><title>trsrhs2</title>
+<ellipse style="fill:none;stroke:black;" cx="274" cy="261" rx="39" ry="18"/>
+<text text-anchor="middle" x="274" y="266">(queue,0)</text>
+</g>
+<!-- trslhs2&#45;&gt;trsrhs2 -->
+<g id="edge24" class="edge"><title>trslhs2&#45;&gt;trsrhs2</title>
+<path style="fill:none;stroke:#0000aa;" d="M90,75C96,77 102,79 108,81 160,100 184,93 220,133 247,162 261,205 268,233"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="271,233 270,243 265,234 271,233"/>
+</g>
+<!-- trsrhs0 -->
+<g id="node17" class="node"><title>trsrhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="334" cy="349" rx="27" ry="18"/>
+<text text-anchor="middle" x="334" y="354">(_,0)</text>
+</g>
+<!-- trslhs4&#45;&gt;trsrhs0 -->
+<g id="edge28" class="edge"><title>trslhs4&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:#0000aa;" d="M159,278C167,290 178,305 192,313 234,338 253,317 298,331 300,332 302,332 304,333"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="305,330 313,337 302,336 305,330"/>
+</g>
+<!-- trslhs3&#45;&gt;trslhs4 -->
+<g id="edge9" class="edge"><title>trslhs3&#45;&gt;trslhs4</title>
+<path style="fill:none;stroke:black;" d="M160,168C155,173 151,180 148,187 143,202 144,219 145,233"/>
+<polygon style="fill:black;stroke:black;" points="148,233 146,243 142,233 148,233"/>
+<text text-anchor="middle" x="156" y="200">T</text>
+</g>
+<!-- trslhs3&#45;&gt;trslhs4 -->
+<g id="edge11" class="edge"><title>trslhs3&#45;&gt;trslhs4</title>
+<path style="fill:none;stroke:black;" d="M171,169C167,186 161,213 156,233"/>
+<polygon style="fill:black;stroke:black;" points="159,234 154,243 153,233 159,234"/>
+<text text-anchor="middle" x="174" y="200">H</text>
+</g>
+<!-- trsrhs1 -->
+<g id="node14" class="node"><title>trsrhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="415" cy="349" rx="36" ry="18"/>
+<text text-anchor="middle" x="415" y="354">(deq0,0)</text>
+</g>
+<!-- trslhs3&#45;&gt;trsrhs1 -->
+<g id="edge26" class="edge"><title>trslhs3&#45;&gt;trsrhs1</title>
+<path style="fill:none;stroke:#0000aa;" d="M178,169C184,197 198,251 226,287 268,340 306,313 370,331 373,332 375,333 378,334"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="379,331 387,337 376,337 379,331"/>
+</g>
+<!-- trsrhs4 -->
+<g id="node13" class="node"><title>trsrhs4</title>
+<ellipse style="fill:none;stroke:black;" cx="262" cy="349" rx="27" ry="18"/>
+<text text-anchor="middle" x="262" y="354">(_,0)</text>
+</g>
+<!-- trslhs1&#45;&gt;trsrhs4 -->
+<g id="edge22" class="edge"><title>trslhs1&#45;&gt;trsrhs4</title>
+<path style="fill:none;stroke:#0000aa;" d="M54,169C62,198 80,253 114,287 145,318 193,334 226,342"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="227,339 236,344 226,345 227,339"/>
+</g>
+<!-- trsrhs2&#45;&gt;trsrhs4 -->
+<g id="edge14" class="edge"><title>trsrhs2&#45;&gt;trsrhs4</title>
+<path style="fill:none;stroke:black;" d="M272,279C270,291 268,307 266,321"/>
+<polygon style="fill:black;stroke:black;" points="269,322 264,331 263,321 269,322"/>
+<text text-anchor="middle" x="275" y="310">T</text>
+</g>
+<!-- trsrhs2&#45;&gt;trsrhs1 -->
+<g id="edge18" class="edge"><title>trsrhs2&#45;&gt;trsrhs1</title>
+<path style="fill:none;stroke:black;" d="M297,276C320,290 357,313 383,330"/>
+<polygon style="fill:black;stroke:black;" points="385,327 392,335 382,333 385,327"/>
+<text text-anchor="middle" x="363" y="310">deq</text>
+</g>
+<!-- trsrhs2&#45;&gt;trsrhs0 -->
+<g id="edge16" class="edge"><title>trsrhs2&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:black;" d="M286,278C294,291 307,310 317,325"/>
+<polygon style="fill:black;stroke:black;" points="320,323 323,333 314,327 320,323"/>
+<text text-anchor="middle" x="315" y="310">M</text>
+</g>
+</g>
+</svg>
+
+</li>
+<li>
+<a name="Ref_1_1_13"> <h4>deq swing/false</h4> </a>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd" [
+ <!ATTLIST svg xmlns:xlink CDATA #FIXED "http://www.w3.org/1999/xlink">
+]>
+<!-- Generated by dot version 2.6 (Tue Dec  6 13:53:08 GMT 2005)
+     For user: (ejk) Eric Koskinen -->
+<!-- Title: trs Pages: 1 -->
+<svg width="383pt" height="470pt"
+ viewBox = "0 0 383 470"
+ xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" style="font-family:Times-Roman;font-size:14.00;">
+<title>trs</title>
+<g id="graph2" class="cluster"><title>cluster_trslhs</title>
+<polygon style="fill:none;stroke:black;" points="13,265 219,265 219,13 13,13 13,265"/>
+<text text-anchor="middle" x="116" y="30">LHS</text>
+</g>
+<g id="graph3" class="cluster"><title>cluster_trsrhs</title>
+<polygon style="fill:none;stroke:black;" points="92,449 370,449 370,285 92,285 92,449"/>
+<text text-anchor="middle" x="231" y="302">RHS</text>
+</g>
+<!-- trslhs4 -->
+<g id="node2" class="node"><title>trslhs4</title>
+<ellipse style="fill:none;stroke:black;" cx="48" cy="151" rx="27" ry="18"/>
+<text text-anchor="middle" x="48" y="156">(_,0)</text>
+</g>
+<!-- trsrhs0 -->
+<g id="node15" class="node"><title>trsrhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="128" cy="423" rx="27" ry="18"/>
+<text text-anchor="middle" x="128" y="428">(_,0)</text>
+</g>
+<!-- trslhs4&#45;&gt;trsrhs0 -->
+<g id="edge24" class="edge"><title>trslhs4&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:#0000aa;" d="M47,169C45,206 44,290 71,353 78,371 93,388 105,401"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="107,398 112,408 102,403 107,398"/>
+</g>
+<!-- trslhs3 -->
+<g id="node3" class="node"><title>trslhs3</title>
+<ellipse style="fill:none;stroke:black;" cx="60" cy="63" rx="39" ry="18"/>
+<text text-anchor="middle" x="60" y="68">(queue,0)</text>
+</g>
+<!-- trslhs3&#45;&gt;trslhs4 -->
+<g id="edge7" class="edge"><title>trslhs3&#45;&gt;trslhs4</title>
+<path style="fill:none;stroke:black;" d="M58,81C56,93 54,109 52,123"/>
+<polygon style="fill:black;stroke:black;" points="55,124 50,133 49,123 55,124"/>
+<text text-anchor="middle" x="61" y="112">T</text>
+</g>
+<!-- trslhs1 -->
+<g id="node6" class="node"><title>trslhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="129" cy="151" rx="36" ry="18"/>
+<text text-anchor="middle" x="129" y="156">(deq2,0)</text>
+</g>
+<!-- trslhs3&#45;&gt;trslhs1 -->
+<g id="edge9" class="edge"><title>trslhs3&#45;&gt;trslhs1</title>
+<path style="fill:none;stroke:black;" d="M73,80C83,93 97,112 109,126"/>
+<polygon style="fill:black;stroke:black;" points="112,124 116,134 107,129 112,124"/>
+<text text-anchor="middle" x="111" y="112">deq</text>
+</g>
+<!-- trsrhs4 -->
+<g id="node16" class="node"><title>trsrhs4</title>
+<ellipse style="fill:none;stroke:black;" cx="211" cy="335" rx="39" ry="18"/>
+<text text-anchor="middle" x="211" y="340">(queue,0)</text>
+</g>
+<!-- trslhs3&#45;&gt;trsrhs4 -->
+<g id="edge22" class="edge"><title>trslhs3&#45;&gt;trsrhs4</title>
+<path style="fill:none;stroke:#0000aa;" d="M87,76C117,92 163,117 174,133 209,187 213,265 212,307"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="216,307 212,317 209,307 216,307"/>
+</g>
+<!-- trslhs2 -->
+<g id="node4" class="node"><title>trslhs2</title>
+<ellipse style="fill:none;stroke:black;" cx="164" cy="63" rx="46" ry="18"/>
+<text text-anchor="middle" x="164" y="68">(NWAPS,0)</text>
+</g>
+<!-- trsrhs1 -->
+<g id="node12" class="node"><title>trsrhs1</title>
+<ellipse style="fill:none;stroke:black;" cx="315" cy="335" rx="46" ry="18"/>
+<text text-anchor="middle" x="315" y="340">(NWAPS,0)</text>
+</g>
+<!-- trslhs2&#45;&gt;trsrhs1 -->
+<g id="edge20" class="edge"><title>trslhs2&#45;&gt;trsrhs1</title>
+<path style="fill:none;stroke:#0000aa;" d="M187,79C194,85 202,91 208,99 259,166 293,261 307,307"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="310,306 310,317 304,308 310,306"/>
+</g>
+<!-- trslhs0 -->
+<g id="node5" class="node"><title>trslhs0</title>
+<ellipse style="fill:none;stroke:black;" cx="127" cy="239" rx="27" ry="18"/>
+<text text-anchor="middle" x="127" y="244">(_,0)</text>
+</g>
+<!-- trsrhs3 -->
+<g id="node13" class="node"><title>trsrhs3</title>
+<ellipse style="fill:none;stroke:black;" cx="127" cy="335" rx="27" ry="18"/>
+<text text-anchor="middle" x="127" y="340">(_,0)</text>
+</g>
+<!-- trslhs0&#45;&gt;trsrhs3 -->
+<g id="edge16" class="edge"><title>trslhs0&#45;&gt;trsrhs3</title>
+<path style="fill:none;stroke:#0000aa;" d="M127,257C127,271 127,291 127,307"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="131,307 127,317 124,307 131,307"/>
+</g>
+<!-- trslhs1&#45;&gt;trslhs0 -->
+<g id="edge3" class="edge"><title>trslhs1&#45;&gt;trslhs0</title>
+<path style="fill:none;stroke:black;" d="M120,169C117,174 114,181 113,187 112,195 113,204 115,212"/>
+<polygon style="fill:black;stroke:black;" points="118,211 118,222 112,213 118,211"/>
+<text text-anchor="middle" x="121" y="200">T</text>
+</g>
+<!-- trslhs1&#45;&gt;trslhs0 -->
+<g id="edge5" class="edge"><title>trslhs1&#45;&gt;trslhs0</title>
+<path style="fill:none;stroke:black;" d="M129,169C128,181 128,197 128,211"/>
+<polygon style="fill:black;stroke:black;" points="131,211 127,221 125,211 131,211"/>
+<text text-anchor="middle" x="135" y="200">H</text>
+</g>
+<!-- trsrhs2 -->
+<g id="node14" class="node"><title>trsrhs2</title>
+<ellipse style="fill:none;stroke:black;" cx="209" cy="423" rx="36" ry="18"/>
+<text text-anchor="middle" x="209" y="428">(deq0,0)</text>
+</g>
+<!-- trslhs1&#45;&gt;trsrhs2 -->
+<g id="edge18" class="edge"><title>trslhs1&#45;&gt;trsrhs2</title>
+<path style="fill:none;stroke:#0000aa;" d="M117,168C108,182 96,202 91,221 77,278 62,303 91,353 101,369 142,391 173,407"/>
+<polygon style="fill:#0000aa;stroke:#0000aa;" points="174,404 182,411 171,410 174,404"/>
+</g>
+<!-- trsrhs4&#45;&gt;trsrhs2 -->
+<g id="edge14" class="edge"><title>trsrhs4&#45;&gt;trsrhs2</title>
+<path style="fill:none;stroke:black;" d="M211,353C210,365 210,381 210,395"/>
+<polygon style="fill:black;stroke:black;" points="213,395 209,405 207,395 213,395"/>
+<text text-anchor="middle" x="219" y="384">deq</text>
+</g>
+<!-- trsrhs4&#45;&gt;trsrhs0 -->
+<g id="edge12" class="edge"><title>trsrhs4&#45;&gt;trsrhs0</title>
+<path style="fill:none;stroke:black;" d="M195,352C182,366 164,385 149,400"/>
+<polygon style="fill:black;stroke:black;" points="151,403 142,408 146,398 151,403"/>
+<text text-anchor="middle" x="182" y="384">T</text>
+</g>
+</g>
+</svg>
+
+</li>
+</ul>
+</li>
+</ul>
+<a name="Ref_2"> <h2>KM Tree</h2> </a>
+<pre>
+digraph KMTree {
+
+    subgraph cluster_2 {
+        
+        cluster_2__0 [label="(queue,0)"];
+        cluster_2__1 [label="(NWAPS,0)"];
+        
+    }
+    subgraph cluster_1 {
+        
+        cluster_1__0 [label="(enq0,1)"];
+        cluster_1__1 [label="(queue,0)"];
+        cluster_1__2 [label="(SPAWN,0)"];
+        cluster_1__3 [label="(x,1)"];
+        cluster_1__0 -> cluster_1__3 [label="x"];
+        cluster_1__1 -> cluster_1__0 [label="enq"];
+    }
+    subgraph cluster_0_0 {
+        
+        cluster_0_0__4 [label="(SPAWN,0)"];
+        cluster_0_0__0 [label="(enq0,1)"];
+        cluster_0_0__1 [label="(x,1)"];
+        cluster_0_0__5 [label="(deq0,1)"];
+        cluster_0_0__3 [label="(x,1)"];
+        cluster_0_0__2 [label="(queue,0)"];
+        cluster_0_0__0 -> cluster_0_0__1 [label="x"];
+        cluster_0_0__2 -> cluster_0_0__5 [label="deq"];
+        cluster_0_0__2 -> cluster_0_0__0 [label="enq"];
+        cluster_0_0__5 -> cluster_0_0__3 [label="x"];
+    }
+    subgraph cluster_0_0_1 {
+        
+        cluster_0_0_1__5 [label="(NWAPS,0)"];
+        cluster_0_0_1__4 [label="(deq0,1)"];
+        cluster_0_0_1__2 [label="(queue,0)"];
+        cluster_0_0_1__3 [label="(x,1)"];
+        cluster_0_0_1__0 [label="(enq0,1)"];
+        cluster_0_0_1__1 [label="(x,1)"];
+        cluster_0_0_1__0 -> cluster_0_0_1__1 [label="x"];
+        cluster_0_0_1__2 -> cluster_0_0_1__4 [label="deq"];
+        cluster_0_0_1__2 -> cluster_0_0_1__0 [label="enq"];
+        cluster_0_0_1__4 -> cluster_0_0_1__3 [label="x"];
+    }
+    subgraph cluster_0_0_0 {
+        
+        cluster_0_0_0__0 [label="(enq0,1)"];
+        cluster_0_0_0__1 [label="(x,1)"];
+        cluster_0_0_0__4 [label="(x,1)"];
+        cluster_0_0_0__5 [label="(deq0,1)"];
+        cluster_0_0_0__3 [label="(SPAWN,0)"];
+        cluster_0_0_0__2 [label="(queue,0)"];
+        cluster_0_0_0__0 -> cluster_0_0_0__1 [label="x"];
+        cluster_0_0_0__2 -> cluster_0_0_0__5 [label="deq"];
+        cluster_0_0_0__2 -> cluster_0_0_0__0 [label="enq"];
+        cluster_0_0_0__5 -> cluster_0_0_0__4 [label="x"];
+    }
+    subgraph cluster {
+        
+        cluster__0 [label="(queue,0)"];
+        cluster__1 [label="(SPAWN,0)"];
+        
+    }
+    subgraph cluster_0 {
+        
+        cluster_0__0 [label="(deq0,1)"];
+        cluster_0__1 [label="(x,1)"];
+        cluster_0__2 [label="(queue,0)"];
+        cluster_0__3 [label="(SPAWN,0)"];
+        cluster_0__0 -> cluster_0__1 [label="x"];
+        cluster_0__2 -> cluster_0__0 [label="deq"];
+    }
+    subgraph cluster_0_1 {
+        
+        cluster_0_1__0 [label="(deq0,1)"];
+        cluster_0_1__1 [label="(x,1)"];
+        cluster_0_1__2 [label="(queue,0)"];
+        cluster_0_1__3 [label="(NWAPS,0)"];
+        cluster_0_1__0 -> cluster_0_1__1 [label="x"];
+        cluster_0_1__2 -> cluster_0_1__0 [label="deq"];
+    }
+    cluster -> cluster_0;
+    cluster_0 -> cluster_0_0;
+    cluster_0_0 -> cluster_0_0_0;
+    cluster_0_0 -> cluster_0_0_1;
+    cluster_0 -> cluster_0_1;
+    cluster -> cluster_1;
+    cluster -> cluster_2;
+    cluster_0_0_0 -> cluster_0_0[color="#0000aa"];
+    cluster_0_1 -> cluster_0_0_1[color="#0000aa"];
+    cluster_1 -> cluster_0_0[color="#0000aa"];
+    cluster_2 -> cluster_0_0_1[color="#0000aa"];
+    
+}
+
+</pre>
+<a name="Ref_3"> <h2>Cover</h2> </a>
+<ul>
+<li>
+<a name="Ref_3_0"> <h3>cover element 0</h3> </a>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd" [
+ <!ATTLIST svg xmlns:xlink CDATA #FIXED "http://www.w3.org/1999/xlink">
+]>
+<!-- Generated by dot version 2.6 (Tue Dec  6 13:53:08 GMT 2005)
+     For user: (ejk) Eric Koskinen -->
+<!-- Title: cover Pages: 1 -->
+<svg width="359pt" height="402pt"
+ viewBox = "0 0 359 402"
+ xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" style="font-family:Times-Roman;font-size:14.00;">
+<title>cover</title>
+<!-- 5 -->
+<g id="node1" class="node"><title>5</title>
+<ellipse style="fill:none;stroke:black;" cx="83" cy="158" rx="36" ry="18"/>
+<text text-anchor="middle" x="83" y="163">(deq0,1)</text>
+</g>
+<!-- 3 -->
+<g id="node4" class="node"><title>3</title>
+<ellipse style="fill:none;stroke:black;" cx="33" cy="24" rx="27" ry="18"/>
+<text text-anchor="middle" x="33" y="29">(x,1)</text>
+</g>
+<!-- 5&#45;&gt;3 -->
+<g id="edge8" class="edge"><title>5&#45;&gt;3</title>
+<path style="fill:none;stroke:black;" d="M76,140C68,118 53,78 43,51"/>
+<polygon style="fill:black;stroke:black;" points="40,52 40,41 46,50 40,52"/>
+<text text-anchor="middle" x="52" y="98">x</text>
+</g>
+<!-- 1 -->
+<g id="node2" class="node"><title>1</title>
+<ellipse style="fill:none;stroke:black;" cx="326" cy="378" rx="27" ry="18"/>
+<text text-anchor="middle" x="326" y="383">(x,1)</text>
+</g>
+<!-- 0 -->
+<g id="node3" class="node"><title>0</title>
+<ellipse style="fill:none;stroke:black;" cx="251" cy="306" rx="36" ry="18"/>
+<text text-anchor="middle" x="251" y="311">(enq0,1)</text>
+</g>
+<!-- 0&#45;&gt;1 -->
+<g id="edge2" class="edge"><title>0&#45;&gt;1</title>
+<path style="fill:none;stroke:black;" d="M268,322C279,332 292,345 304,356"/>
+<polygon style="fill:black;stroke:black;" points="306,353 311,363 301,358 306,353"/>
+<text text-anchor="middle" x="296" y="341">x</text>
+</g>
+<!-- 4 -->
+<g id="node5" class="node"><title>4</title>
+<ellipse style="fill:none;stroke:black;" cx="285" cy="233" rx="46" ry="18"/>
+<text text-anchor="middle" x="285" y="238">(SPAWN,0)</text>
+</g>
+<!-- 2 -->
+<g id="node6" class="node"><title>2</title>
+<ellipse style="fill:none;stroke:black;" cx="187" cy="176" rx="39" ry="18"/>
+<text text-anchor="middle" x="187" y="181">(queue,0)</text>
+</g>
+<!-- 2&#45;&gt;5 -->
+<g id="edge4" class="edge"><title>2&#45;&gt;5</title>
+<path style="fill:none;stroke:black;" d="M150,170C142,169 135,167 127,166"/>
+<polygon style="fill:black;stroke:black;" points="126,169 117,164 127,163 126,169"/>
+<text text-anchor="middle" x="132" y="182">deq</text>
+</g>
+<!-- 2&#45;&gt;0 -->
+<g id="edge6" class="edge"><title>2&#45;&gt;0</title>
+<path style="fill:none;stroke:black;" d="M196,194C207,215 225,253 238,279"/>
+<polygon style="fill:black;stroke:black;" points="241,277 242,288 235,280 241,277"/>
+<text text-anchor="middle" x="207" y="252">enq</text>
+</g>
+</g>
+</svg>
+
+</li>
+<li>
+<a name="Ref_3_1"> <h3>cover element 1</h3> </a>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd" [
+ <!ATTLIST svg xmlns:xlink CDATA #FIXED "http://www.w3.org/1999/xlink">
+]>
+<!-- Generated by dot version 2.6 (Tue Dec  6 13:53:08 GMT 2005)
+     For user: (ejk) Eric Koskinen -->
+<!-- Title: cover Pages: 1 -->
+<svg width="260pt" height="335pt"
+ viewBox = "0 0 260 335"
+ xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" style="font-family:Times-Roman;font-size:14.00;">
+<title>cover</title>
+<!-- 5 -->
+<g id="node1" class="node"><title>5</title>
+<ellipse style="fill:none;stroke:black;" cx="207" cy="179" rx="46" ry="18"/>
+<text text-anchor="middle" x="207" y="184">(NWAPS,0)</text>
+</g>
+<!-- 1 -->
+<g id="node2" class="node"><title>1</title>
+<ellipse style="fill:none;stroke:black;" cx="33" cy="65" rx="27" ry="18"/>
+<text text-anchor="middle" x="33" y="70">(x,1)</text>
+</g>
+<!-- 0 -->
+<g id="node3" class="node"><title>0</title>
+<ellipse style="fill:none;stroke:black;" cx="208" cy="128" rx="36" ry="18"/>
+<text text-anchor="middle" x="208" y="133">(enq0,1)</text>
+</g>
+<!-- 0&#45;&gt;1 -->
+<g id="edge2" class="edge"><title>0&#45;&gt;1</title>
+<path style="fill:none;stroke:black;" d="M179,117C148,106 99,89 67,77"/>
+<polygon style="fill:black;stroke:black;" points="66,80 57,74 68,74 66,80"/>
+<text text-anchor="middle" x="115" y="110">x</text>
+</g>
+<!-- 3 -->
+<g id="node4" class="node"><title>3</title>
+<ellipse style="fill:none;stroke:black;" cx="90" cy="311" rx="27" ry="18"/>
+<text text-anchor="middle" x="90" y="316">(x,1)</text>
+</g>
+<!-- 2 -->
+<g id="node5" class="node"><title>2</title>
+<ellipse style="fill:none;stroke:black;" cx="157" cy="24" rx="39" ry="18"/>
+<text text-anchor="middle" x="157" y="29">(queue,0)</text>
+</g>
+<!-- 2&#45;&gt;0 -->
+<g id="edge6" class="edge"><title>2&#45;&gt;0</title>
+<path style="fill:none;stroke:black;" d="M166,42C174,58 186,82 195,101"/>
+<polygon style="fill:black;stroke:black;" points="198,99 199,110 192,102 198,99"/>
+<text text-anchor="middle" x="195" y="75">enq</text>
+</g>
+<!-- 4 -->
+<g id="node6" class="node"><title>4</title>
+<ellipse style="fill:none;stroke:black;" cx="101" cy="201" rx="36" ry="18"/>
+<text text-anchor="middle" x="101" y="206">(deq0,1)</text>
+</g>
+<!-- 2&#45;&gt;4 -->
+<g id="edge4" class="edge"><title>2&#45;&gt;4</title>
+<path style="fill:none;stroke:black;" d="M151,42C141,73 121,136 110,173"/>
+<polygon style="fill:black;stroke:black;" points="113,174 107,183 107,172 113,174"/>
+<text text-anchor="middle" x="141" y="121">deq</text>
+</g>
+<!-- 4&#45;&gt;3 -->
+<g id="edge8" class="edge"><title>4&#45;&gt;3</title>
+<path style="fill:none;stroke:black;" d="M99,219C97,236 95,262 93,283"/>
+<polygon style="fill:black;stroke:black;" points="96,283 92,293 90,283 96,283"/>
+<text text-anchor="middle" x="90" y="261">x</text>
+</g>
+</g>
+</svg>
+
+</li>
+</ul>
+</body>
+</html>
