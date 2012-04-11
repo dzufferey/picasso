@@ -171,7 +171,8 @@ pre
   (s, stack) -> (e, emp) [A]
 post
   node (n, NWAPS)
-  (s, stack) -> (e, emp) [H]
+  (s, stack) -> (e, emp) [
+H]
 ==>
   n -> n
   s -> s
