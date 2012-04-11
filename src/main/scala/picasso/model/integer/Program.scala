@@ -54,19 +54,30 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
 
   /** try to simplify the program while preserving (non)termination. */
   def simplifyForTermination = {
+    //repeat a few time ...
+    simplifyForTermination1.simplifyForTermination1.simplifyForTermination1
+  }
+  
+  def simplifyForTermination1 = {
     Logger("integer.Program", LogDebug, "unsimplified program:\n" + this.printForQARMC)
+    Logger("integer.Program", LogInfo, "propagating zeros.")
     val p2 = this.propagateZeros
     Logger("integer.Program", LogDebug, "removing 0s:\n" + p2.printForQARMC)
-    val p3 = p2.removeEqualsVariables
-    Logger("integer.Program", LogDebug, "equal variables:\n" + p3.printForQARMC)
-    val p4 = p3.reduceNumberOfVariables
+    //Logger("integer.Program", LogInfo, "removing equal variables.")
+    //val p3 = p2.removeEqualsVariables
+    //Logger("integer.Program", LogDebug, "equal variables:\n" + p3.printForQARMC)
+    Logger("integer.Program", LogInfo, "merging variables.")
+    val p4 = p2.reduceNumberOfVariables
     Logger("integer.Program", LogDebug, "merging variables:\n" + p4.printForQARMC)
+    Logger("integer.Program", LogInfo, "compacting transitions.")
     val p5 = p4.compactPath
     Logger("integer.Program", LogDebug, "compacting transitions:\n" + p5.printForQARMC)
+    Logger("integer.Program", LogInfo, "removing useless split.")
     val p6 = p5.lookForUselessSplitting
     Logger("integer.Program", LogDebug, "looking for useless splitting:\n" + p6.printForQARMC)
+    Logger("integer.Program", LogInfo, "pruning Assume.")
     val p7 = p6.pruneAssumes
-    Logger("integer.Program", LogDebug, "looking for useless splitting:\n" + p7.printForQARMC)
+    Logger("integer.Program", LogDebug, "assumed pruned:\n" + p7.printForQARMC)
     p7
     //TODO remove (strictly increasing) 'sink' variables
     //TODO transition in sequence that operates on disjoint set of variable might be merged (if the control flow is linear)
@@ -289,12 +300,15 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
             (ms1 -- ms2).isEmpty && (ms2 -- ms1).isEmpty //TODO: poor man's multiset equality
           }
         }
+        //println("dropping because changed: " + candidates2.filterNot{ case (_, vars) => vars forall (v => !changed(v)) })
         val candidates3 = candidates2.filter{ case (_, vars) => vars forall (v => !changed(v)) }
         val newCandidates = splitted.map{ case (_, vars) => (t.sourcePC, vars) }
         val candidates4 = newCandidates.toList ++ candidates3
         val confirmed2 = confirmedCandidates.map{ case (src, vars) => (src, vars, t.targetPC) } ++ confirmed
         lookForCandidates(ts, candidates4, confirmed2)
-      case Nil => confirmed
+      case Nil =>
+        //println("at the end, still candidates: " + candidates.mkString(", "))
+        confirmed
     }
     //
     def mergeConfirmed(trs: List[Transition],

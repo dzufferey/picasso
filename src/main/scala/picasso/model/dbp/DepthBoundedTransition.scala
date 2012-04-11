@@ -97,23 +97,25 @@ extends Transition[DepthBoundedConf[P]]
         val (post, folding) = postUnfolded.foldWithWitness
         //print("post: " + post)
 
+
+        //the morphism for the post is f_hr_g1 restricted to the frame + g1_hk_f inverted ?
+        val postMorphism0 = (frame.vertices.toSeq.map{ case x => (x,f_hr_g1.getOrElse(x,x)) }: Iterable[(P#V,P#V)] ).toMap
+        val postMorphism1 = g1_hk_f.flatMap[(P#V,P#V), Morphism]{ case (a,b) => if (a != b) Some(b -> b) else None}
+        
         //Logger("dbp", LogWarning, "removed: " + removed)
         //Logger("dbp", LogWarning, "lhs.morph(g1): " + lhs.morph(g1))
         //Logger("dbp", LogWarning, "conf1 -- lhs.morph(g1): " + (conf1 -- lhs.morph(g1)))
         //Logger("dbp", LogWarning, "frame: " + frame)
         //Logger("dbp", LogWarning, "(frame morph f_hr_g1): " + (frame morph f_hr_g1))
         //Logger("dbp", LogWarning, "(rhsClone morph g1_hk_f): " + (rhsClone morph g1_hk_f))
-
-        //the morphism for the post is f_hr_g1 restricted to the frame + g1_hk_f inverted ?
-        val postMorphism0 = (frame.vertices.toSeq.map{ case x => (x,f_hr_g1.getOrElse(x,x)) }: Iterable[(P#V,P#V)] ).toMap
         //Logger("dbp", LogWarning, "postMorphism0: " + postMorphism0)
-        val postMorphism1 = g1_hk_f.flatMap[(P#V,P#V), Morphism]{ case (a,b) => if (a != b) Some(b -> a) else None}
         //Logger("dbp", LogWarning, "postMorphism1: " + postMorphism1)
         //Logger("dbp", LogWarning, "g1_hk_f: " + g1_hk_f)
+        
         val postMorphism = postMorphism0 ++ postMorphism1
         for ( (k, v) <- postMorphism ) {
-          assert(conf1.contains(k), k + " not in " + conf1.vertices)
-          assert(postUnfolded.contains(v), v + " not in " + postUnfolded.vertices)
+          assert(conf1.contains(k), "transition " + id + ": " + k + " not in " + conf1.vertices)
+          assert(postUnfolded.contains(v), "transition " + id + ": " + v + " not in " + postUnfolded.vertices)
         }
 
         val witness = new TransitionWitness
