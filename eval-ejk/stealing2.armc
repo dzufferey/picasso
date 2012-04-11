@@ -1,17 +1,3 @@
-[[33mWarning[0m] @ integer.Transition: mergeVariables changing: Variance(Variable(worker$20),Variable(worker$9),false,false), dropping the constraint
-[[33mWarning[0m] @ integer.Transition: mergeVariables changing: Variance(Variable(worker$28),Variable(worker$9),false,false), dropping the constraint
-[[33mWarning[0m] @ integer.Transition: mergeVariables changing: Variance(Variable(job$7),Variable(job$1),false,false), dropping the constraint
-[[33mWarning[0m] @ integer.Transition: mergeVariables changing: Variance(Variable(stolen$6),Variable(stolen$1),false,false), dropping the constraint
-[[33mWarning[0m] @ integer.Transition: mergeVariables changing: Variance(Variable(stolen$10),Variable(stolen$1),false,false), dropping the constraint
-[[33mWarning[0m] @ integer.Transition: mergeVariables changing: Variance(Variable(job$3),Variable(job$1),false,false), dropping the constraint
-[[33mWarning[0m] @ integer.Transition: mergeVariables changing: Variance(Variable(job$16),Variable(job$15),false,false), dropping the constraint
-[[33mWarning[0m] @ integer.Transition: mergeVariables changing: Variance(Variable(job$27),Variable(job$15),false,false), dropping the constraint
-[[33mWarning[0m] @ integer.Transition: mergeVariables changing: Variance(Variable(job$35),Variable(job$15),false,false), dropping the constraint
-[[33mWarning[0m] @ integer.Transition: mergeVariables changing: Variance(Variable(worker$2),Variable(worker$1),false,false), dropping the constraint
-[[33mWarning[0m] @ integer.Transition: mergeVariables changing: Variance(Variable(worker$5),Variable(worker$1),false,false), dropping the constraint
-[[33mWarning[0m] @ integer.Transition: mergeVariables changing: Variance(Variable(worker$11),Variable(worker$10),false,false), dropping the constraint
-[[33mWarning[0m] @ integer.Transition: mergeVariables changing: Variance(Variable(worker$27),Variable(worker$10),false,false), dropping the constraint
-[[33mWarning[0m] @ integer.Transition: mergeVariables changing: Variance(Variable(worker$37),Variable(worker$10),false,false), dropping the constraint
 % BEGIN FIXED PREAMBLE
 :- multifile r/5,implicit_updates/0,var2names/2,preds/2,trans_preds/3,
 cube_size/1,start/1,error/1,refinement/1,cutpoint/1,invgen_template/2,

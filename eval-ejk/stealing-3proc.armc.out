@@ -1,0 +1,122 @@
+ARMC3: Abstraction Refinement Model Checker, v. 3.20.05 (May-21-2008)
+rybal@mpi-sws.mpg.de
+cmd line: [live,eval-ejk/stealing-3proc.armc]
+reading input from eval-ejk/stealing-3proc.armc...done.
+
+
+
+--------------------------------------------------
+abstraction refinement iteration 0:
+lfp iteration 0 1 2 3 
+abstract counterexample: stem [0,0], loop [1,2,7]
+trans preds: no predicates
+X$1=<0
+X$1'-X$1>=0
+refining loop
+cutting step 3 at pc(s__2)
+LI at pc(s__2): X$1'-X$1=< -1
+cutting step 2 at pc(s__3)
+LI at pc(s__3): X$1'-X$1=< -1
+cutting step 1 at pc(s__1)
+LI at pc(s__1): X$1'-X$1=< -1
+
+refining stem
+
+cutting step 4 at pc(s__1)
+unsat suffix not yet reached
+cutting step 3 at pc(s__2)
+LI at pc(s__2): X$1'-_5576=< -1
+cutting step 2 at pc(s__3)
+cutting step 1 at pc(s__1)
+
+refining loop
+cutting step 3 at pc(s__2)
+LI at pc(s__2): X$1>=1
+cutting step 2 at pc(s__3)
+LI at pc(s__3): X$1>=1
+cutting step 1 at pc(s__1)
+LI at pc(s__1): X$1>=1
+
+refining stem
+
+cutting step 4 at pc(s__1)
+unsat suffix not yet reached
+cutting step 3 at pc(s__2)
+LI at pc(s__2): _5576>=1
+cutting step 2 at pc(s__3)
+cutting step 1 at pc(s__1)
+
+
+
+
+--------------------------------------------------
+abstraction refinement iteration 1:
+lfp iteration 0 1 2 3 4 5 
+
+
+==================================================
+ARMC-LIVE: program is correct
+
+abstract trans fixpoint
+abstract_trans_state(0, pc(s__8), pc(s__8), [], stem, 1, (0,0)).
+abstract_trans_state(1, pc(s__8), pc(s__1), [], stem, 2, (1,0)).
+abstract_trans_state(2, pc(s__8), pc(s__2), [], stem, 3, (2,1)).
+abstract_trans_state(2, pc(s__1), pc(s__2), [1,2], loop, 4, (2,1)).
+abstract_trans_state(2, pc(s__8), pc(s__4), [], stem, 5, (2,3)).
+abstract_trans_state(2, pc(s__1), pc(s__4), [1,2], loop, 6, (2,3)).
+abstract_trans_state(2, pc(s__8), pc(s__6), [], stem, 7, (2,5)).
+abstract_trans_state(2, pc(s__1), pc(s__6), [1,2], loop, 8, (2,5)).
+abstract_trans_state(3, pc(s__8), pc(s__3), [], stem, 9, (3,2)).
+abstract_trans_state(3, pc(s__1), pc(s__3), [1,2], loop, 10, (4,2)).
+abstract_trans_state(3, pc(s__8), pc(s__5), [], stem, 11, (5,4)).
+abstract_trans_state(3, pc(s__1), pc(s__5), [1,2], loop, 12, (6,4)).
+abstract_trans_state(3, pc(s__8), pc(s__7), [], stem, 13, (7,6)).
+abstract_trans_state(3, pc(s__1), pc(s__7), [1,2], loop, 14, (8,6)).
+abstract_trans_state(4, pc(s__1), pc(s__1), [1,2], loop, 15, (10,7)).
+
+frontier 0: stem 1 (pc(s__8)->pc(s__8)) from 0 by applying 0: 	T
+frontier 1: stem 2 (pc(s__8)->pc(s__1)) from 1 by applying 0: 	T
+frontier 2: stem 3 (pc(s__8)->pc(s__2)) from 2 by applying 1: 	T
+frontier 2: loop 4 (pc(s__1)->pc(s__2)) from 2 by applying 1: 	X$1>=1, X$1'-X$1=< -1
+frontier 2: stem 5 (pc(s__8)->pc(s__4)) from 2 by applying 3: 	T
+frontier 2: loop 6 (pc(s__1)->pc(s__4)) from 2 by applying 3: 	X$1>=1, X$1'-X$1=< -1
+frontier 2: stem 7 (pc(s__8)->pc(s__6)) from 2 by applying 5: 	T
+frontier 2: loop 8 (pc(s__1)->pc(s__6)) from 2 by applying 5: 	X$1>=1, X$1'-X$1=< -1
+frontier 3: stem 9 (pc(s__8)->pc(s__3)) from 3 by applying 2: 	T
+frontier 3: loop 10 (pc(s__1)->pc(s__3)) from 4 by applying 2: 	X$1>=1, X$1'-X$1=< -1
+frontier 3: stem 11 (pc(s__8)->pc(s__5)) from 5 by applying 4: 	T
+frontier 3: loop 12 (pc(s__1)->pc(s__5)) from 6 by applying 4: 	X$1>=1, X$1'-X$1=< -1
+frontier 3: stem 13 (pc(s__8)->pc(s__7)) from 7 by applying 6: 	T
+frontier 3: loop 14 (pc(s__1)->pc(s__7)) from 8 by applying 6: 	X$1>=1, X$1'-X$1=< -1
+frontier 4: loop 15 (pc(s__1)->pc(s__1)) from 10 by applying 7: 	X$1>=1, X$1'-X$1=< -1
+
+_94759->_94762:	#2:	X$1>=1, X$1'-X$1=< -1
+---------------------------------------------+----run(s)----+---wall(s)----+
+Time on instantiating uf axioms              |     0.00     |     0.00     |
+Time on cli constraint solving               |     0.01     |     0.01     |
+Time on cli constraint preparation           |     0.00     |     0.00     |
+Time on cli matrix parsing                   |     0.00     |     0.00     |
+Time on cli preprocessing                    |     0.00     |     0.00     |
+Time on concretizing trans rel               |     0.00     |     0.00     |
+Time on concretizing from state              |     0.00     |     0.00     |
+Time on computing the subsumer subtree       |     0.00     |     0.00     |
+Time on finding the location of subsumer in queue|     0.00     |     0.00     |
+Time on path invariant generation            |     0.00     |     0.00     |
+Time on new predicate selection              |     0.00     |     0.00     |
+Time on refinement preprocessing cut         |     0.00     |     0.00     |
+Time on refinement cutting trace             |     0.02     |     0.02     |
+Time on refinement finding unsat subtrace    |     0.00     |     0.00     |
+Time on refinement                           |     0.02     |     0.02     |
+Time on fixpoint abstraction                 |     0.00     |     0.00     |
+Time on fixpoint test                        |     0.00     |     0.00     |
+Time on abstract check                       |     0.00     |     0.00     |
+Time on total including result checking      |     0.00     |     0.00     |
+Time on check result                         |     0.00     |     0.00     |
+Time on total                                |     0.00     |     0.00     |
+---------------------------------------------+--------------+--------------+
+
+
+
+==================================================
+ARMC-LIVE: program is correct
+
