@@ -1,0 +1,1277 @@
+% BEGIN FIXED PREAMBLE
+:- multifile r/5,implicit_updates/0,var2names/2,preds/2,trans_preds/3,
+cube_size/1,start/1,error/1,refinement/1,cutpoint/1,invgen_template/2,
+ invgen_template/1,cfg_exit_relation/1,stmtsrc/2,strengthening/2,globals/3,
+ bound_var/2,bounding_vars/2,transition_access/2,atomic/3.
+refinement(inter).
+cube_size(1).
+% END FIXED PREAMBLE
+
+var2names( p(_, data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), [(X_9, 'X$9'), (X_5, 'X$5'), (X_1, 'X$1'), (X_7, 'X$7'), (X_2, 'X$2'), (X_3, 'X$3'), (X_8, 'X$8'), (X_4, 'X$4'), (X_6, 'X$6')]).
+
+preds( p(_, data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), []).
+
+start( pc(s__343)).
+cutpoint(pc(s__30)).
+cutpoint(pc(s__171)).
+cutpoint(pc(s__23)).
+cutpoint(pc(s__126)).
+cutpoint(pc(s__271)).
+cutpoint(pc(s__264)).
+cutpoint(pc(s__54)).
+cutpoint(pc(s__102)).
+cutpoint(pc(s__110)).
+cutpoint(pc(s__295)).
+
+% initialize
+r( p(pc(s__343), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__1), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = 0, X_1_prime = 0, X_3_prime = 0, X_7_prime = 0, X_4_prime = 0, X_9_prime = 0, X_6_prime = 0, X_2_prime = 0, X_8_prime = 0, 0 =< Init_0]
+, [], 0).
+% morphing, stop spawn
+r( p(pc(s__1), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__2), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 1).
+% morphing, spawn worker
+r( p(pc(s__1), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__3), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 2).
+% replicating 1
+r( p(pc(s__3), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__4), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = 1, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 3).
+% morphing, stop spawn
+r( p(pc(s__4), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__5), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 4).
+% unfolding
+r( p(pc(s__4), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__6), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_5, X_5_prime + 1 = X_5, 0 =< X_5_prime, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 5).
+% morphing, spawn job
+r( p(pc(s__6), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__7), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 6).
+% replicating 1
+r( p(pc(s__7), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__8), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_4_prime = 2, X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 7).
+% folding
+r( p(pc(s__8), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__9), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + X_4, X_7_prime = X_4, X_4_prime = 0, X_9_prime = X_9, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 8).
+% morphing, spawn worker
+r( p(pc(s__4), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__10), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 9).
+% folding
+r( p(pc(s__10), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__11), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 10).
+% replicating 1
+r( p(pc(s__11), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__12), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 11).
+% morphing, stop spawn
+r( p(pc(s__9), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__13), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 12).
+% unfolding
+r( p(pc(s__9), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__14), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_7, 1 =< X_5, X_5_prime + 1 = X_5, 0 =< X_5_prime, X_7_prime + 1 = X_7, 0 =< X_7_prime, X_9_prime = X_9, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 13).
+% morphing, spawn job
+r( p(pc(s__14), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__15), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 14).
+% replicating 1
+r( p(pc(s__15), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__16), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = 3, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 15).
+% folding
+r( p(pc(s__16), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__17), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + X_7, X_7_prime = X_7 + X_9, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 16).
+% replicating 1
+r( p(pc(s__17), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__18), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 17).
+% morphing, spawn worker
+r( p(pc(s__9), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__19), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 18).
+% folding
+r( p(pc(s__19), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__20), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 19).
+% replicating 1
+r( p(pc(s__20), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__21), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 20).
+% replicating 1
+r( p(pc(s__21), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__22), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 21).
+% unfolding
+r( p(pc(s__13), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__23), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_7, 1 =< X_5, X_5_prime + 1 = X_5, 0 =< X_5_prime, X_7_prime + 1 = X_7, 0 =< X_7_prime, X_9_prime = X_9, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 22).
+% morphing, consume
+r( p(pc(s__23), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__24), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 23).
+% folding
+r( p(pc(s__24), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__25), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 24).
+% unfolding
+r( p(pc(s__13), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__26), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 2 =< X_7, 2 =< X_5, X_5_prime + 2 = X_5, 0 =< X_5_prime, X_7_prime + 2 = X_7, 0 =< X_7_prime, X_9_prime = X_9, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 25).
+% inhibiting
+r( p(pc(s__26), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__27), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 26).
+% morphing, steal
+r( p(pc(s__27), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__28), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 27).
+% folding
+r( p(pc(s__28), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__29), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 28).
+% replicating 1
+r( p(pc(s__29), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__30), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = 1, X_4_prime = 1, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 29).
+% unfolding
+r( p(pc(s__30), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__31), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_5, 1 =< X_7, 0 =< X_4, 0 =< X_1, X_5_prime = X_4, X_1_prime = X_1, X_7_prime + 1 = X_7, 0 =< X_7_prime, X_4_prime + 1 = X_5, 0 =< X_4_prime, X_9_prime = X_9, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 30).
+% morphing, consume
+r( p(pc(s__31), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__32), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 31).
+% folding
+r( p(pc(s__32), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__33), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 32).
+% replicating 1
+r( p(pc(s__33), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__34), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 33).
+% unfolding
+r( p(pc(s__30), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__35), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 0 =< X_5, 0 =< X_7, 1 =< X_4, 1 =< X_1, X_5_prime + 1 = X_4, 0 =< X_5_prime, X_1_prime + 1 = X_1, 0 =< X_1_prime, X_7_prime = X_7, X_4_prime = X_5, X_9_prime = X_9, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 34).
+% morphing, consume
+r( p(pc(s__35), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__36), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 35).
+% folding
+r( p(pc(s__36), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__37), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5 + 1, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 36).
+% replicating 1
+r( p(pc(s__37), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__38), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 37).
+% unfolding
+r( p(pc(s__30), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__39), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_5, 1 =< X_7, 1 =< X_4, 1 =< X_1, X_5_prime + 1 = X_4, 0 =< X_5_prime, X_1_prime + 1 = X_1, 0 =< X_1_prime, X_7_prime + 1 = X_7, 0 =< X_7_prime, X_4_prime + 1 = X_5, 0 =< X_4_prime, X_9_prime = X_9, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 38).
+% morphing, steal
+r( p(pc(s__39), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__40), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 39).
+% folding
+r( p(pc(s__40), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__41), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5 + 1, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 40).
+% replicating 1
+r( p(pc(s__41), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__42), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = 3, X_4_prime = X_5, X_2_prime = X_4, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 41).
+% folding
+r( p(pc(s__42), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__43), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_5 + X_1, X_7_prime = 0, X_4_prime = X_5 + X_2, X_9_prime = X_7, X_2_prime = 0, X_8_prime = X_5, X_3_prime = X_3, X_6_prime = X_6]
+, [], 42).
+% unfolding
+r( p(pc(s__30), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__44), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 2 =< X_5, 2 =< X_7, 0 =< X_4, 0 =< X_1, X_5_prime = X_4, X_1_prime = X_1, X_7_prime + 2 = X_7, 0 =< X_7_prime, X_4_prime + 2 = X_5, 0 =< X_4_prime, X_9_prime = X_9, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 43).
+% inhibiting
+r( p(pc(s__44), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__45), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 44).
+% morphing, steal
+r( p(pc(s__45), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__46), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 45).
+% folding
+r( p(pc(s__46), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__47), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4 + 1, X_1_prime = X_1 + 1, X_4_prime = X_5, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 46).
+% replicating 1
+r( p(pc(s__47), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__48), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_2_prime = 1, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 47).
+% folding
+r( p(pc(s__48), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__49), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4 + X_2, X_4_prime = X_5, X_2_prime = 0, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 48).
+% unfolding
+r( p(pc(s__43), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__50), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 0 =< X_8, 0 =< X_1, 1 =< X_5, 1 =< X_9, 0 =< X_4, X_5_prime = X_4, X_1_prime = X_1, X_7_prime + 1 = X_9, 0 =< X_7_prime, X_4_prime + 1 = X_5, 0 =< X_4_prime, X_9_prime = 0, X_8_prime = X_8, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 49).
+% morphing, consume
+r( p(pc(s__50), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__51), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_8, X_4_prime = X_5, X_8_prime = X_1, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 50).
+% folding
+r( p(pc(s__51), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__52), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_4_prime = X_4 + 1, X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 51).
+% replicating 1
+r( p(pc(s__52), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__53), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 52).
+% folding
+r( p(pc(s__53), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__54), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_1 + X_8, X_7_prime = 0, X_9_prime = X_7, X_8_prime = 0, X_5_prime = X_5, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 53).
+% unfolding
+r( p(pc(s__43), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__55), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_8, 1 =< X_1, 0 =< X_5, 0 =< X_9, 1 =< X_4, X_5_prime = X_5, X_1_prime + 1 = X_8, 0 =< X_1_prime, X_7_prime = X_9, X_4_prime + 1 = X_4, 0 =< X_4_prime, X_9_prime = 0, X_8_prime + 1 = X_1, 0 =< X_8_prime, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 54).
+% morphing, consume
+r( p(pc(s__55), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__56), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_8, X_4_prime = X_5, X_8_prime = X_1, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 55).
+% folding
+r( p(pc(s__56), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__57), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_8_prime = X_8 + 1, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 56).
+% replicating 1
+r( p(pc(s__57), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__58), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 57).
+% folding
+r( p(pc(s__58), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__59), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_1 + X_8, X_4_prime = X_5, X_8_prime = 0, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 58).
+% replicating 1
+r( p(pc(s__59), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__60), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 59).
+% unfolding
+r( p(pc(s__43), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__61), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_8, 1 =< X_1, 0 =< X_5, 0 =< X_9, 1 =< X_4, X_5_prime + 1 = X_4, 0 =< X_5_prime, X_1_prime + 1 = X_1, 0 =< X_1_prime, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = 0, X_8_prime + 1 = X_8, 0 =< X_8_prime, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 60).
+% morphing, consume
+r( p(pc(s__61), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__62), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 61).
+% folding
+r( p(pc(s__62), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__63), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4 + 1, X_4_prime = X_5, X_8_prime = X_8 + 1, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 62).
+% replicating 1
+r( p(pc(s__63), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__64), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_8, X_8_prime = X_1, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 63).
+% folding
+r( p(pc(s__64), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__65), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_1 + X_8, X_8_prime = 0, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 64).
+% replicating 1
+r( p(pc(s__65), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__66), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 65).
+% unfolding
+r( p(pc(s__43), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__67), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_8, 1 =< X_1, 1 =< X_5, 1 =< X_9, 1 =< X_4, X_5_prime + 1 = X_4, 0 =< X_5_prime, X_1_prime + 1 = X_1, 0 =< X_1_prime, X_7_prime + 1 = X_9, 0 =< X_7_prime, X_4_prime + 1 = X_5, 0 =< X_4_prime, X_9_prime = 0, X_8_prime + 1 = X_8, 0 =< X_8_prime, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 66).
+% morphing, steal
+r( p(pc(s__67), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__68), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_8, X_4_prime = X_5, X_8_prime = X_1, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 67).
+% folding
+r( p(pc(s__68), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__69), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_4_prime = X_4 + 1, X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 68).
+% replicating 1
+r( p(pc(s__69), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__70), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_8, X_4_prime = 4, X_2_prime = X_4, X_8_prime = X_1, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_3_prime = X_3, X_6_prime = X_6]
+, [], 69).
+% folding
+r( p(pc(s__70), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__71), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4 + X_2, X_1_prime = X_4 + X_8, X_3_prime = X_1 + X_4, X_4_prime = X_5, X_2_prime = 0, X_8_prime = X_4, X_9_prime = X_9, X_7_prime = X_7, X_6_prime = X_6]
+, [], 70).
+% replicating 1
+r( p(pc(s__71), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__72), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 71).
+% folding
+r( p(pc(s__72), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__73), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_3, X_3_prime = 0, X_4_prime = X_5, X_8_prime = X_1 + X_8, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_6_prime = X_6]
+, [], 72).
+% unfolding
+r( p(pc(s__43), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__74), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 0 =< X_8, 0 =< X_1, 2 =< X_5, 2 =< X_9, 0 =< X_4, X_5_prime + 2 = X_5, 0 =< X_5_prime, X_1_prime = X_1, X_7_prime + 2 = X_9, 0 =< X_7_prime, X_4_prime = X_4, X_9_prime = 0, X_8_prime = X_8, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 73).
+% inhibiting
+r( p(pc(s__74), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__75), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_8, X_8_prime = X_1, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 74).
+% morphing, steal
+r( p(pc(s__75), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__76), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 75).
+% folding
+r( p(pc(s__76), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__77), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_1 + 1, X_4_prime = X_5 + 1, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 76).
+% replicating 1
+r( p(pc(s__77), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__78), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_8, X_2_prime = 1, X_8_prime = X_1, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 77).
+% folding
+r( p(pc(s__78), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__79), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4 + X_2, X_1_prime = X_1 + X_8, X_4_prime = X_5, X_2_prime = 0, X_8_prime = 0, X_9_prime = X_9, X_7_prime = X_7, X_3_prime = X_3, X_6_prime = X_6]
+, [], 78).
+% replicating 1
+r( p(pc(s__79), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__80), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 79).
+% unfolding
+r( p(pc(s__54), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__81), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 0 =< X_4, 0 =< X_9, 1 =< X_5, 1 =< X_1, X_5_prime = X_4, X_1_prime + X_8_prime + 1 = X_1, 0 =< X_1_prime, X_7_prime = X_9, X_4_prime + 1 = X_5, 0 =< X_4_prime, X_9_prime = 0, 0 =< X_8_prime, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 80).
+% morphing, consume
+r( p(pc(s__81), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__82), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 81).
+% folding
+r( p(pc(s__82), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__83), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4 + 1, X_1_prime = X_1 + X_8, X_4_prime = X_5, X_8_prime = 0, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 82).
+% replicating 1
+r( p(pc(s__83), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__84), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 83).
+% replicating 1
+r( p(pc(s__84), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__85), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 84).
+% unfolding
+r( p(pc(s__54), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__86), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_4, 1 =< X_9, 0 =< X_5, 0 =< X_1, X_5_prime + 1 = X_4, 0 =< X_5_prime, X_1_prime = X_1, X_7_prime + 1 = X_9, 0 =< X_7_prime, X_4_prime = X_5, X_9_prime = 0, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 85).
+% morphing, consume
+r( p(pc(s__86), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__87), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 86).
+% folding
+r( p(pc(s__87), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__88), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4 + 1, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 87).
+% replicating 1
+r( p(pc(s__88), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__89), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 88).
+% replicating 1
+r( p(pc(s__89), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__90), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 89).
+% unfolding
+r( p(pc(s__54), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__91), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_4, 1 =< X_9, 1 =< X_5, 0 =< X_1, X_5_prime + 1 = X_4, 0 =< X_5_prime, X_1_prime + X_8_prime = X_1, 0 =< X_1_prime, X_7_prime + 1 = X_9, 0 =< X_7_prime, X_4_prime + 1 = X_5, 0 =< X_4_prime, X_9_prime = 0, 0 =< X_8_prime, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 90).
+% morphing, steal
+r( p(pc(s__91), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__92), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 91).
+% folding
+r( p(pc(s__92), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__93), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_1 + X_8 + 1, X_4_prime = X_4 + 2, X_8_prime = 0, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 92).
+% replicating 1
+r( p(pc(s__93), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__94), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 93).
+% replicating 1
+r( p(pc(s__94), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__95), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 94).
+% unfolding
+r( p(pc(s__54), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__96), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 2 =< X_4, 2 =< X_9, 0 =< X_5, 0 =< X_1, X_5_prime + 2 = X_4, 0 =< X_5_prime, X_1_prime = X_1, X_7_prime + 2 = X_9, 0 =< X_7_prime, X_4_prime = X_5, X_9_prime = 0, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 95).
+% inhibiting
+r( p(pc(s__96), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__97), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 96).
+% morphing, steal
+r( p(pc(s__97), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__98), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 97).
+% folding
+r( p(pc(s__98), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__99), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 2, X_1_prime = X_1 + 1, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 98).
+% replicating 1
+r( p(pc(s__99), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__100), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 99).
+% replicating 1
+r( p(pc(s__100), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__101), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 100).
+% morphing, stop spawn
+r( p(pc(s__18), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__102), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 101).
+% unfolding
+r( p(pc(s__18), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__103), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_9, 1 =< X_5, 1 =< X_7, X_5_prime + 1 = X_5, 0 =< X_5_prime, X_7_prime + 1 = X_9, 0 =< X_7_prime, X_9_prime + 1 = X_7, 0 =< X_9_prime, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 102).
+% morphing, spawn job
+r( p(pc(s__103), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__104), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 103).
+% replicating 1
+r( p(pc(s__104), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__105), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = 4, X_6_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4]
+, [], 104).
+% folding
+r( p(pc(s__105), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__106), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + X_9, X_7_prime = X_9, X_9_prime = X_7 + X_9, X_6_prime = X_9 + X_6, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4]
+, [], 105).
+% replicating 1
+r( p(pc(s__106), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__107), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_6, X_9_prime = X_7, X_6_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4]
+, [], 106).
+% folding
+r( p(pc(s__107), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__108), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9 + X_6, X_6_prime = 0, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4]
+, [], 107).
+% replicating 1
+r( p(pc(s__108), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__109), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 108).
+% folding
+r( p(pc(s__109), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__110), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_7 + X_9, X_9_prime = 0, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 109).
+% morphing, spawn worker
+r( p(pc(s__18), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__111), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 110).
+% folding
+r( p(pc(s__111), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__112), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 111).
+% replicating 1
+r( p(pc(s__112), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__113), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 112).
+% folding
+r( p(pc(s__113), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__114), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_7 + X_9, X_9_prime = 0, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 113).
+% replicating 1
+r( p(pc(s__114), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__115), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 114).
+% unfolding
+r( p(pc(s__102), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__116), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_7, 1 =< X_5, 1 =< X_9, X_5_prime + 1 = X_5, 0 =< X_5_prime, X_7_prime + 1 = X_7, 0 =< X_7_prime, X_9_prime + 1 = X_9, 0 =< X_9_prime, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 115).
+% morphing, consume
+r( p(pc(s__116), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__117), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 116).
+% folding
+r( p(pc(s__117), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__118), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_7_prime = X_9 + 1, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 117).
+% unfolding
+r( p(pc(s__102), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__119), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_7, 1 =< X_5, 1 =< X_9, X_5_prime + 1 = X_5, 0 =< X_5_prime, X_7_prime + 1 = X_9, 0 =< X_7_prime, X_9_prime + 1 = X_7, 0 =< X_9_prime, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 118).
+% morphing, consume
+r( p(pc(s__119), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__120), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 119).
+% folding
+r( p(pc(s__120), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__121), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_7_prime = X_9 + 1, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 120).
+% unfolding
+r( p(pc(s__102), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__122), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 2 =< X_7, 2 =< X_5, 2 =< X_9, X_5_prime + 2 = X_5, 0 =< X_5_prime, X_7_prime + 2 = X_7, 0 =< X_7_prime, X_9_prime + 2 = X_9, 0 =< X_9_prime, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 121).
+% inhibiting
+r( p(pc(s__122), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__123), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 122).
+% morphing, steal
+r( p(pc(s__123), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__124), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 123).
+% folding
+r( p(pc(s__124), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__125), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_9_prime = X_9 + 1, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 124).
+% replicating 1
+r( p(pc(s__125), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__126), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = 1, X_1_prime = 1, X_4_prime = X_5, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 125).
+% unfolding
+r( p(pc(s__102), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__127), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 2 =< X_7, 2 =< X_5, 2 =< X_9, X_5_prime + 2 = X_5, 0 =< X_5_prime, X_7_prime + 2 = X_7, 0 =< X_7_prime, X_9_prime + 2 = X_9, 0 =< X_9_prime, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 126).
+% inhibiting
+r( p(pc(s__127), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__128), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 127).
+% morphing, steal
+r( p(pc(s__128), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__129), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 128).
+% folding
+r( p(pc(s__129), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__130), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_7_prime = X_7 + 1, X_9_prime = X_9, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 129).
+% replicating 1
+r( p(pc(s__130), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__131), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = 2, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 130).
+% unfolding
+r( p(pc(s__126), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__132), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_4, 1 =< X_9, 0 =< X_1, 1 =< X_7, 0 =< X_5, X_5_prime = X_5, X_1_prime = X_1, X_7_prime + 1 = X_9, 0 =< X_7_prime, X_4_prime + 1 = X_4, 0 =< X_4_prime, X_9_prime + 1 = X_7, 0 =< X_9_prime, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 131).
+% morphing, consume
+r( p(pc(s__132), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__133), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 132).
+% folding
+r( p(pc(s__133), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__134), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_4_prime = X_4 + 1, X_9_prime = X_7 + 1, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 133).
+% replicating 1
+r( p(pc(s__134), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__135), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 134).
+% unfolding
+r( p(pc(s__126), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__136), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_4, 1 =< X_9, 0 =< X_1, 1 =< X_7, 0 =< X_5, X_5_prime = X_5, X_1_prime = X_1, X_7_prime + 1 = X_9, 0 =< X_7_prime, X_4_prime + 1 = X_4, 0 =< X_4_prime, X_9_prime + 1 = X_7, 0 =< X_9_prime, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 135).
+% morphing, consume
+r( p(pc(s__136), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__137), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 136).
+% folding
+r( p(pc(s__137), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__138), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_7_prime = X_9, X_9_prime = X_7 + 1, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 137).
+% replicating 1
+r( p(pc(s__138), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__139), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 138).
+% unfolding
+r( p(pc(s__126), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__140), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 0 =< X_4, 0 =< X_9, 1 =< X_1, 0 =< X_7, 1 =< X_5, X_5_prime + 1 = X_5, 0 =< X_5_prime, X_1_prime + 1 = X_1, 0 =< X_1_prime, X_7_prime = X_7, X_4_prime = X_4, X_9_prime = X_9, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 139).
+% morphing, consume
+r( p(pc(s__140), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__141), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 140).
+% folding
+r( p(pc(s__141), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__142), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5 + 1, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 141).
+% replicating 1
+r( p(pc(s__142), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__143), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 142).
+% unfolding
+r( p(pc(s__126), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__144), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_4, 1 =< X_9, 1 =< X_1, 1 =< X_7, 1 =< X_5, X_5_prime + 1 = X_5, 0 =< X_5_prime, X_1_prime + 1 = X_1, 0 =< X_1_prime, X_7_prime + 1 = X_9, 0 =< X_7_prime, X_4_prime + 1 = X_4, 0 =< X_4_prime, X_9_prime + 1 = X_7, 0 =< X_9_prime, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 143).
+% morphing, steal
+r( p(pc(s__144), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__145), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 144).
+% folding
+r( p(pc(s__145), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__146), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9 + 1, X_4_prime = X_4 + 1, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 145).
+% replicating 1
+r( p(pc(s__146), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__147), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = 3, X_8_prime = X_1, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 146).
+% folding
+r( p(pc(s__147), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__148), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + X_1, X_1_prime = X_1 + X_8, X_7_prime = X_9, X_9_prime = X_7, X_8_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 147).
+% replicating 1
+r( p(pc(s__148), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__149), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_8, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_8_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 148).
+% unfolding
+r( p(pc(s__126), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__150), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_4, 1 =< X_9, 1 =< X_1, 1 =< X_7, 1 =< X_5, X_5_prime + 1 = X_4, 0 =< X_5_prime, X_1_prime + 1 = X_1, 0 =< X_1_prime, X_7_prime + 1 = X_7, 0 =< X_7_prime, X_4_prime + 1 = X_5, 0 =< X_4_prime, X_9_prime + 1 = X_9, 0 =< X_9_prime, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 149).
+% morphing, steal
+r( p(pc(s__150), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__151), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 150).
+% folding
+r( p(pc(s__151), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__152), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = X_9 + 1, X_4_prime = X_5 + 1, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 151).
+% replicating 1
+r( p(pc(s__152), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__153), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = 3, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_8_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 152).
+% folding
+r( p(pc(s__153), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__154), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_1 + X_4, X_1_prime = X_1 + X_8, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_8_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 153).
+% replicating 1
+r( p(pc(s__154), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__155), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_8, X_8_prime = X_1, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 154).
+% unfolding
+r( p(pc(s__126), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__156), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 2 =< X_4, 2 =< X_9, 0 =< X_1, 2 =< X_7, 0 =< X_5, X_5_prime = X_5, X_1_prime = X_1, X_7_prime + 2 = X_7, 0 =< X_7_prime, X_4_prime + 2 = X_4, 0 =< X_4_prime, X_9_prime + 2 = X_9, 0 =< X_9_prime, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 155).
+% inhibiting
+r( p(pc(s__156), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__157), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 156).
+% morphing, steal
+r( p(pc(s__157), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__158), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 157).
+% folding
+r( p(pc(s__158), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__159), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_1_prime = X_1 + 1, X_4_prime = X_4 + 1, X_9_prime = X_9 + 1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 158).
+% replicating 1
+r( p(pc(s__159), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__160), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 159).
+% unfolding
+r( p(pc(s__126), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__161), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 2 =< X_4, 2 =< X_9, 0 =< X_1, 2 =< X_7, 0 =< X_5, X_5_prime + 2 = X_4, 0 =< X_5_prime, X_1_prime = X_1, X_7_prime + 2 = X_9, 0 =< X_7_prime, X_4_prime = X_5, X_9_prime + 2 = X_7, 0 =< X_9_prime, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 160).
+% inhibiting
+r( p(pc(s__161), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__162), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 161).
+% morphing, steal
+r( p(pc(s__162), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__163), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 162).
+% folding
+r( p(pc(s__163), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__164), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4 + 1, X_1_prime = X_1 + 1, X_4_prime = X_5 + 1, X_9_prime = X_9 + 1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 163).
+% replicating 1
+r( p(pc(s__164), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__165), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 164).
+% unfolding
+r( p(pc(s__149), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__166), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 0 =< X_5, 1 =< X_4, 1 =< X_1, 0 =< X_9, 0 =< X_7, 1 =< X_8, X_5_prime + 1 = X_4, 0 =< X_5_prime, X_1_prime + 1 = X_8, 0 =< X_1_prime, X_7_prime = X_7, X_4_prime = X_5, X_9_prime = X_9, X_8_prime + 1 = X_1, 0 =< X_8_prime, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 165).
+% morphing, consume
+r( p(pc(s__166), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__167), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 166).
+% folding
+r( p(pc(s__167), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__168), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = X_9, X_4_prime = X_5 + 1, X_9_prime = X_7, X_8_prime = X_8 + 1, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 167).
+% replicating 1
+r( p(pc(s__168), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__169), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_8, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_8_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 168).
+% folding
+r( p(pc(s__169), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__170), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_1 + X_8, X_4_prime = X_5, X_8_prime = 0, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 169).
+% replicating 1
+r( p(pc(s__170), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 170).
+% unfolding
+r( p(pc(s__149), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__172), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_5, 0 =< X_4, 0 =< X_1, 1 =< X_9, 1 =< X_7, 0 =< X_8, X_5_prime = X_4, X_1_prime = X_1, X_7_prime + 1 = X_7, 0 =< X_7_prime, X_4_prime + 1 = X_5, 0 =< X_4_prime, X_9_prime + 1 = X_9, 0 =< X_9_prime, X_8_prime = X_8, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 171).
+% morphing, consume
+r( p(pc(s__172), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__173), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 172).
+% folding
+r( p(pc(s__173), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__174), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_1_prime = X_8, X_7_prime = X_9, X_9_prime = X_7 + 1, X_8_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 173).
+% replicating 1
+r( p(pc(s__174), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__175), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 174).
+% folding
+r( p(pc(s__175), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__176), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_1 + X_8, X_4_prime = X_5, X_8_prime = 0, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 175).
+% replicating 1
+r( p(pc(s__176), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__177), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 176).
+% unfolding
+r( p(pc(s__149), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__178), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_5, 0 =< X_4, 0 =< X_1, 1 =< X_9, 1 =< X_7, 0 =< X_8, X_5_prime = X_4, X_1_prime = X_8, X_7_prime + 1 = X_9, 0 =< X_7_prime, X_4_prime + 1 = X_5, 0 =< X_4_prime, X_9_prime + 1 = X_7, 0 =< X_9_prime, X_8_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 177).
+% morphing, consume
+r( p(pc(s__178), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__179), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 178).
+% folding
+r( p(pc(s__179), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__180), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_8, X_4_prime = X_4 + 1, X_9_prime = X_9 + 1, X_8_prime = X_1, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 179).
+% replicating 1
+r( p(pc(s__180), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__181), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_8, X_7_prime = X_9, X_9_prime = X_7, X_8_prime = X_1, X_5_prime = X_5, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 180).
+% folding
+r( p(pc(s__181), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__182), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_1 + X_8, X_7_prime = X_9, X_9_prime = X_7, X_8_prime = 0, X_5_prime = X_5, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 181).
+% unfolding
+r( p(pc(s__149), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__183), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 0 =< X_5, 1 =< X_4, 1 =< X_1, 0 =< X_9, 0 =< X_7, 1 =< X_8, X_5_prime + 1 = X_4, 0 =< X_5_prime, X_1_prime + 1 = X_8, 0 =< X_1_prime, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_8_prime + 1 = X_1, 0 =< X_8_prime, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 182).
+% morphing, consume
+r( p(pc(s__183), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__184), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_8, X_4_prime = X_5, X_8_prime = X_1, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 183).
+% folding
+r( p(pc(s__184), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__185), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4 + 1, X_1_prime = X_1 + 1, X_4_prime = X_5, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 184).
+% replicating 1
+r( p(pc(s__185), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__186), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_8, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_8_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 185).
+% folding
+r( p(pc(s__186), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__187), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_1 + X_8, X_4_prime = X_5, X_8_prime = 0, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 186).
+% unfolding
+r( p(pc(s__149), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__188), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_5, 1 =< X_4, 1 =< X_1, 1 =< X_9, 1 =< X_7, 1 =< X_8, X_5_prime + 1 = X_5, 0 =< X_5_prime, X_1_prime + 1 = X_1, 0 =< X_1_prime, X_7_prime + 1 = X_7, 0 =< X_7_prime, X_4_prime + 1 = X_4, 0 =< X_4_prime, X_9_prime + 1 = X_9, 0 =< X_9_prime, X_8_prime + 1 = X_8, 0 =< X_8_prime, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 187).
+% morphing, steal
+r( p(pc(s__188), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__189), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 188).
+% folding
+r( p(pc(s__189), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__190), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_7_prime = X_7 + 1, X_9_prime = X_9, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 189).
+% replicating 1
+r( p(pc(s__190), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__191), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_8, X_3_prime = X_1, X_8_prime = 4, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_4_prime = X_4, X_6_prime = X_6]
+, [], 190).
+% folding
+r( p(pc(s__191), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__192), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4 + X_8, X_1_prime = X_8, X_3_prime = X_1 + X_8, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_8_prime = X_3 + X_8, X_2_prime = X_2, X_6_prime = X_6]
+, [], 191).
+% replicating 1
+r( p(pc(s__192), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__193), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_8, X_3_prime = X_1, X_8_prime = X_3, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_4_prime = X_4, X_6_prime = X_6]
+, [], 192).
+% unfolding
+r( p(pc(s__149), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__194), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_5, 1 =< X_4, 1 =< X_1, 1 =< X_9, 1 =< X_7, 1 =< X_8, X_5_prime + 1 = X_4, 0 =< X_5_prime, X_1_prime + 1 = X_8, 0 =< X_1_prime, X_7_prime + 1 = X_7, 0 =< X_7_prime, X_4_prime + 1 = X_5, 0 =< X_4_prime, X_9_prime + 1 = X_9, 0 =< X_9_prime, X_8_prime + 1 = X_1, 0 =< X_8_prime, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 193).
+% morphing, steal
+r( p(pc(s__194), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__195), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_8, X_4_prime = X_5, X_8_prime = X_1, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 194).
+% folding
+r( p(pc(s__195), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__196), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_1_prime = X_8, X_9_prime = X_9 + 1, X_8_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 195).
+% replicating 1
+r( p(pc(s__196), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__197), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = 4, X_3_prime = X_8, X_4_prime = X_5, X_8_prime = X_1, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_6_prime = X_6]
+, [], 196).
+% folding
+r( p(pc(s__197), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__198), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_1 + X_3, X_3_prime = X_1 + X_8, X_7_prime = X_9, X_4_prime = X_5 + X_1, X_9_prime = X_7, X_8_prime = X_1, X_2_prime = X_2, X_6_prime = X_6]
+, [], 197).
+% replicating 1
+r( p(pc(s__198), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__199), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 198).
+% unfolding
+r( p(pc(s__149), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__200), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 2 =< X_5, 0 =< X_4, 0 =< X_1, 2 =< X_9, 2 =< X_7, 0 =< X_8, X_5_prime + 2 = X_5, 0 =< X_5_prime, X_1_prime = X_1, X_7_prime + 2 = X_7, 0 =< X_7_prime, X_4_prime = X_4, X_9_prime + 2 = X_9, 0 =< X_9_prime, X_8_prime = X_8, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 199).
+% inhibiting
+r( p(pc(s__200), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__201), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_8, X_4_prime = X_5, X_8_prime = X_1, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 200).
+% morphing, steal
+r( p(pc(s__201), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__202), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_8, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_8_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 201).
+% folding
+r( p(pc(s__202), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__203), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_1_prime = X_8, X_7_prime = X_9, X_4_prime = X_4 + 1, X_9_prime = X_7 + 1, X_8_prime = X_1 + 1, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 202).
+% replicating 1
+r( p(pc(s__203), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__204), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_8, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_8_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 203).
+% folding
+r( p(pc(s__204), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__205), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_1 + X_8, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_8_prime = 0, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 204).
+% replicating 1
+r( p(pc(s__205), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__206), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 205).
+% unfolding
+r( p(pc(s__149), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__207), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 2 =< X_5, 0 =< X_4, 0 =< X_1, 2 =< X_9, 2 =< X_7, 0 =< X_8, X_5_prime + 2 = X_5, 0 =< X_5_prime, X_1_prime = X_1, X_7_prime + 2 = X_9, 0 =< X_7_prime, X_4_prime = X_4, X_9_prime + 2 = X_7, 0 =< X_9_prime, X_8_prime = X_8, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 206).
+% inhibiting
+r( p(pc(s__207), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__208), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 207).
+% morphing, steal
+r( p(pc(s__208), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__209), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_8, X_8_prime = X_1, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 208).
+% folding
+r( p(pc(s__209), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__210), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4 + 1, X_1_prime = X_8 + 1, X_7_prime = X_7 + 1, X_4_prime = X_5 + 1, X_8_prime = X_1, X_9_prime = X_9, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 209).
+% replicating 1
+r( p(pc(s__210), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__211), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 210).
+% folding
+r( p(pc(s__211), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__212), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_1 + X_8, X_8_prime = 0, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 211).
+% unfolding
+r( p(pc(s__171), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__213), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_4, 0 =< X_1, 0 =< X_5, 1 =< X_7, 1 =< X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime + 1 = X_9, 0 =< X_7_prime, X_4_prime + 1 = X_4, 0 =< X_4_prime, X_9_prime + 1 = X_7, 0 =< X_9_prime, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 212).
+% morphing, consume
+r( p(pc(s__213), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__214), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 213).
+% folding
+r( p(pc(s__214), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__215), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_7_prime = X_7 + 1, X_9_prime = X_9, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 214).
+% replicating 1
+r( p(pc(s__215), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__216), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 215).
+% replicating 1
+r( p(pc(s__216), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__217), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 216).
+% unfolding
+r( p(pc(s__171), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__218), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_4, 0 =< X_1, 0 =< X_5, 1 =< X_7, 1 =< X_9, X_5_prime + 1 = X_4, 0 =< X_5_prime, X_1_prime = X_1, X_7_prime + 1 = X_9, 0 =< X_7_prime, X_4_prime = X_5, X_9_prime + 1 = X_7, 0 =< X_9_prime, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 217).
+% morphing, consume
+r( p(pc(s__218), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__219), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 218).
+% folding
+r( p(pc(s__219), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__220), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_4_prime = X_4 + 1, X_9_prime = X_7 + 1, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 219).
+% replicating 1
+r( p(pc(s__220), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__221), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 220).
+% replicating 1
+r( p(pc(s__221), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__222), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 221).
+% unfolding
+r( p(pc(s__171), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__223), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 0 =< X_4, 1 =< X_1, 1 =< X_5, 0 =< X_7, 0 =< X_9, X_5_prime = X_4, X_1_prime + X_8_prime + 1 = X_1, 0 =< X_1_prime, X_7_prime = X_9, X_4_prime + 1 = X_5, 0 =< X_4_prime, X_9_prime = X_7, 0 =< X_8_prime, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 222).
+% morphing, consume
+r( p(pc(s__223), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__224), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_8, X_4_prime = X_5, X_8_prime = X_1, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 223).
+% folding
+r( p(pc(s__224), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__225), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_1 + X_8, X_7_prime = X_9, X_4_prime = X_5 + 1, X_9_prime = X_7, X_8_prime = 0, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 224).
+% replicating 1
+r( p(pc(s__225), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__226), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 225).
+% replicating 1
+r( p(pc(s__226), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__227), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 226).
+% unfolding
+r( p(pc(s__171), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__228), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_4, 0 =< X_1, 1 =< X_5, 1 =< X_7, 1 =< X_9, X_5_prime + 1 = X_4, 0 =< X_5_prime, X_1_prime + X_8_prime = X_1, 0 =< X_1_prime, X_7_prime + 1 = X_7, 0 =< X_7_prime, X_4_prime + 1 = X_5, 0 =< X_4_prime, X_9_prime + 1 = X_9, 0 =< X_9_prime, 0 =< X_8_prime, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 227).
+% morphing, steal
+r( p(pc(s__228), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__229), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_8, X_4_prime = X_5, X_8_prime = X_1, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 228).
+% folding
+r( p(pc(s__229), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__230), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4 + 1, X_7_prime = X_7 + 1, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 229).
+% replicating 1
+r( p(pc(s__230), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__231), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = 2, X_3_prime = X_1, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_2_prime = X_2, X_8_prime = X_8, X_6_prime = X_6]
+, [], 230).
+% folding
+r( p(pc(s__231), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__232), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + X_1, X_1_prime = X_1, X_3_prime = 0, X_8_prime = X_3 + X_8, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_4_prime = X_4, X_6_prime = X_6]
+, [], 231).
+% replicating 1
+r( p(pc(s__232), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__233), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_8, X_8_prime = X_1, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 232).
+% folding
+r( p(pc(s__233), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__234), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_1 + X_8, X_7_prime = X_9, X_9_prime = X_7, X_8_prime = 0, X_5_prime = X_5, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 233).
+% unfolding
+r( p(pc(s__171), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__235), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_4, 0 =< X_1, 1 =< X_5, 1 =< X_7, 1 =< X_9, X_5_prime + 1 = X_5, 0 =< X_5_prime, X_1_prime + X_8_prime = X_1, 0 =< X_1_prime, X_7_prime + 1 = X_9, 0 =< X_7_prime, X_4_prime + 1 = X_4, 0 =< X_4_prime, X_9_prime + 1 = X_7, 0 =< X_9_prime, 0 =< X_8_prime, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 234).
+% morphing, steal
+r( p(pc(s__235), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__236), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_8, X_7_prime = X_9, X_9_prime = X_7, X_8_prime = X_1, X_5_prime = X_5, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 235).
+% folding
+r( p(pc(s__236), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__237), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_1 + X_8 + 1, X_7_prime = X_9, X_4_prime = X_5 + 1, X_9_prime = X_7, X_8_prime = 0, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 236).
+% replicating 1
+r( p(pc(s__237), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__238), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = 2, X_4_prime = X_5, X_2_prime = X_4, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 237).
+% folding
+r( p(pc(s__238), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__239), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + X_4, X_7_prime = X_5 + X_9, X_4_prime = X_2, X_9_prime = X_7, X_2_prime = 0, X_1_prime = X_1, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 238).
+% replicating 1
+r( p(pc(s__239), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__240), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 239).
+% unfolding
+r( p(pc(s__171), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__241), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 2 =< X_4, 0 =< X_1, 0 =< X_5, 2 =< X_7, 2 =< X_9, X_5_prime + 2 = X_4, 0 =< X_5_prime, X_1_prime = X_1, X_7_prime + 2 = X_7, 0 =< X_7_prime, X_4_prime = X_5, X_9_prime + 2 = X_9, 0 =< X_9_prime, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 240).
+% inhibiting
+r( p(pc(s__241), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__242), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 241).
+% morphing, steal
+r( p(pc(s__242), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__243), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 242).
+% folding
+r( p(pc(s__243), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__244), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4 + 1, X_1_prime = X_1 + 1, X_7_prime = X_7 + 1, X_4_prime = X_5 + 1, X_9_prime = X_9, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 243).
+% replicating 1
+r( p(pc(s__244), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__245), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 244).
+% replicating 1
+r( p(pc(s__245), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__246), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 245).
+% unfolding
+r( p(pc(s__171), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__247), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 2 =< X_4, 0 =< X_1, 0 =< X_5, 2 =< X_7, 2 =< X_9, X_5_prime + 2 = X_4, 0 =< X_5_prime, X_1_prime = X_1, X_7_prime + 2 = X_9, 0 =< X_7_prime, X_4_prime = X_5, X_9_prime + 2 = X_7, 0 =< X_9_prime, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 246).
+% inhibiting
+r( p(pc(s__247), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__248), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 247).
+% morphing, steal
+r( p(pc(s__248), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__249), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 248).
+% folding
+r( p(pc(s__249), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__250), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5 + 1, X_9_prime = X_9 + 1, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 249).
+% replicating 1
+r( p(pc(s__250), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__251), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = 2, X_8_prime = X_1, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 250).
+% folding
+r( p(pc(s__251), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__252), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + X_1, X_1_prime = X_1 + X_8, X_7_prime = X_9, X_9_prime = X_7, X_8_prime = 0, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 251).
+% replicating 1
+r( p(pc(s__252), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__253), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 252).
+% morphing, stop spawn
+r( p(pc(s__110), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__254), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 253).
+% unfolding
+r( p(pc(s__110), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__255), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 0 =< X_7, 1 =< X_5, X_5_prime + 1 = X_5, 0 =< X_5_prime, X_7_prime + X_9_prime = X_7, 0 =< X_7_prime, 0 =< X_9_prime, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 254).
+% morphing, spawn job
+r( p(pc(s__255), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__256), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 255).
+% folding
+r( p(pc(s__256), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__257), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_7_prime = X_7 + X_9 + 1, X_9_prime = 0, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 256).
+% replicating 1
+r( p(pc(s__257), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__258), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 257).
+% replicating 1
+r( p(pc(s__258), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__259), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 258).
+% morphing, spawn worker
+r( p(pc(s__110), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__260), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 259).
+% folding
+r( p(pc(s__260), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__261), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 260).
+% replicating 1
+r( p(pc(s__261), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__262), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 261).
+% replicating 1
+r( p(pc(s__262), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__263), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 262).
+% unfolding
+r( p(pc(s__254), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__264), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_7, 1 =< X_5, X_5_prime + 1 = X_5, 0 =< X_5_prime, X_7_prime + X_9_prime + 1 = X_7, 0 =< X_7_prime, 0 =< X_9_prime, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 263).
+% morphing, consume
+r( p(pc(s__264), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__265), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 264).
+% folding
+r( p(pc(s__265), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__266), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_7_prime = X_7 + X_9, X_9_prime = 0, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 265).
+% unfolding
+r( p(pc(s__254), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__267), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_7, 2 =< X_5, X_5_prime + 2 = X_5, 0 =< X_5_prime, X_7_prime + X_9_prime + X_6_prime + 1 = X_7, 0 =< X_7_prime, 0 =< X_9_prime, 0 =< X_6_prime, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4]
+, [], 266).
+% inhibiting
+r( p(pc(s__267), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__268), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_6, X_6_prime = 0, X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4]
+, [], 267).
+% morphing, steal
+r( p(pc(s__268), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__269), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 268).
+% folding
+r( p(pc(s__269), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__270), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_7_prime = X_7 + X_9, X_9_prime = 0, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 269).
+% replicating 1
+r( p(pc(s__270), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__271), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = 1, X_4_prime = 1, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 270).
+% unfolding
+r( p(pc(s__271), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__272), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_4, 0 =< X_7, 0 =< X_5, 1 =< X_1, X_5_prime = X_5, X_1_prime + 1 = X_1, 0 =< X_1_prime, X_7_prime = X_7, X_4_prime + 1 = X_4, 0 =< X_4_prime, X_9_prime = X_9, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 271).
+% morphing, consume
+r( p(pc(s__272), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__273), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 272).
+% folding
+r( p(pc(s__273), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__274), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_4_prime = X_4 + 1, X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 273).
+% replicating 1
+r( p(pc(s__274), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__275), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 274).
+% unfolding
+r( p(pc(s__271), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__276), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 0 =< X_4, 1 =< X_7, 1 =< X_5, 0 =< X_1, X_5_prime + 1 = X_5, 0 =< X_5_prime, X_1_prime = X_1, X_7_prime + X_9_prime + 1 = X_7, 0 =< X_7_prime, X_4_prime = X_4, 0 =< X_9_prime, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 275).
+% morphing, consume
+r( p(pc(s__276), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__277), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 276).
+% folding
+r( p(pc(s__277), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__278), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = X_7 + X_9, X_4_prime = X_5 + 1, X_9_prime = 0, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 277).
+% replicating 1
+r( p(pc(s__278), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__279), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 278).
+% unfolding
+r( p(pc(s__271), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__280), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 0 =< X_4, 1 =< X_7, 2 =< X_5, 0 =< X_1, X_5_prime = X_4, X_1_prime = X_1, X_7_prime + X_9_prime + X_6_prime + 1 = X_7, 0 =< X_7_prime, X_4_prime + 2 = X_5, 0 =< X_4_prime, 0 =< X_9_prime, 0 =< X_6_prime, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8]
+, [], 279).
+% inhibiting
+r( p(pc(s__280), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__281), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_6, X_6_prime = 0, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4]
+, [], 280).
+% morphing, steal
+r( p(pc(s__281), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__282), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 281).
+% folding
+r( p(pc(s__282), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__283), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_1_prime = X_1 + 1, X_7_prime = X_7 + X_9, X_4_prime = X_4 + 1, X_9_prime = 0, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 282).
+% replicating 1
+r( p(pc(s__283), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__284), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 283).
+% unfolding
+r( p(pc(s__271), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__285), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_4, 1 =< X_7, 1 =< X_5, 1 =< X_1, X_5_prime + 1 = X_4, 0 =< X_5_prime, X_1_prime + 1 = X_1, 0 =< X_1_prime, X_7_prime + X_9_prime + 1 = X_7, 0 =< X_7_prime, X_4_prime + 1 = X_5, 0 =< X_4_prime, 0 =< X_9_prime, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 284).
+% morphing, steal
+r( p(pc(s__285), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__286), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 285).
+% folding
+r( p(pc(s__286), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__287), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_7_prime = X_7 + X_9, X_9_prime = 0, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 286).
+% replicating 1
+r( p(pc(s__287), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__288), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = 3, X_8_prime = X_1, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 287).
+% folding
+r( p(pc(s__288), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__289), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_1, X_4_prime = X_1 + X_4, X_8_prime = X_1 + X_8, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 288).
+% replicating 1
+r( p(pc(s__289), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__290), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 289).
+% unfolding
+r( p(pc(s__290), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__291), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_5, 0 =< X_7, 0 =< X_4, 1 =< X_1, 1 =< X_8, X_5_prime = X_4, X_1_prime + 1 = X_8, 0 =< X_1_prime, X_7_prime = X_7, X_4_prime + 1 = X_5, 0 =< X_4_prime, X_8_prime + 1 = X_1, 0 =< X_8_prime, X_9_prime = X_9, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 290).
+% morphing, consume
+r( p(pc(s__291), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__292), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_8, X_4_prime = X_5, X_8_prime = X_1, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 291).
+% folding
+r( p(pc(s__292), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__293), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + 1, X_1_prime = X_1 + 1, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 292).
+% replicating 1
+r( p(pc(s__293), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__294), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 293).
+% folding
+r( p(pc(s__294), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__295), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_1 + X_8, X_8_prime = 0, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 294).
+% unfolding
+r( p(pc(s__290), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__296), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_5, 0 =< X_7, 0 =< X_4, 1 =< X_1, 1 =< X_8, X_5_prime + 1 = X_5, 0 =< X_5_prime, X_1_prime + 1 = X_8, 0 =< X_1_prime, X_7_prime = X_7, X_4_prime = X_4, X_8_prime + 1 = X_1, 0 =< X_8_prime, X_9_prime = X_9, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 295).
+% morphing, consume
+r( p(pc(s__296), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__297), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 296).
+% folding
+r( p(pc(s__297), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__298), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_8 + 1, X_4_prime = X_4 + 1, X_8_prime = X_1, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 297).
+% replicating 1
+r( p(pc(s__298), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__299), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 298).
+% folding
+r( p(pc(s__299), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__300), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_1 + X_8, X_4_prime = X_5, X_8_prime = 0, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 299).
+% replicating 1
+r( p(pc(s__300), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__301), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 300).
+% unfolding
+r( p(pc(s__290), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__302), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 0 =< X_5, 1 =< X_7, 1 =< X_4, 0 =< X_1, 0 =< X_8, X_5_prime + 1 = X_4, 0 =< X_5_prime, X_1_prime = X_1, X_7_prime + X_9_prime + 1 = X_7, 0 =< X_7_prime, X_4_prime = X_5, 0 =< X_9_prime, X_8_prime = X_8, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 301).
+% morphing, consume
+r( p(pc(s__302), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__303), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 302).
+% folding
+r( p(pc(s__303), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__304), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_7 + X_9, X_4_prime = X_4 + 1, X_9_prime = 0, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 303).
+% replicating 1
+r( p(pc(s__304), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__305), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_8, X_8_prime = X_1, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 304).
+% folding
+r( p(pc(s__305), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__306), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_1 + X_8, X_4_prime = X_5, X_8_prime = 0, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 305).
+% unfolding
+r( p(pc(s__290), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__307), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 0 =< X_5, 1 =< X_7, 2 =< X_4, 0 =< X_1, 0 =< X_8, X_5_prime = X_5, X_1_prime = X_1, X_7_prime + X_9_prime + X_6_prime + 1 = X_7, 0 =< X_7_prime, X_4_prime + 2 = X_4, 0 =< X_4_prime, 0 =< X_9_prime, 0 =< X_6_prime, X_8_prime = X_8, X_2_prime = X_2, X_3_prime = X_3]
+, [], 306).
+% inhibiting
+r( p(pc(s__307), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__308), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_8, X_7_prime = X_6, X_9_prime = X_7, X_6_prime = 0, X_8_prime = X_1, X_5_prime = X_5, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4]
+, [], 307).
+% morphing, steal
+r( p(pc(s__308), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__309), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_8, X_8_prime = X_1, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 308).
+% folding
+r( p(pc(s__309), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__310), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4 + 1, X_1_prime = X_8, X_7_prime = 0, X_4_prime = X_5, X_9_prime = X_7 + X_9, X_8_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 309).
+% replicating 1
+r( p(pc(s__310), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__311), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_8, X_3_prime = X_1, X_4_prime = X_5, X_8_prime = 2, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_6_prime = X_6]
+, [], 310).
+% folding
+r( p(pc(s__311), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__312), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + X_8, X_1_prime = X_3 + X_8, X_3_prime = 0, X_8_prime = X_1, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_4_prime = X_4, X_6_prime = X_6]
+, [], 311).
+% unfolding
+r( p(pc(s__290), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__313), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_5, 1 =< X_7, 1 =< X_4, 1 =< X_1, 1 =< X_8, X_5_prime + 1 = X_5, 0 =< X_5_prime, X_1_prime + 1 = X_8, 0 =< X_1_prime, X_7_prime + X_9_prime + 1 = X_7, 0 =< X_7_prime, X_4_prime + 1 = X_4, 0 =< X_4_prime, 0 =< X_9_prime, X_8_prime + 1 = X_1, 0 =< X_8_prime, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 312).
+% morphing, steal
+r( p(pc(s__313), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__314), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_8, X_8_prime = X_1, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 313).
+% folding
+r( p(pc(s__314), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__315), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_8, X_7_prime = 0, X_4_prime = X_4 + 1, X_9_prime = X_7 + X_9, X_8_prime = X_1, X_5_prime = X_5, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 314).
+% replicating 1
+r( p(pc(s__315), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__316), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = 4, X_3_prime = X_8, X_8_prime = X_1, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_4_prime = X_4, X_6_prime = X_6]
+, [], 315).
+% folding
+r( p(pc(s__316), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__317), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_1, X_3_prime = X_1 + X_8, X_7_prime = X_9, X_4_prime = X_5 + X_1, X_9_prime = 0, X_8_prime = X_1 + X_3, X_2_prime = X_2, X_6_prime = X_6]
+, [], 316).
+% replicating 1
+r( p(pc(s__317), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__318), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_3, X_3_prime = X_8, X_8_prime = X_1, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_4_prime = X_4, X_6_prime = X_6]
+, [], 317).
+% folding
+r( p(pc(s__318), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__319), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_1 + X_3 + X_8, X_3_prime = 0, X_8_prime = 0, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_4_prime = X_4, X_6_prime = X_6]
+, [], 318).
+% unfolding
+r( p(pc(s__295), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__320), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_5, 0 =< X_7, 0 =< X_4, 1 =< X_1, X_5_prime + 1 = X_5, 0 =< X_5_prime, X_1_prime + X_8_prime + 1 = X_1, 0 =< X_1_prime, X_7_prime = X_7, X_4_prime = X_4, 0 =< X_8_prime, X_9_prime = X_9, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 319).
+% morphing, consume
+r( p(pc(s__320), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__321), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 320).
+% folding
+r( p(pc(s__321), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__322), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_1 + X_8, X_4_prime = X_5 + 1, X_8_prime = 0, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 321).
+% replicating 1
+r( p(pc(s__322), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__323), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 322).
+% replicating 1
+r( p(pc(s__323), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__324), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 323).
+% unfolding
+r( p(pc(s__295), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__325), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 0 =< X_5, 1 =< X_7, 1 =< X_4, 0 =< X_1, X_5_prime + 1 = X_4, 0 =< X_5_prime, X_1_prime = X_1, X_7_prime + X_9_prime + 1 = X_7, 0 =< X_7_prime, X_4_prime = X_5, 0 =< X_9_prime, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 324).
+% morphing, consume
+r( p(pc(s__325), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__326), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 325).
+% folding
+r( p(pc(s__326), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__327), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4 + 1, X_7_prime = X_7 + X_9, X_4_prime = X_5, X_9_prime = 0, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 326).
+% replicating 1
+r( p(pc(s__327), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__328), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 327).
+% replicating 1
+r( p(pc(s__328), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__329), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 328).
+% unfolding
+r( p(pc(s__295), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__330), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 0 =< X_5, 1 =< X_7, 2 =< X_4, 0 =< X_1, X_5_prime = X_5, X_1_prime = X_1, X_7_prime + X_9_prime + X_6_prime + 1 = X_7, 0 =< X_7_prime, X_4_prime + 2 = X_4, 0 =< X_4_prime, 0 =< X_9_prime, 0 =< X_6_prime, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8]
+, [], 329).
+% inhibiting
+r( p(pc(s__330), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__331), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_6, X_6_prime = 0, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4]
+, [], 330).
+% morphing, steal
+r( p(pc(s__331), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__332), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 331).
+% folding
+r( p(pc(s__332), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__333), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4 + 1, X_1_prime = X_1 + 1, X_7_prime = X_7 + X_9, X_4_prime = X_5 + 1, X_9_prime = 0, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 332).
+% replicating 1
+r( p(pc(s__333), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__334), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 333).
+% replicating 1
+r( p(pc(s__334), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__335), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 334).
+% unfolding
+r( p(pc(s__295), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__336), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ 1 =< X_5, 1 =< X_7, 1 =< X_4, 0 =< X_1, X_5_prime + 1 = X_4, 0 =< X_5_prime, X_1_prime + X_8_prime = X_1, 0 =< X_1_prime, X_7_prime + X_9_prime + 1 = X_7, 0 =< X_7_prime, X_4_prime + 1 = X_5, 0 =< X_4_prime, 0 =< X_9_prime, 0 =< X_8_prime, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 335).
+% morphing, steal
+r( p(pc(s__336), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__337), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 336).
+% folding
+r( p(pc(s__337), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__338), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4 + 1, X_1_prime = X_1 + X_8 + 1, X_4_prime = X_5, X_8_prime = 0, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 337).
+% replicating 1
+r( p(pc(s__338), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__339), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = 1, X_2_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 338).
+% folding
+r( p(pc(s__339), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__340), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_5 + X_4, X_7_prime = X_7 + X_9, X_4_prime = X_2, X_9_prime = 0, X_2_prime = 0, X_1_prime = X_1, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 339).
+% replicating 1
+r( p(pc(s__340), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__341), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 340).
+% replicating 1
+r( p(pc(s__341), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__342), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 341).
+% covering
+r( p(pc(s__25), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__13), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 342).
+% covering
+r( p(pc(s__34), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__30), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 343).
+% covering
+r( p(pc(s__38), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__30), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 344).
+% covering
+r( p(pc(s__85), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__54), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = 0, X_4_prime = X_5, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 345).
+% covering
+r( p(pc(s__90), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__54), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = 0, X_4_prime = X_5, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 346).
+% covering
+r( p(pc(s__95), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__54), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = 0, X_4_prime = X_5, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 347).
+% covering
+r( p(pc(s__101), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__54), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = 0, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 348).
+% covering
+r( p(pc(s__60), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__54), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = 0, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 349).
+% covering
+r( p(pc(s__66), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__54), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = 0, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 350).
+% covering
+r( p(pc(s__73), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__54), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_1 + X_8, X_7_prime = 0, X_4_prime = X_5, X_9_prime = X_7, X_8_prime = 0, X_2_prime = X_2, X_3_prime = X_3, X_6_prime = X_6]
+, [], 351).
+% covering
+r( p(pc(s__80), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__54), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = 0, X_4_prime = X_5, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 352).
+% covering
+r( p(pc(s__49), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__54), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = 0, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 353).
+% covering
+r( p(pc(s__118), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__102), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 354).
+% covering
+r( p(pc(s__118), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__102), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 355).
+% covering
+r( p(pc(s__121), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__102), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 356).
+% covering
+r( p(pc(s__121), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__102), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 357).
+% covering
+r( p(pc(s__135), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__126), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 358).
+% covering
+r( p(pc(s__135), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__126), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 359).
+% covering
+r( p(pc(s__139), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__126), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 360).
+% covering
+r( p(pc(s__139), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__126), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 361).
+% covering
+r( p(pc(s__143), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__126), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 362).
+% covering
+r( p(pc(s__143), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__126), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 363).
+% covering
+r( p(pc(s__217), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 364).
+% covering
+r( p(pc(s__217), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 365).
+% covering
+r( p(pc(s__222), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 366).
+% covering
+r( p(pc(s__222), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 367).
+% covering
+r( p(pc(s__227), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 368).
+% covering
+r( p(pc(s__227), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 369).
+% covering
+r( p(pc(s__234), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 370).
+% covering
+r( p(pc(s__234), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 371).
+% covering
+r( p(pc(s__240), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 372).
+% covering
+r( p(pc(s__240), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 373).
+% covering
+r( p(pc(s__246), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 374).
+% covering
+r( p(pc(s__246), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 375).
+% covering
+r( p(pc(s__253), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 376).
+% covering
+r( p(pc(s__253), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 377).
+% covering
+r( p(pc(s__177), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 378).
+% covering
+r( p(pc(s__177), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 379).
+% covering
+r( p(pc(s__182), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 380).
+% covering
+r( p(pc(s__182), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 381).
+% covering
+r( p(pc(s__187), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 382).
+% covering
+r( p(pc(s__187), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 383).
+% covering
+r( p(pc(s__193), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_1 + X_3 + X_8, X_3_prime = 0, X_8_prime = 0, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_4_prime = X_4, X_6_prime = X_6]
+, [], 384).
+% covering
+r( p(pc(s__193), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_1 + X_3 + X_8, X_3_prime = 0, X_7_prime = X_9, X_9_prime = X_7, X_8_prime = 0, X_5_prime = X_5, X_2_prime = X_2, X_4_prime = X_4, X_6_prime = X_6]
+, [], 385).
+% covering
+r( p(pc(s__199), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_1 + X_3 + X_8, X_3_prime = 0, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_8_prime = 0, X_2_prime = X_2, X_6_prime = X_6]
+, [], 386).
+% covering
+r( p(pc(s__199), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_1_prime = X_1 + X_3 + X_8, X_3_prime = 0, X_4_prime = X_5, X_8_prime = 0, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_6_prime = X_6]
+, [], 387).
+% covering
+r( p(pc(s__206), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 388).
+% covering
+r( p(pc(s__206), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 389).
+% covering
+r( p(pc(s__212), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 390).
+% covering
+r( p(pc(s__212), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 391).
+% covering
+r( p(pc(s__155), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_1 + X_8, X_7_prime = X_9, X_9_prime = X_7, X_8_prime = 0, X_5_prime = X_5, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 392).
+% covering
+r( p(pc(s__155), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_1 + X_8, X_8_prime = 0, X_9_prime = X_9, X_5_prime = X_5, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 393).
+% covering
+r( p(pc(s__160), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 394).
+% covering
+r( p(pc(s__160), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 395).
+% covering
+r( p(pc(s__165), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 396).
+% covering
+r( p(pc(s__165), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = X_9, X_9_prime = X_7, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 397).
+% covering
+r( p(pc(s__131), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_1, X_1_prime = X_1, X_7_prime = X_9, X_4_prime = X_5, X_9_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 398).
+% covering
+r( p(pc(s__131), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__171), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_1, X_1_prime = X_1, X_4_prime = X_5, X_9_prime = X_9, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 399).
+% covering
+r( p(pc(s__266), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__254), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 400).
+% covering
+r( p(pc(s__275), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__271), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 401).
+% covering
+r( p(pc(s__279), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__271), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 402).
+% covering
+r( p(pc(s__284), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__271), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 403).
+% covering
+r( p(pc(s__324), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__295), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 404).
+% covering
+r( p(pc(s__329), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__295), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 405).
+% covering
+r( p(pc(s__335), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__295), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 406).
+% covering
+r( p(pc(s__342), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__295), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 407).
+% covering
+r( p(pc(s__301), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__295), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 408).
+% covering
+r( p(pc(s__306), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__295), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 409).
+% covering
+r( p(pc(s__312), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__295), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_1_prime = X_1 + X_8, X_7_prime = X_9, X_9_prime = 0, X_8_prime = 0, X_5_prime = X_5, X_2_prime = X_2, X_3_prime = X_3, X_4_prime = X_4, X_6_prime = X_6]
+, [], 410).
+% covering
+r( p(pc(s__319), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__295), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_5_prime = X_4, X_4_prime = X_5, X_9_prime = X_9, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_6_prime = X_6]
+, [], 411).
+% covering
+r( p(pc(s__259), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__110), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 412).
+% covering
+r( p(pc(s__263), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__110), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 413).
+% covering
+r( p(pc(s__115), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__110), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 414).
+% covering
+r( p(pc(s__22), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__110), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_7_prime = X_7, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 415).
+% covering
+r( p(pc(s__12), data(X_9, X_5, X_1, X_7, X_2, X_3, X_8, X_4, X_6)), p(pc(s__110), data(X_9_prime, X_5_prime, X_1_prime, X_7_prime, X_2_prime, X_3_prime, X_8_prime, X_4_prime, X_6_prime)), [ X_7_prime = 0, X_9_prime = X_9, X_5_prime = X_5, X_1_prime = X_1, X_2_prime = X_2, X_3_prime = X_3, X_8_prime = X_8, X_4_prime = X_4, X_6_prime = X_6]
+, [], 416).
+
