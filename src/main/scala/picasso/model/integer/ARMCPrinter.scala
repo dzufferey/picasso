@@ -41,6 +41,25 @@ object ARMCPrinter extends PrologLikePrinter {
     writer.newLine
   }
 
+  //TODO heurstically guess the transition predicates ...
+  protected def transPreds(vars: Seq[Variable], trs: GenSeq[Transition])(implicit writer: BufferedWriter) {
+    //first all vars >= 0
+    //then sum going down (strict + nonstrict pred)
+    //TODO get the elementaryCycles and look at the flow of the variable in each cycle ...
+    val cfa = EdgeLabeledDiGraph[GT.ELGT{type V = String; type EL = Transition}](trs.map(t => (t.sourcePC, t, t.targetPC)).seq)
+    val cycles = cfa.elementaryCycles.map(_.labels)
+    //step (1), for each cycle we need to be a bit of bookkeeping:
+    //what flow from one var to another ?
+    //what increase (how much)
+    //what decrease (how much)
+    //step (2), generating predicates for larger cycles
+    //elementaryCycles can be summed in order to generate larger cycles.
+    //using the bookkeeping from step (1) we should generate some additional predicates
+    //question: what large cycle to generate and when to stop ?
+    sys.error("TODO")
+  }
+
+
   protected def cutpoints(trs: GenSeq[Transition])(implicit writer: BufferedWriter) {
     //find all the cycles in the graph (induced cycles generate the complete cycle space)
     //then set hitting problem (combinatorial optimisation) (can we do is as linear algebra in the cycle space or only as ILP ?)

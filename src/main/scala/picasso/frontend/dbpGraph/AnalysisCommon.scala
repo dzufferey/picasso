@@ -41,7 +41,8 @@ abstract class AnalysisCommon(what: String, fileName: String, content: String) {
           report.add(new PreformattedText("Input", content))
      
           val process = new DepthBoundedProcess(trs)
-          Logger("dbpGraph", LogInfo, Misc.docToString(process.toGraphviz("DBPGraph")) )
+          Logger("dbpGraph", LogInfo, process.toString) 
+          //Logger("dbpGraph", LogInfo, Misc.docToString(process.toGraphviz("DBPGraph")) )
           addProcessToReport(process, init)
 
           analysis(process, init, target)

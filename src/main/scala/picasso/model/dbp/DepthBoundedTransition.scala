@@ -170,34 +170,28 @@ extends Transition[DepthBoundedConf[P]]
 
   override def toString = {
     //give id to nodes
-    /*
     val allVertices = lhs.vertices ++ rhs.vertices ++ inh.map(_._1.vertices).getOrElse(Set[P#V]())
     val namer = new Namer
-    val nodeIds = allVertices.map(v => (v, namer("n"))).toMap
-    def printGraph(g: DepthBoundedConf[P]) = {
-      var vertices = g.vertices
-      for ( (a,b,c) <- g.edges ) {
-        vertices = vertices - a - c
-        ...
+    val nodeIds = allVertices.map(v => (v, namer("n").replace("$","_"))).toMap[P#V, String]
+    def printMap(m: Map[P#V, P#V]) = {
+      val buffer = new scala.collection.mutable.StringBuilder()
+      for ( (a,b) <- m ) {
+        buffer.append("    " + nodeIds(a) + " -> " + nodeIds(b) + "\n")
       }
-      // ...
+      buffer.toString
     }
-    def printMap(g: Map[P#V, P#V]) = {
-      // ...
-    }
-    "transition " + id + "\n" +
-    "pre\n" + printGraph(lhs)
-    "post\n" + printGraph(rhs)
-    "==>\n" + printMap(hr)
-    "<==\n" + printMap(hk)
+    "transition \"" + id + "\"\n" +
+    lhs.toStringWithIds("pre", nodeIds) +
+    rhs.toStringWithIds("post", nodeIds) +
+    "==>\n" + printMap(hr) +
+    "<==\n" + printMap(hk) +
     (inh match {
       case Some((inGraph, inMap)) => 
-        "no\n" + printGraph(inGraph)
+        inGraph.toStringWithIds("no", nodeIds) +
         "==>\n" + printMap(inMap)
       case None => ""
     })
-    */
-    Misc.docToString(toGraphviz("DBT"))
+    //Misc.docToString(toGraphviz("DBT"))
   }
 
 }

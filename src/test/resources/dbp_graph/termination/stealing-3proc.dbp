@@ -1,9 +1,9 @@
 // Work stealing. 3 workers
 
 init
-  (w1, worker) -> (j, job)* [job]
-  (w2, worker) -> (j, job)* [job]
-  (w3, worker) -> (j, job)* [job]
+  (w1, worker) -> (j1, job)* [job]
+  (w2, worker) -> (j2, job)* [job]
+  (w3, worker) -> (j3, job)* [job]
  
 // *****************************************************************************
 

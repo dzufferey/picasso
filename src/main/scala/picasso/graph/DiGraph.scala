@@ -947,8 +947,8 @@ object LabeledDiGraph extends GraphFactory[GT, LabeledDiGraph] {
   */
 }
 
-class EdgeLabeledDiGraph[P <: GT.ELGT](edges: Map[P#V,Map[P#EL,Set[P#V]]], label: P#V => P#VL)
-extends GraphLike[GT.ELGT,P,EdgeLabeledDiGraph](edges, label) {
+class EdgeLabeledDiGraph[P <: GT.ELGT](_edges: Map[P#V,Map[P#EL,Set[P#V]]])
+extends GraphLike[GT.ELGT,P,EdgeLabeledDiGraph](_edges, ((_: P#V) => ()) ) {
   
   override def nodeToString(n: V): String = n.toString
   override def edgeToString(n1:V, l: P#EL, n2: V): String = n1 + "-" + l + "->" + n2
@@ -959,11 +959,10 @@ extends GraphLike[GT.ELGT,P,EdgeLabeledDiGraph](edges, label) {
 
 object EdgeLabeledDiGraph extends GraphFactory[GT.ELGT, EdgeLabeledDiGraph] {
   import Labeled._
-  def apply[P <: GT.ELGT](edges: Map[P#V,Map[P#EL, Set[P#V]]], label: P#V => P#VL) = 
-    new EdgeLabeledDiGraph(edges, label)
-  def apply[P <: GT.ELGT](edges: Map[P#V,Map[P#EL, Set[P#V]]]): EdgeLabeledDiGraph[P] =
-    apply(edges, (x : P#V) => ())
+  def apply[P <: GT.ELGT](edges: Map[P#V,Map[P#EL, Set[P#V]]], label: P#V => P#VL) = new EdgeLabeledDiGraph(edges)
+  def apply[P <: GT.ELGT](edges: Map[P#V,Map[P#EL, Set[P#V]]]): EdgeLabeledDiGraph[P] = apply(edges)
   def empty[P <: GT.ELGT]: EdgeLabeledDiGraph[P] = empty[P]((x : P#V) => ())
+  def apply[P <: GT.ELGT](es: Iterable[(P#V,P#EL,P#V)]) = new EdgeLabeledDiGraph[P](listToMap(es))
   /*def apply[A,C,B](edges: Map[A,Map[B,Set[A]]]) = new EdgeLabeledDiGraph[A,C,B](edges)
   def apply[A,C,B]() = new EdgeLabeledDiGraph[A,C,B](Map.empty[A,Map[B,Set[A]]])
   def apply[A,C,B](es: Iterable[(A,B,A)]) = new EdgeLabeledDiGraph[A,C,B](listToMap(es))

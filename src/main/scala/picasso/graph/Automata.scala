@@ -5,7 +5,7 @@ import scala.collection.immutable.Map
 import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger, Level, Misc}
 
 
-class Automaton[P <: GT.ELGT](edges: Map[P#V,Map[P#EL,Set[P#V]]], val initState: P#V, val targetStates: Set[P#V]) extends EdgeLabeledDiGraph[P](edges, (x: P#V) => ()) {
+class Automaton[P <: GT.ELGT](edges: Map[P#V,Map[P#EL,Set[P#V]]], val initState: P#V, val targetStates: Set[P#V]) extends EdgeLabeledDiGraph[P](edges) {
 
   //TODO
 

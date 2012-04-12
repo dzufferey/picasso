@@ -30,6 +30,10 @@ class DepthBoundedProcess[P <: DBCT](trs: GenSeq[DepthBoundedTransition[P]])(imp
   val trs2 = trs.par
   def transitions = trs2
 
+  override def toString = {
+    transitions.mkString("\n")
+  }
+
   /** accelration/widening with witness:
    * returns:
    * - the result

@@ -1,6 +1,6 @@
 package picasso.model.dbp
 
-import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger, Misc}
+import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger, Misc, Namer}
 import picasso.math._
 import picasso.math.WellPartialOrdering._
 import picasso.graph._
@@ -9,7 +9,6 @@ import picasso.graph._
 class DepthBoundedConf[P <: DBCT](_edges: Map[P#V, Map[P#EL, Set[P#V]]], label: P#V => P#VL)
 extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
 
-  override def toString = toGraphviz("DBC")
 
   override type Self = DepthBoundedConf[P] 
   override def companion = DepthBoundedConf
@@ -19,6 +18,30 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
   type Edges = Map[V, Map[EL, Set[V]]]
   type UndirectedAdjacencyMap = Map[V, Set[V]]
 
+  def toStringWithIds(prefix: String, ids: Map[V, String]) = {
+    def printNode(n : P#V) = {
+      "(" + ids(n) + ", " + n.state + ")" + (0 until n.depth).map(_ => "*").mkString("")
+    }
+    var vs = vertices
+    val buffer = new scala.collection.mutable.StringBuilder()
+    buffer.append(prefix + "\n")
+    for ( (a,b,c) <- edges ) {
+      vs = vs - a - c
+      val suffix = if (b.toString != "") (" [" + b + "]\n") else "\n"
+      buffer.append("    " + printNode(a) + " -> " + printNode(c) + suffix)
+    }
+    for ( alone <- vs ) {
+      buffer.append("    node " + printNode(alone) + "\n")
+    }
+    buffer.toString
+  }
+
+  //override def toString = toGraphviz("DBC")
+  override def toString = {
+    val namer = new Namer
+    val nodeIds = vertices.map(v => (v, namer("n").replace("$","_"))).toMap[P#V, String]
+    toStringWithIds("DepthBoundedConf", nodeIds)
+  }
 
   // use def instead of val if caching requires too much space
   lazy val undirectedAdjacencyMap = {
@@ -211,6 +234,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     //the unfolding should be done on depth 1 (higher depth will follows from the earlier unfolding)
 
     //witness if from the new graph to the old one (reverse of the usual morphism)
+    //TODO migth need to unfold more in some case ...
     def unfold(graph: Self, newM: Morphism, witness: Morphism): (Self, Morphism, Morphism) = newM.find{ case (a,b) => b.depth == 1 } match {
       case Some((smallerX, x)) =>
         val cmp = graph.getComponent(x)
