@@ -238,6 +238,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     def unfold(graph: Self, newM: Morphism, witness: Morphism): (Self, Morphism, Morphism) = newM.find{ case (a,b) => b.depth == 1 } match {
       case Some((smallerX, x)) =>
         val cmp = graph.getComponent(x)
+        Logger("DBP", LogDebug, "unfolding : " + smallerX + " -> " + x)
         Logger("DBP", LogDebug, "component is : " + cmp.mkString)
         val (graph2, newWitness) = cloneComponent(graph, cmp)
         val witness2 = witness ++ newWitness.map{ case (a,b) => (b, witness.getOrElse(a, a)) } //the newWitness has te be reversed to point in the right direction
@@ -250,10 +251,11 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
 
         unfold(graph2, newM2, witness2)
       case None =>
-        assert(newM.forall(_._2.depth == 0), newM.mkString(","))
+        assert(newM.forall(_._2.depth == 0), "trying to unfold:\n" + newM.mkString("\n") + "\n" + graph.toGraphviz("DBC"))
         (graph, newM, witness)
     }
 
+    Logger("DBP", LogDebug, "unfoldWithWitness")
     unfold(this, m, Map())
   }
   
