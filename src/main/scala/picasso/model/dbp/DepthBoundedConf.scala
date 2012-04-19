@@ -159,6 +159,26 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     getComponent1(undirected, node)
   }
 
+  /** getComponent + parents componements up to the top componement. */
+  def getComponentsPyramide(node: V): Seq[Set[V]] = {
+    val undirected = this.undirect
+    val cmp1 = getComponent1(undirected, node)
+    def process(acc: List[Set[V]], current: Set[V]): List[Set[V]] = {
+      //get one level down from the current cmp
+      val lowest = current.map(_.depth).min
+      val next = current.flatMap(undirected(_)).find(n => n.depth == (lowest - 1))
+      next match {
+        case Some(v) => 
+          val current1 = getComponent1(undirected, v)
+          assert(current subsetOf current1)
+          process(current :: acc, current1)
+        case None =>
+          current :: acc
+      }
+    }
+    process(Nil, cmp1)
+  }
+
   def decomposeInComponents: Seq[Set[V]] = {
     val undirected = this.undirect
     def process(todo: List[V], acc: List[Set[V]]): Seq[Set[V]] = todo match {
@@ -241,7 +261,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
         Logger("DBP", LogDebug, "unfolding : " + smallerX + " -> " + x)
         Logger("DBP", LogDebug, "component is : " + cmp.mkString)
         val (graph2, newWitness) = cloneComponent(graph, cmp)
-        val witness2 = witness ++ newWitness.map{ case (a,b) => (b, witness.getOrElse(a, a)) } //the newWitness has te be reversed to point in the right direction
+        val witness2 = witness ++ newWitness.map{ case (a,b) => (b, witness.getOrElse(a, a)) } //the newWitness has to be reversed to point in the right direction
 
         //compute the component on the smaller graph ...
         val smallerCmp = componentOnSmaller(cmp, newM, smallerX)
@@ -251,8 +271,34 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
 
         unfold(graph2, newM2, witness2)
       case None =>
-        assert(newM.forall(_._2.depth == 0), "trying to unfold:\n" + newM.mkString("\n") + "\n" + graph.toGraphviz("DBC"))
-        (graph, newM, witness)
+        val complexUnfolding = newM.filter(_._2.depth > 0)
+        if (complexUnfolding.isEmpty) {
+          (graph, newM, witness)
+        } else {
+          //if there are still some mapping with degree strictly more than one, 
+          //get the componements in which is the node up to depth 1, and unfold the component.
+          //TODO when this part is stable, it can take over the special case above (subsumes it)
+          val (smallerMinC, minCandidate) = complexUnfolding.minBy( a => a._2.depth )
+          val cmps = graph.getComponentsPyramide(minCandidate)
+          val relevantCmp = if (cmps.head.exists(_.depth == 0)) cmps.tail else cmps
+          def unfoldPyramide(cmps: Seq[Set[V]], graph: Self, accM: Morphism, accWitness: Morphism): (Self, Morphism, Morphism) = {
+            if (cmps.isEmpty) {
+              (graph, accM, accWitness)
+            } else {
+              assert(cmps.head.exists(_.depth == 1), "unfolding no depth 1, something might be wrong with the graph: " + graph + "\n" + accM)
+              val (graph2, newWitness) = cloneComponent(graph, cmps.head)
+              //the newWitness has to be reversed to point in the right direction
+              val witness2 = accWitness ++ newWitness.map{ case (a,b) => (b, accWitness.getOrElse(a, a)) }
+              //compute the component on the smaller graph ...
+              val smallerCmp = componentOnSmaller(cmps.head, accM, smallerMinC)
+              //use the witness to rewire the nodes
+              val accM2: Morphism = accM.map(dummy(smallerCmp, newWitness)).toMap
+              val cmps2 = cmps.tail.map(cmp => cmp.map(n => newWitness.getOrElse(n, n) ))
+              unfoldPyramide(cmps2, graph2, accM2, witness2)
+            }
+          }
+          unfoldPyramide(relevantCmp, graph, newM, witness)
+        }
     }
 
     Logger("DBP", LogDebug, "unfoldWithWitness")
