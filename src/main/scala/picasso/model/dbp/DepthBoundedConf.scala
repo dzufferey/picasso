@@ -275,6 +275,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
         if (complexUnfolding.isEmpty) {
           (graph, newM, witness)
         } else {
+          assert(false, "if we get here the system is probably not depth-bounded!")
           //if there are still some mapping with degree strictly more than one, 
           //get the componements in which is the node up to depth 1, and unfold the component.
           //TODO when this part is stable, it can take over the special case above (subsumes it)
