@@ -9,7 +9,7 @@
 //we need to do some case splitting (or use inhibitors)
 //to avoid A getting replicated we need to give A the NULL value when it is null.
 
-//TODO when both many enqueue and dequeue, it seems that this encoding is not depth-bounded!!
+//TODO when both many enqueue and dequeue, it seems that this encoding is not depth-bounded!! (T+H+deq chain)
 
 init
   (q, queue) -> (x, x) [H]
