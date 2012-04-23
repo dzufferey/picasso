@@ -16,7 +16,6 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
 
   type Morphism = Map[V, V]
   type Edges = Map[V, Map[EL, Set[V]]]
-  type UndirectedAdjacencyMap = Map[V, Set[V]]
 
   def toStringWithIds(prefix: String, ids: Map[V, String]) = {
     def printNode(n : P#V) = {
@@ -212,7 +211,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     val smallerUndirected = smaller.undirect
 
     def cloneComponent(graph: Self, nodes: Set[V]): (Self, Morphism) = {
-      assert(nodes.forall(_.depth > 0))
+      assert(nodes.forall(_.depth > 0), nodes + "\n" + graph)
       val witness: Map[V, V] = nodes.map( x => (x, x--) ).toMap
       val newNodes = witness.map(_._2)
       val edgesToCopy = graph.edges.filter{ case (a,_,b) => nodes(a) || nodes(b) }
@@ -255,54 +254,30 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
 
     //witness if from the new graph to the old one (reverse of the usual morphism)
     //TODO migth need to unfold more in some case ...
-    def unfold(graph: Self, newM: Morphism, witness: Morphism): (Self, Morphism, Morphism) = newM.find{ case (a,b) => b.depth == 1 } match {
-      case Some((smallerX, x)) =>
-        val cmp = graph.getComponent(x)
-        Logger("DBP", LogDebug, "unfolding : " + smallerX + " -> " + x)
-        Logger("DBP", LogDebug, "component is : " + cmp.mkString)
-        val (graph2, newWitness) = cloneComponent(graph, cmp)
-        val witness2 = witness ++ newWitness.map{ case (a,b) => (b, witness.getOrElse(a, a)) } //the newWitness has to be reversed to point in the right direction
-
+    def unfold(graph: Self, newM: Morphism, witness: Morphism): (Self, Morphism, Morphism) = {
+      val needUnfolding = newM.filter{ case (a,b) => b.depth >= 1 }
+      if (needUnfolding.isEmpty) {
+        (graph, newM, witness)
+      } else {
+        val (smallerMinC, minCandidate) = needUnfolding.minBy( a => a._2.depth ) //unfold the low depth first
+        val cmps = graph.getComponentsPyramide(minCandidate)
+        val relevantCmp = if (cmps.head.exists(_.depth == 0)) cmps.tail else cmps
+        val toUnfold = relevantCmp.head
+        Logger("DBP", LogDebug, "unfolding : " + smallerMinC + " -> " + minCandidate)
+        Logger("DBP", LogDebug, "component is : " + toUnfold.mkString)
+        assert(toUnfold.exists(_.depth == 1), "unfolding no depth 1, something might be wrong with the graph: " + graph + "\n" + newM)
+        val (graph2, newWitness) = cloneComponent(graph, toUnfold)
+        //the newWitness has to be reversed to point in the right direction
+        val witness2 = witness ++ newWitness.map{ case (a,b) => (b, witness.getOrElse(a, a)) }
         //compute the component on the smaller graph ...
-        val smallerCmp = componentOnSmaller(cmp, newM, smallerX)
-        Logger("DBP", LogDebug, "smaller component is : " + smallerCmp.mkString)
+        val smallerCmp = componentOnSmaller(toUnfold, newM, smallerMinC)
         //use the witness to rewire the nodes
         val newM2: Morphism = newM.map(dummy(smallerCmp, newWitness)).toMap
-
         unfold(graph2, newM2, witness2)
-      case None =>
-        val complexUnfolding = newM.filter(_._2.depth > 0)
-        if (complexUnfolding.isEmpty) {
-          (graph, newM, witness)
-        } else {
-          assert(false, "if we get here the system is probably not depth-bounded! (if it is depth-bounded, then we have a bug ...)\n" + graph)
-          //if there are still some mapping with degree strictly more than one, 
-          //get the componements in which is the node up to depth 1, and unfold the component.
-          //TODO when this part is stable, it can take over the special case above (subsumes it)
-          val (smallerMinC, minCandidate) = complexUnfolding.minBy( a => a._2.depth )
-          val cmps = graph.getComponentsPyramide(minCandidate)
-          val relevantCmp = if (cmps.head.exists(_.depth == 0)) cmps.tail else cmps
-          def unfoldPyramide(cmps: Seq[Set[V]], graph: Self, accM: Morphism, accWitness: Morphism): (Self, Morphism, Morphism) = {
-            if (cmps.isEmpty) {
-              (graph, accM, accWitness)
-            } else {
-              assert(cmps.head.exists(_.depth == 1), "unfolding no depth 1, something might be wrong with the graph: " + graph + "\n" + accM)
-              val (graph2, newWitness) = cloneComponent(graph, cmps.head)
-              //the newWitness has to be reversed to point in the right direction
-              val witness2 = accWitness ++ newWitness.map{ case (a,b) => (b, accWitness.getOrElse(a, a)) }
-              //compute the component on the smaller graph ...
-              val smallerCmp = componentOnSmaller(cmps.head, accM, smallerMinC)
-              //use the witness to rewire the nodes
-              val accM2: Morphism = accM.map(dummy(smallerCmp, newWitness)).toMap
-              val cmps2 = cmps.tail.map(cmp => cmp.map(n => newWitness.getOrElse(n, n) ))
-              unfoldPyramide(cmps2, graph2, accM2, witness2)
-            }
-          }
-          unfoldPyramide(relevantCmp, graph, newM, witness)
-        }
+      }
     }
 
-    Logger("DBP", LogDebug, "unfoldWithWitness")
+    Logger("DBP", LogDebug, "unfoldWithWitness: " + this + "\n" + m.mkString("\n"))
     unfold(this, m, Map())
   }
   
@@ -311,87 +286,6 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     val (a,b,_) = unfoldWithWitness(smaller, m)
     (a,b)
   }
-
-  /*
-  def unfold(smaller: Self, m: Morphism): (Self, Morphism) = {
-    
-    val smallerAdj = smaller.undirectedAdjacencyMap
-
-    val biggerAdj = this.undirectedAdjacencyMap
-
-    def unfold(m: Morphism, biggerAdj: UndirectedAdjacencyMap, bigger: Edges): (Morphism, Edges) = {
-      def copyComponent(new_m: Morphism, todo : List[(Option[V], V)], cloneMap: Map[V, V]) : (Morphism, UndirectedAdjacencyMap, Edges) = {
-        val totalCloneMap = (x: V) => cloneMap.getOrElse(x,x)
-        todo match {
-          case Nil => {
-            // Duplicate edges for cloned nodes
-            val new_bigger: Edges = {
-              val old_new_edges: Edges =
-                bigger.map[(V,Map[EL, Set[V]]),Edges](p => {
-                  val y = p._1
-                  val es = p._2
-                  if (!(cloneMap isDefinedAt y)) (y, es mapValues (ys => ys ++ (ys collect cloneMap)))
-                  else (y, es)})
-              val cloned_new_edges: Edges = 
-                bigger.collect[(V,Map[EL, Set[V]]),Edges] 
-                  {case (y, es) if cloneMap isDefinedAt y => (cloneMap(y), es mapValues (ys => ys map totalCloneMap))}
-              old_new_edges ++ cloned_new_edges
-            }
-            val new_biggerAdj: UndirectedAdjacencyMap = 
-              (biggerAdj.map[(V,Set[V]),UndirectedAdjacencyMap] (p => {
-                val y = p._1
-                val y1s = p._2
-                if (!(cloneMap isDefinedAt y)) (y, y1s ++ (y1s collect cloneMap))
-                else (y, y1s)})) ++
-              biggerAdj.collect[(V,Set[V]),UndirectedAdjacencyMap] {case (y, y1s) if cloneMap isDefinedAt y => (cloneMap(y), y1s map totalCloneMap)}
-            (new_m, new_biggerAdj, new_bigger)
-          }
-          case (opt_x, y) :: todo1 => {
-            if ((cloneMap contains y) || y.depth == 0) {
-              val new_m1 = 
-                opt_x match {
-                  case None => new_m
-                  case Some(x) => new_m + ((x, totalCloneMap(y)))
-                }
-              copyComponent(new_m1, todo1, cloneMap) 
-            } else {
-              val y_clone = y--
-              val new_cloneMap = cloneMap + ((y, y_clone))
-              val new_m1 = 
-                opt_x match {
-                  case None => new_m
-                  case Some(x) => new_m + ((x, y_clone))
-                }
-              val todo_left =
-                opt_x match {
-                  case None => Nil
-                  case Some(x) =>
-                    (smallerAdj(x) map (x1 => (Some(x1), m(x1)))) toList
-                }
-              val todo_right = (biggerAdj(y) map ((None, _))) toList
-              val new_todo = todo_left ++ todo1 ++ todo_right
-              copyComponent(new_m1, new_todo, new_cloneMap)
-            }
-          }
-        }
-      }
-
-      // pick seed node in some replication component
-      val seed = m find (_._2.depth > 0)
-      
-      seed match {
-        case None => (m, bigger)
-        case Some(p) => {
-          val new_acc = copyComponent(m, List((Some(p._1), p._2)), Map.empty[V,V])
-          unfold(new_acc._1, new_acc._2, new_acc._3)
-        }
-      }
-    }
-
-    val res = unfold(m, biggerAdj, adjacencyMap)
-    (DepthBoundedConf[P](res._2), res._1)
-  }
-  */
 
   def foldWithWitness(implicit wpo: WellPartialOrdering[P#State]): (Self, Morphism) = {
     val iter = this morphisms this
@@ -448,6 +342,35 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     val m = (Map.empty[V,V] /: vertices){ (acc, v) => acc + (v -> v.clone)}
     (this morph m, m)
   }
+  
+  //after removing some nodes (e.g. inhibitor), the depth of some nodes might be larger than needed.
+  //The flattening will try to reduce the depths.
+  def flatten: (Self, Morphism) = {
+    //look at nodes difference of depth between nodes.
+    //a node alone should be of depth 0 or 1
+    //a can be of depth i > 1 iff it is linked to a node of depth i-1.
+    def lowerDepth: Map[V, Int] = {
+      //how to compute the minimal depth:
+      //- get the nodes that are replicated
+      //- create a set of constraints between nodes: lt and eq
+      //- merge nodes that are equal
+      //- the new graph should be a DAG
+      //- topological sort
+      //- greedy
+      sys.error("TODO")
+    }
+
+    val newDepths = lowerDepth
+    val changingDepths = newDepths.filter{ case (a,i) => a.depth != i }
+    val morphism: Morphism = changingDepths.map[(V,V), Map[V,V]]{ case (a, i) =>
+      val delta = a.depth - i
+      assert(delta > 0)
+      val a2 = (a /: (0 until delta))( (a, _) => a--)
+      (a, a2)
+    }
+    (this morph morphism, morphism)
+  }
+
 
 }
 

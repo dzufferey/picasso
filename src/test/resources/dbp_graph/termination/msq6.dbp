@@ -8,8 +8,7 @@
 //the difficulty is that X.next mith be different thing depending on wheter the queue is empty or not.
 //we need to do some case splitting (or use inhibitors)
 //to avoid A getting replicated we need to give A the NULL value when it is null.
-
-//TODO when both many enqueue and dequeue, it seems that this encoding is not depth-bounded!! (T+H+deq chain)
+//to avoid T+H+deq chain, we need to remove the nodes when it gets dequeued.
 
 init
   (q, queue) -> (x, x) [H]
@@ -205,7 +204,7 @@ post
   x1 -> x1
   x2 -> x2
 <==
-
+  
 transition "enq3 -> enq0: try to swing the tail (already done)"
 pre
   (q, queue) -> (n, NULL) [A]
@@ -222,6 +221,32 @@ post
   x2 -> x2
   n -> n
 <==
+
+transition "Tail removed removed at enq1 (retry)"
+pre
+  node (e, enq1)
+post
+  node (e, enq0)
+==>
+  e -> e
+<==
+no
+  (e, enq1) -> (w, x) [T] 
+==>
+  e -> e
+
+transition "Tail removed removed at enq2 (done)"
+pre
+  node (e, enq2)
+post
+  node (e, enqDone)
+==>
+  e -> e
+<==
+no
+  (e, enq2) -> (w, x) [T] 
+==>
+  e -> e
 
 ////what does the dequeue do:
 //dequeue(Q: pointer to queue_t, pvalue: pointer to data type): boolean
@@ -335,11 +360,11 @@ post
   (q, queue) -> (w2, x) [H]
   node (w2, x)
   node (e, deqTrue)
-  node (w1, x)
+  //node (w1, x)
 ==>
   q -> q
   e -> e
-  w1 -> w1
+  //w1 -> w1
   w2 -> w2
 <==
 no
@@ -357,11 +382,11 @@ post
   (q, queue) -> (w3, x) [H]
   node (w2, x)
   node (e, deqTrue)
-  node (w1, x)
+  //node (w1, x)
 ==>
   q -> q
   e -> e
-  w1 -> w1
+  //w1 -> w1
   w2 -> w2
   w3 -> w3
 <==
@@ -421,3 +446,29 @@ post
   w1 -> w1
   w2 -> w2
 <==
+
+transition "Head was removed: deq2 -> retry"
+pre
+  node (e, deq2)
+post
+  node (e, deq0)
+==>
+  e -> e
+<==
+no
+  (e, deq2) -> (w, x) [H]
+==>
+  e -> e
+
+transition "Head was removed: deq3 -> retry"
+pre
+  node (e, deq3)
+post
+  node (e, deq0)
+==>
+  e -> e
+<==
+no
+  (e, deq3) -> (w, x) [H]
+==>
+  e -> e

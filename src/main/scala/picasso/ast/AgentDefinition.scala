@@ -54,7 +54,8 @@ class AgentDefinition[PC](val id: String, val params: List[ID], val cfa: Automat
     cfa.aiFixpoint( ((written: Set[ID], p: Process) => written ++ p.writtenIDs),//TODO only correct if there are no blocks
                     ((a: Set[ID], b: Set[ID]) => a ++ b),
                     ((a: Set[ID], b: Set[ID]) => b subsetOf a),
-                    default)
+                    default,
+                    true)
   }
 
   lazy val readMap: Map[PC, Set[ID]] = 

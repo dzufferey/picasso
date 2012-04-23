@@ -20,6 +20,8 @@ extends Transition[DepthBoundedConf[P]]
   type Morphism = Map[P#V, P#V]
 
 
+  //TODO after removing some nodes, we should check the depth of the node -> some nodes need to be lowered
+  // ...
   protected def removeInhibitors(conf: Conf, g: Morphism): Option[(Conf, Set[P#V])] = {
     inh match {
       case Some((inhibitor, inhMap)) => {

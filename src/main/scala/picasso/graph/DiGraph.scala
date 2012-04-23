@@ -685,7 +685,12 @@ extends Traceable[P#V,P#EL] {
     * @param defaultValue the initial abstract values
     * TODO process edges and vertices concurrently ?
     */
-  def aiFixpoint[D](post: (D, EL) => D, join: (D, D) => D, cover: (D,D) => Boolean, defaultValue: V => D): Map[V, D] = {
+  def aiFixpoint[D](post: (D, EL) => D,
+                    join: (D, D) => D,
+                    cover: (D,D) => Boolean,
+                    defaultValue: V => D,
+                    forceMonotonicity: Boolean = false
+                   ): Map[V, D] = {
     val fp1 = new scala.collection.mutable.HashMap[P#V, D]()
     val fp2 = new scala.collection.mutable.HashMap[P#V, D]()
     val fpTemp = new scala.collection.mutable.HashMap[P#V, scala.collection.mutable.ListBuffer[D]]()
@@ -710,9 +715,13 @@ extends Traceable[P#V,P#EL] {
         val buffer = fpTemp(v)
         if (!buffer.isEmpty) {
           val joined = buffer.reduceLeft(join)
-          assert(cover(joined, fp1(v)), "not monotonic @ "+v+": new " + joined + ", old " + fp1(v)) //make sure it is increasing
-          fp2 += (v -> joined)
           buffer.clear
+          if (forceMonotonicity) {
+            fp2 += (v -> (join(joined, fp1(v))))
+          } else {
+            assert(cover(joined, fp1(v)), "not monotonic @ "+v+": new " + joined + ", old " + fp1(v)) //make sure it is increasing
+            fp2 += (v -> joined)
+          }
         }
       }
       //Console.println("iteration: fp1 = " + fp1)
@@ -721,8 +730,13 @@ extends Traceable[P#V,P#EL] {
     fp1.toMap
   }
   
-  def aiFixpointBackward[D](pre: (D, EL) => D, join: (D, D) => D, cover: (D,D) => Boolean, defaultValue: V => D): Map[V, D] =
-    this.reverse.aiFixpoint(pre, join, cover, defaultValue)
+  def aiFixpointBackward[D](pre: (D, EL) => D,
+                            join: (D, D) => D,
+                            cover: (D,D) => Boolean,
+                            defaultValue: V => D,
+                            forceMonotonicity: Boolean = false
+                           ): Map[V, D] =
+    this.reverse.aiFixpoint(pre, join, cover, defaultValue, forceMonotonicity)
 
   /** Strongly connected component decomposition */
   def SCC(all: Boolean): List[Set[V]] = {
