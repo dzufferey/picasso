@@ -349,16 +349,36 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     //look at nodes difference of depth between nodes.
     //a node alone should be of depth 0 or 1
     //a can be of depth i > 1 iff it is linked to a node of depth i-1.
-    def lowerDepth: Map[V, Int] = {
-      //how to compute the minimal depth:
-      //- get the nodes that are replicated
-      //- create a set of constraints between nodes: lt and eq
-      //- merge nodes that are equal
-      //- the new graph should be a DAG
-      //- topological sort
-      //- greedy
-      sys.error("TODO")
-    }
+
+    //how to compute the minimal depth:
+    //- get the nodes that are replicated
+    val (replicated, other) = vertices.partition(_.depth > 0)
+    //- create a set of constraints between nodes: eq
+    val eqEdges1 = replicated.toSeq.flatMap(v => this(v).toSeq.filter(_.depth == v.depth).map(v -> _))
+    val eqEdges2 = eqEdges1.map{case (a,b) => (b,a) }
+    val eqGraph = DiGraph[GT.ULGT{type V = P#V}](eqEdges1 ++ eqEdges2).addVertices(replicated)
+    
+    //- create a set of constraints between nodes: lt
+    val ltEdges = replicated.toSeq.flatMap(v => this(v).toSeq.filter(_.depth > v.depth).map(v -> _))
+    val ltGraph = DiGraph[GT.ULGT{type V = P#V}](ltEdges).addVertices(replicated)
+
+    //- merge nodes that are equal
+    val sameComponents = eqGraph.SCC(true)
+    val mergeCmp = sameComponents.flatMap( cmp => cmp.map(_ -> cmp.head) ).toMap[V, V]
+    val ltGraphMerged = ltGraph morph mergeCmp
+    
+      
+    //- topological sort
+    val topSort = ltGraphMerged.topologicalSort
+    //- greedy: assign depth
+    val mergedDepths = (Map[V,Int]() /: topSort)( (acc, v) => {
+      val currentDepth = acc.getOrElse(v, 1)
+      val successors = ltGraphMerged(v) //have depth of at least currentDepth + 1
+      val successorsPlusDepth = successors.map(s => s -> math.max(currentDepth + 1, acc.getOrElse(s, 1)) )
+      acc ++ successorsPlusDepth + (v -> currentDepth)
+    })
+    //- expand to the whole SCC
+    val lowerDepth = mergeCmp.map[(V,Int), Map[V,Int]]{ case (v, repr) => v -> mergedDepths(repr) }
 
     val newDepths = lowerDepth
     val changingDepths = newDepths.filter{ case (a,i) => a.depth != i }
@@ -368,7 +388,9 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
       val a2 = (a /: (0 until delta))( (a, _) => a--)
       (a, a2)
     }
-    (this morph morphism, morphism)
+    assert(other.forall(v => !morphism.contains(v)))
+    val morphismFull = morphism ++ other.map(x => (x,x) )
+    (this morph morphism, morphismFull)
   }
 
 

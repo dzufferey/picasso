@@ -291,7 +291,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
 
   // replicated nodes that disappear are set to 0
   // node from 'from' should be either in 'to' or in 'inhibited'
-  protected def inhibiting(from: S, inhibited: Set[P#V], to: S): Transition = {
+  protected def inhibiting(from: S, inhibited: Set[P#V], flattening: Map[P#V,P#V], to: S): Transition = {
     Logger("DBPTermination", LogDebug, "inhibited transition from " + from +
                                        " to " + to +
                                        " with " + inhibited +
@@ -300,10 +300,11 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     assert(from != to)
     val (pc1, map1) = getPC(from)
     val (pc2, map2) = getPC(to)
-    val stmts1 = for ( node <- from.vertices if !inhibited.contains(node)) yield {
-      assert(to contains node)
-      getCardinality(map2, node) match {
-         case v @ Variable(_) => Affect(v, getCardinality(map1, node))
+    val stmts1 = for ( node1 <- from.vertices if !inhibited.contains(node1) ) yield {
+      val node2 = flattening(node1)
+      assert(to contains node2)
+      getCardinality(map2, node2) match {
+         case v @ Variable(_) => Affect(v, getCardinality(map1, node1))
          case Constant(1) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
       }
@@ -488,9 +489,9 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
       false
     }
   }
-  protected def isInhibitingTrivial(from: S,  inhibited: Set[P#V], to: S) = {
+  protected def isInhibitingTrivial(from: S,  inhibited: Set[P#V], flatten: Map[P#V,P#V], to: S) = {
     if (from == to) {
-      assert(inhibited.isEmpty)
+      assert(inhibited.isEmpty && flatten.isEmpty)
       true
     } else {
       false
@@ -518,8 +519,8 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
       if (isUnfoldingTrivial(witness.from, witness.unfolding, witness.unfolded)) None
       else Some(unfolding(witness.from, witness.unfolding, witness.unfolded))
     val t2 =
-      if (isInhibitingTrivial(witness.unfolded, witness.inhibitedNodes, witness.inhibited)) None
-      else Some(inhibiting(witness.unfolded, witness.inhibitedNodes, witness.inhibited))
+      if (isInhibitingTrivial(witness.unfolded, witness.inhibitedNodes, witness.inhibitedFlattening, witness.inhibited)) None
+      else Some(inhibiting(witness.unfolded, witness.inhibitedNodes, witness.inhibitedFlattening, witness.inhibited))
     val t3 =
       if (isMorphingTrivial(witness.inhibited, witness.post, witness.transition, witness.unfoldedAfterPost)) None
       else Some(morphing(witness.inhibited, witness.post, witness.transition, witness.unfoldedAfterPost))

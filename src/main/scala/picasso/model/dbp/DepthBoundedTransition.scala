@@ -20,9 +20,7 @@ extends Transition[DepthBoundedConf[P]]
   type Morphism = Map[P#V, P#V]
 
 
-  //TODO after removing some nodes, we should check the depth of the node -> some nodes need to be lowered
-  // ...
-  protected def removeInhibitors(conf: Conf, g: Morphism): Option[(Conf, Set[P#V])] = {
+  protected def removeInhibitors(conf: Conf, g: Morphism): Option[(Conf, Set[P#V], Morphism)] = {
     inh match {
       case Some((inhibitor, inhMap)) => {
         //get the mapping of the inhibitor starting form the inhMap
@@ -34,7 +32,7 @@ extends Transition[DepthBoundedConf[P]]
         val inhMapRange = inhMap.values.toSet
         val nodesToRemove = inhibitor.vertices.filter(v => !inhMapRange.contains(v))
         var nodeRemoved = Set[P#V]()
-        
+
         //for each of such match removes the part which is not in the range of inhMap
         val notInhibited = (conf /: matches) {
           (conf, m) =>
@@ -43,14 +41,15 @@ extends Transition[DepthBoundedConf[P]]
             nodeRemoved = nodeRemoved ++ nodesToRemoveMapped
             coercedConf
         }
+        val (flatConf, flattening) = notInhibited.flatten
         //make sure that the morphism g is still valid after removing the inhibitors
-        if ( g.values.forall(v => notInhibited contains v) ) {
-          Some( notInhibited -> nodeRemoved )
+        if ( g.values.forall(v => notInhibited.contains(v) && flattening(v).depth >= v.depth) ) {
+          Some( (flatConf, nodeRemoved, flattening) )
         } else {
           None
         }
       }
-      case None => Some(conf -> Set[P#V]())
+      case None => Some((conf, Set[P#V](), Map[P#V,P#V]()))
     }
   }
 
@@ -69,7 +68,7 @@ extends Transition[DepthBoundedConf[P]]
       //print("lhs: " + lhs.morph(g1))
 
       // remove all inhibiting subgraphs from conf0 (monotonicity abstraction)
-      for ( (conf1, removedByInhibitor) <- removeInhibitors(conf0, g1) ) yield {
+      for ( (conf1, removedByInhibitor, flattening) <- removeInhibitors(conf0, g1) ) yield {
 
         // Compute nodes that the transition removes from conf1
         val hkRange = hk.values
@@ -128,6 +127,7 @@ extends Transition[DepthBoundedConf[P]]
         witness.unfolded = conf0
         //witness.unfoldedMorphism = g1
         witness.inhibitedNodes = removedByInhibitor
+        witness.inhibitedFlattening = flattening
         witness.inhibited = conf1
         witness.post = postMorphism
         witness.unfoldedAfterPost = postUnfolded

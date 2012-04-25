@@ -200,6 +200,8 @@ extends Traceable[P#V,P#EL] {
     val newMap = (adjacencyMap /: (that adjacencyMap)) ((acc, p) => acc + ((p._1, merge(adjacencyMap.getOrElse(p._1, Map[EL,Set[V]]()), p._2))))
     companion[P](newMap, label)
   }
+  
+  def addVertices(vs: Traversable[V]): Self = (this /: vs)(_ + _)
 
   def filterNodes(fct: V => Boolean): Self = {
     val toRemove = vertices.filterNot(fct)

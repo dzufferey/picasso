@@ -32,6 +32,7 @@ class TransitionWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
   //can be recomputed afterward
   /** nodes removed due to the inhibitor */
   var inhibitedNodes: Set[P#V] = Set[P#V]()
+  var inhibitedFlattening: Morphism = null
   var inhibited: DepthBoundedConf[P] = null
 
   /** what happened during the post.
