@@ -1,4 +1,4 @@
-name := "Picasso"
+name := "Picasso: core components"
 
 version := "0.1"
 
@@ -8,14 +8,10 @@ scalaVersion := "2.9.2"
 
 libraryDependencies ++=  Seq(
     "org.scalatest" % "scalatest_2.9.2" % "1.6.1" % "test",
-    "org.scala-lang" % "scala-compiler" % "2.9.2",
-    //"org.sat4j" % "org.sat4j.core" % "2.3.1",
-    //"org.sat4j" % "org.sat4j.pb" % "2.3.1",
-    //"org.sat4j" % "org.sat4j.maxsat" % "2.3.1",
     "org.apache.commons" % "commons-lang3" % "3.1"
 )
 
-mainClass in (Compile, packageBin) := Some("picasso.frontend.basic.Main")
+mainClass in (Compile, packageBin) := Some("picasso.frontend.dbpGraph.Main")
 
 scalacOptions ++= Seq("-unchecked", "-deprecation")
 
