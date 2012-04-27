@@ -68,6 +68,17 @@ object DBPGraphParser extends StandardTokenParsers {
   def system: Parser[(DepthBoundedConf[DBCGraph], List[DepthBoundedTransition[DBCGraph]], Option[DepthBoundedConf[DBCGraph]])] =
     ("init" ~> graph) ~ rep(transition) ~ opt("target" ~> graph) ^^ { case init ~ trs ~ target => (init, trs, target) }
     
+  def parseGraph(str: String): Option[DepthBoundedConf[DBCGraph]] = {
+    val tokens = new lexical.Scanner(str)
+    val result = phrase(graph)(tokens)
+    if (result.successful) {
+      Some(result.get)
+    } else {
+      Logger("DBPGraphParser", LogError, "parsing error (graph): " + result.toString)
+      None
+    }
+  }
+
   def apply(str: String): Option[(DepthBoundedConf[DBCGraph], List[DepthBoundedTransition[DBCGraph]], Option[DepthBoundedConf[DBCGraph]])] = {
     val tokens = new lexical.Scanner(str)
     val result = phrase(system)(tokens)

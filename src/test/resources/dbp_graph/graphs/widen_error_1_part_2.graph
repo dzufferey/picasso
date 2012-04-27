@@ -1,0 +1,22 @@
+(n_2, enq1)*** -> (n_7, x)** [T]
+(n_2, enq1)*** -> (n_13, x)*** [x]
+(n_3, enq0)* -> (n_19, x)* [x]
+(n_5, deq0)* -> (n_10, x) [T]
+(n_6, enq3)* -> (n_16, x)* [x]
+(n_8, queue) -> (n_14, x) [T]
+(n_8, queue) -> (n_7, x)** [M]
+(n_8, queue) -> (n_10, x) [H]
+(n_8, queue) -> (n_20, NULL) [A]
+(n_9, deq2)* -> (n_10, x) [T]
+(n_9, deq2)* -> (n_7, x)** [T]
+(n_9, deq2)* -> (n_10, x) [H]
+(n_11, enq1)* -> (n_10, x) [T]
+(n_11, enq1)* -> (n_1, x)* [x]
+(n_15, deq3)* -> (n_10, x) [T]
+(n_15, deq3)* -> (n_7, x)** [T]
+(n_15, deq3)* -> (n_10, x) [H]
+(n_18, deq1)* -> (n_10, x) [T]
+(n_18, deq1)* -> (n_10, x) [H]
+node (n_4, enqDone)
+node (n_12, deqTrue)
+node (n_17, enqDone)*

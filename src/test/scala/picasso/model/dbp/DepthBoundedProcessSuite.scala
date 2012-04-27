@@ -3,7 +3,7 @@ package picasso.model.dbp
 import org.scalatest._
 import picasso.math.WellPartialOrdering._
 import picasso.analysis._
-import picasso.utils.{LogDebug, LogNotice, LogInfo, Logger}
+import picasso.utils._
 //import parma_polyhedra_library._
 
 
@@ -213,6 +213,25 @@ class DepthBoundedProcessSuite extends FunSuite {
     Logger("TEST", LogNotice, "folded cover: " + cover.fold)
     assert(cover isSubgraphOf fullCover, "full cover: " + fullCover)
     assert(fullCover isSubgraphOf cover, "cover: " + cover)
+  }
+
+  private val testDir = "src/test/resources/dbp_graph/graphs/"
+  private def getFileContent(fName: String): String = {
+    val fn = testDir + fName
+    IO.readTextFile(fn)
+  }
+
+  test("widening 001"){
+    import picasso.frontend.dbpGraph._
+    val small = DBPGraphParser.parseGraph(getFileContent("widen_error_1_part_1.graph")).get
+    val big   = DBPGraphParser.parseGraph(getFileContent("widen_error_1_part_2.graph")).get
+    val process = new DepthBoundedProcess[DBPGraphs.DBCGraph](Nil)
+    println("small:\n" + small.toGraphviz("DBC"))
+    println("big:\n" + big.toGraphviz("DBC"))
+    process.tryAcceleratePairWithWitness(small, big) match {
+      case Some((accel, witness)) => ()
+      case None => assert(false, "Bug!")
+    }
   }
 
 
