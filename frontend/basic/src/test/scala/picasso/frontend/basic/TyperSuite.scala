@@ -5,7 +5,7 @@ import picasso.utils._
 
 class TyperSuite extends FunSuite {
   
-  val testDir = "src/test/resources/basic/"
+  val testDir = "frontend/basic/src/test/resources/basic/"
 
   test("should type") {
     val files = List(

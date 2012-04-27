@@ -5,7 +5,7 @@ import picasso.utils._
 
 class AnalysisSimpleSuite extends FunSuite {
   
-  val testDir = "src/test/resources/basic/"
+  val testDir = "frontend/basic/src/test/resources/basic/"
 
   def computeCover(fn: String) = {
     val previousLog = Logger.getMinPriority

@@ -4,7 +4,7 @@ import org.scalatest._
 
 class ParserSuite extends FunSuite {
   
-  val testDir = "src/test/resources/basic/"
+  val testDir = "frontend/basic/src/test/resources/basic/"
 
   test("should parse") {
     val files = List(

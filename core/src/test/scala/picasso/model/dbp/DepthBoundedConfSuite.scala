@@ -148,7 +148,7 @@ class DepthBoundedConfSuite extends FunSuite {
 
   }
   
-  private val testDir = "src/test/resources/dbp_graph/graphs/"
+  private val testDir = "core/src/test/resources/dbp_graph/graphs/"
   private def getFileContent(fName: String): String = {
     val fn = testDir + fName
     IO.readTextFile(fn)

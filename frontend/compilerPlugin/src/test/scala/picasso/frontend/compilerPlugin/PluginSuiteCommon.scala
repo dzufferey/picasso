@@ -5,7 +5,7 @@ import picasso.utils.{LogDebug, Logger, IO}
 object PluginSuiteCommon {
   
   //add the compiler to the CP
-  val configFile = "build.sbt" //build.scala.versions=scalaVersion
+  val configFile = "frontend/compilerPlugin/build.sbt" //build.scala.versions=scalaVersion
   lazy val scalaVersion = {
     val values = IO.readTextFile(configFile)
     val pre = values.indexOf("scalaVersion")
@@ -14,14 +14,16 @@ object PluginSuiteCommon {
     values.substring(start, end)
   }
   lazy val scalaVersionDot = scalaVersion.replace("-",".")
-  val compilerCP = List("project/boot/scala-"+scalaVersion+"/lib/scala-library.jar" +
-                        ":target/scala-"+scalaVersionDot+"/classes/"
+  lazy val scalaLib = sys.env("HOME") + "/.ivy2/cache/org.scala-lang/scala-library/jars/scala-library-"+scalaVersionDot+".jar"
+  val compilerCP = List(scalaLib +
+                        ":frontend/compilerPlugin/target/scala-"+scalaVersionDot+"/classes/"
                        )
 
   //assumes that the pwd the project root (where sbt is run)
-  val testDir = "src/test/resources/plugin/"
+  val testDir = "frontend/compilerPlugin/src/test/resources/plugin/"
 
   def runPluginCover(filesNames: List[String], options: List[String] = Nil) = {
+    //Console.println("cp = " + compilerCP)
     val previousLog = Logger.getMinPriority
     Logger.setMinPriority(LogDebug)
     Logger.disallow("graph")

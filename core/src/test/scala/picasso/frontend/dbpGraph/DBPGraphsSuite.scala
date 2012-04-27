@@ -6,7 +6,7 @@ import picasso.model.dbp._
 
 class DBPGraphsSuite extends FunSuite {
   
-  val testDir = "src/test/resources/dbp_graph/"
+  val testDir = "core/src/test/resources/dbp_graph/"
   val logLevel = LogNotice
   val allowedLevel = LogDebug
   val disallowed = List("graph", "DBP")
