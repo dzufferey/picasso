@@ -228,6 +228,8 @@ class DepthBoundedProcessSuite extends FunSuite {
     val process = new DepthBoundedProcess[DBPGraphs.DBCGraph](Nil)
     println("small:\n" + small.toGraphviz("DBC"))
     println("big:\n" + big.toGraphviz("DBC"))
+    val ms = small morphisms big
+    assert(!ms.isEmpty, "Bug: no morphism ?")
     process.tryAcceleratePairWithWitness(small, big) match {
       case Some((accel, witness)) => ()
       case None => assert(false, "Bug!")
