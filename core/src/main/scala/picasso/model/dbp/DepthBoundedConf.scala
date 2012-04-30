@@ -129,6 +129,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
       }
     }
     //(3) stuff within the same nesting
+    //TODO should this be rephrased in term of components ?
     val depthInjective: Iterable[Iterable[Clause[(V,V)]]] =
       //x1 to x2 => all connectedAtSameHeight to x2 becomes injective wrt all connectedAtSameHeight x2
       //injective => not more than one true ...
@@ -334,6 +335,9 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
   def fold(implicit wpo: WellPartialOrdering[P#State]): Self = foldWithWitness._1
 
   def widenWithWitness(newThreads: Set[V]): (Self, Morphism) = {
+    Logger("DBP", LogWarning, "widenWithWitness: TODO this method is broken, it needs to be fixed. It produces \"larger\" graph that are actually incomparable!")
+    //TODO rephrase in terms of components rather than the undirectedAdjacencyMap ?
+    //and flatten at the end ?
 
     def processSeed(depth: Int, newThreads: Set[V], threadsInc: Map[V, V]): Map[V, V] = {
       newThreads find (v => (v.depth == depth) && (depth == 0 || (undirectedAdjacencyMap(v) exists (w => (w.depth == depth) && !(newThreads contains w))))) match {

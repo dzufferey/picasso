@@ -1,0 +1,27 @@
+    (n_6, queue) -> (n_15, x) [T]
+    (n_6, queue) -> (n_8, x) [M]
+    (n_6, queue) -> (n_10, x) [H]
+    (n_6, queue) -> (n_3, NULL) [A]
+    (n_7, enq2) -> (n_8, x) [T]
+    (n_11, deq2)* -> (n_8, x) [T]
+    (n_12, enq1)* -> (n_4, x)* [x]
+    (n_13, enq0)* -> (n_2, x)* [x]
+    (n_18, enq3)* -> (n_5, x)* [x]
+    (n_19, enq1)* -> (n_8, x) [T]
+    (n_19, enq1)* -> (n_17, x)* [x]
+    node (n_1, enqDone)
+    node (n_9, deq1)*
+    node (n_14, deq3)*
+    node (n_16, deqFalse)*
+    node (n_20, deq0)*
+//removing either of those makes it a subgraph ...
+//    (n_7, enq2) -> (n_8, x) [T]
+//    (n_11, deq2)* -> (n_8, x) [T]
+// n_8 can map to n_5 (or n_2)
+// n_7 can only go to n_8, thus n_8 goes to n_5
+// thus n_11 goes to n_18
+// Due to the gradient n_8 should go to n_2 (and not n_5)
+//    (n_8, enq2)* -> (n_5, x)* [T]
+//    (n_18, deq2)* -> (n_2, x) [T]
+//    (n_18, deq2)* -> (n_5, x)* [T]
+//remark: here we see that n_18 looks funny, the wideining should not make that kind of stuff if possible.

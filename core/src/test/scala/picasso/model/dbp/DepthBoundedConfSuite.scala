@@ -203,6 +203,17 @@ class DepthBoundedConfSuite extends FunSuite {
   }
 
 
+  test("subgraph 03"){
+    import picasso.frontend.dbpGraph._
+    val small = DBPGraphParser.parseGraph(getFileContent("widen_error_2_part_1.graph")).get
+    val big   = DBPGraphParser.parseGraph(getFileContent("widen_error_2_part_2.graph")).get
+    //println("small:\n" + small.toGraphviz("DBC"))
+    //println("big:\n" + big.toGraphviz("DBC"))
+    val ms = small morphisms big
+    assert(ms.isEmpty)
+    assert(! (small isSubgraphOf big) )
+  }
+
 
 
 }
