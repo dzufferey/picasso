@@ -12,4 +12,11 @@
     node (n_2, deq0)*
     node (n_5, enqDone)
     node (n_13, enqDone)
-
+//problem with:
+//    (n_7, deq2)* -> (n_10, x) [T]
+//that cannot map to:
+//    (n_9, deq2)* -> (n_7, x)** [T]
+//and
+//    (n_8, deq3)* -> (n_10, x) [T]
+//that cannot map to:
+//    (n_15, deq3)* -> (n_7, x)** [T]

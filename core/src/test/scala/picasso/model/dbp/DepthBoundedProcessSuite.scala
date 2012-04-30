@@ -221,22 +221,6 @@ class DepthBoundedProcessSuite extends FunSuite {
     IO.readTextFile(fn)
   }
 
-  test("widening 001"){
-    import picasso.frontend.dbpGraph._
-    val small = DBPGraphParser.parseGraph(getFileContent("widen_error_1_part_1.graph")).get
-    val big   = DBPGraphParser.parseGraph(getFileContent("widen_error_1_part_2.graph")).get
-    val process = new DepthBoundedProcess[DBPGraphs.DBCGraph](Nil)
-    println("small:\n" + small.toGraphviz("DBC"))
-    println("big:\n" + big.toGraphviz("DBC"))
-    val ms = small morphisms big
-    assert(!ms.isEmpty, "Bug: no morphism ?")
-    process.tryAcceleratePairWithWitness(small, big) match {
-      case Some((accel, witness)) => ()
-      case None => assert(false, "Bug!")
-    }
-  }
-
-
 
 }
 

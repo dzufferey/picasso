@@ -101,6 +101,26 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
          ) yield {
       val d1 = y1.depth - x1.depth
       val d2 = y2.depth - x2.depth
+
+      //TODO this seems fixed ...
+
+      //goal: whatever smaller (this) can do by unfolding, bigger can also do it ...
+      //see test "subgraph 01"
+      //=> should we rather think in term of components ?
+
+      //if increase (d1 > 0), increase at least the same ?
+      //if decrease (d1 < 0), decrease at most the same ?
+      //that is not very symmetric ? or is it ?
+      //due to the flattening the amount of increase and decrease is not that meaningful ...
+      //Can it be as simple as preserving the signum ?
+
+      /*
+      if (math.signum(d1) == math.signum(d2)) {
+        Seq[Clause[(V,V)]]() //ok
+      } else {
+        Seq[Clause[(V,V)]](Seq(Neg(x1 -> x2), Neg(y1 -> y2))) //cannot be both true at the same time
+      }
+      */
       //assert that the difference is at least the same
       if ((d1 > 0 && d2 < d1) || (d1 < 0 && d2 > d1)) {
         Seq[Clause[(V,V)]](Seq(Neg(x1 -> x2), Neg(y1 -> y2))) //cannot be both true at the same time
@@ -138,6 +158,12 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
 
   def morphism(bigger: Self)(implicit wpo: WellPartialOrdering[P#State]) : Option[Morphism] = 
     morphism[P](bigger, _.depth == 0, additionalCstr)
+
+  def subgraphIsomorphism(bigger: Self)(implicit wpo: WellPartialOrdering[P#State]) : Option[Morphism] = 
+    morphism[P](bigger, _.depth == 0, additionalCstr)
+
+  def isSubgraphOf(bigger: Self)(implicit wpo: WellPartialOrdering[P#State]) =
+    subgraphIsomorphism(bigger).isDefined
   
   def degree(v: V): Int = undirectedAdjacencyMap(v).size
 

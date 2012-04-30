@@ -164,6 +164,45 @@ class DepthBoundedConfSuite extends FunSuite {
     //TODO the result of this is what we expect, find out what generates the funny graph in the first place!
   }
 
+  test("subgraph 01") {
+    val conf0 = emp + a1 + c0
+    val conf1 = emp ++ (a1 --> b0) ++ (c0 --> b0)
+    val conf2 = emp ++ (a1 --> b1) ++ (c0 --> b1)
+    val conf3 = emp ++ (a1 --> b2) ++ (c0 --> b2)
+    
+    assert(conf0 isSubgraphOf conf0)
+    assert(conf0 isSubgraphOf conf1)
+    assert(conf0 isSubgraphOf conf2)
+    assert(conf0 isSubgraphOf conf3)
+
+    assert(!(conf1 isSubgraphOf conf0))
+    assert(conf1 isSubgraphOf conf1)
+    assert(!(conf1 isSubgraphOf conf2))
+    assert(!(conf1 isSubgraphOf conf3))
+
+    assert(!(conf2 isSubgraphOf conf0))
+    assert(!(conf2 isSubgraphOf conf1))
+    assert(conf2 isSubgraphOf conf2)
+    assert(conf2 isSubgraphOf conf3)
+
+    assert(!(conf3 isSubgraphOf conf0))
+    assert(!(conf3 isSubgraphOf conf1))
+    assert(!(conf3 isSubgraphOf conf2))
+    assert(conf3 isSubgraphOf conf3)
+  }
+
+  test("subgraph 02"){
+    import picasso.frontend.dbpGraph._
+    val small = DBPGraphParser.parseGraph(getFileContent("widen_error_1_part_1.graph")).get
+    val big   = DBPGraphParser.parseGraph(getFileContent("widen_error_1_part_2.graph")).get
+    //println("small:\n" + small.toGraphviz("DBC"))
+    //println("big:\n" + big.toGraphviz("DBC"))
+    val ms = small morphisms big
+    assert(ms.isEmpty)
+    assert(! (small isSubgraphOf big) )
+  }
+
+
 
 
 }
