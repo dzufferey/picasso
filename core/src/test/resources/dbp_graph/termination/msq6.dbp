@@ -90,10 +90,10 @@ post
   (q, queue) -> (w, x) [H]
   (q, queue) -> (x, x) [T]
   (q, queue) -> (n, NULL) [A]
-  node (e, enqDone)
+  //node (e, enqDone)
 ==>
   q -> q
-  e -> e
+  //e -> e
   w -> w
   x -> x
 <==
@@ -109,10 +109,10 @@ post
   (q, queue) -> (w, x) [M]
   (q, queue) -> (x, x) [T]
   (q, queue) -> (n, NULL) [A]
-  node (e, enqDone)
+  //node (e, enqDone)
 ==>
   q -> q
-  e -> e
+  //e -> e
   w -> w
   x -> x
   h -> h
@@ -124,11 +124,11 @@ pre
   (e, enq2) -> (w2, x) [T] 
 post
   (q, queue) -> (w1, x) [T]
-  node (e, enqDone)
+  //node (e, enqDone)
   node (w2, x)
 ==>
   q -> q
-  e -> e
+  //e -> e
   w1 -> w1
   w2 -> w2
 <==
