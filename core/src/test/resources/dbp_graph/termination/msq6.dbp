@@ -239,9 +239,9 @@ transition "Tail removed removed at enq2 (done)"
 pre
   node (e, enq2)
 post
-  node (e, enqDone)
+  //node (e, enqDone)
 ==>
-  e -> e
+  //e -> e
 <==
 no
   (e, enq2) -> (w, x) [T] 
@@ -320,10 +320,11 @@ post
   w -> w
 <==
 
-transition "deq2 -> deq0: read H+T is isconsistent"
+transition "deq2 -> deq0: read H+T is isconsistent (case H=T)"
 pre
   (q, queue) -> (w1, x) [H]
   (e, deq2) -> (w2, x) [H]
+  (e, deq2) -> (w2, x) [T]
 post
   (q, queue) -> (w1, x) [H]
   node (e, deq0)
@@ -335,6 +336,24 @@ post
   w2 -> w2
 <==
 
+transition "deq2 -> deq0: read H+T is isconsistent (case H<>T)"
+pre
+  (q, queue) -> (w1, x) [H]
+  (e, deq2) -> (w2, x) [H]
+  (e, deq2) -> (w3, x) [T]
+post
+  (q, queue) -> (w1, x) [H]
+  node (e, deq0)
+  node (w2, x)
+  node (w3, x)
+==>
+  q -> q
+  e -> e
+  w1 -> w1
+  w2 -> w2
+  w3 -> w3
+<==
+
 transition "deq3 -> deqFalse (empty): guard = no A, pre T = H"
 pre
   (q, queue) -> (n, NULL) [A]
@@ -342,11 +361,11 @@ pre
   (e, deq3) -> (w, x) [T]
 post
   (q, queue) -> (n, NULL) [A]
-  node (e, deqFalse)
+  //node (e, deqFalse)
   node (w, x)
 ==>
   q -> q
-  e -> e
+  //e -> e
   w -> w
   n -> n
 <==
@@ -359,11 +378,11 @@ pre
 post
   (q, queue) -> (w2, x) [H]
   node (w2, x)
-  node (e, deqTrue)
+  //node (e, deqTrue)
   //node (w1, x)
 ==>
   q -> q
-  e -> e
+  //e -> e
   //w1 -> w1
   w2 -> w2
 <==
@@ -381,11 +400,11 @@ pre
 post
   (q, queue) -> (w3, x) [H]
   node (w2, x)
-  node (e, deqTrue)
+  //node (e, deqTrue)
   //node (w1, x)
 ==>
   q -> q
-  e -> e
+  //e -> e
   //w1 -> w1
   w2 -> w2
   w3 -> w3
@@ -447,11 +466,13 @@ post
   w2 -> w2
 <==
 
+//T cannot be removed before H is removed
+
 transition "Head was removed: deq2 -> retry"
 pre
   node (e, deq2)
 post
-  node (e, deq0)
+  node (e, deq4)
 ==>
   e -> e
 <==
@@ -464,7 +485,7 @@ transition "Head was removed: deq3 -> retry"
 pre
   node (e, deq3)
 post
-  node (e, deq0)
+  node (e, deq4)
 ==>
   e -> e
 <==
@@ -472,3 +493,28 @@ no
   (e, deq3) -> (w, x) [H]
 ==>
   e -> e
+
+//in deq4: there is no H, but there might still be some T.
+transition "no Tail: deq4 -> retry"
+pre
+  node (e, deq4)
+post
+  node (e, deq0)
+==>
+  e -> e
+<==
+no
+  (e, deq4) -> (w, x) [T]
+==>
+  e -> e
+
+transition "still pointing to Tail: deq4 -> retry"
+pre
+  (e, deq4) -> (w, x) [T]
+post
+  node (e, deq0)
+  node (w, x)
+==>
+  e -> e
+  w -> w
+<==
