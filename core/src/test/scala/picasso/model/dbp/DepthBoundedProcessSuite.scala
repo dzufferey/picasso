@@ -33,11 +33,15 @@ class DepthBoundedProcessSuite extends FunSuite {
   val b0 = mkB
   val c0 = mkC
   val d0 = mkD
+  val a1 = a0++
   val b1 = b0++
   val c1 = c0++
+  val a2 = a1++
+  val b2 = b1++
   val c2 = c1++
   val cc0 = mkC
   val cc1 = cc0++
+  val cc2 = cc1++
 
 /*
   test("testing polyhedra library") {
@@ -219,6 +223,58 @@ class DepthBoundedProcessSuite extends FunSuite {
   private def getFileContent(fName: String): String = {
     val fn = testDir + fName
     IO.readTextFile(fn)
+  }
+
+  test("widening test 00") {
+    val proc = new DepthBoundedProcess[LocDBCT](Nil)
+    val conf0 = emp + a1
+    val conf1 = emp + a1 ++ (a0 --> b0)
+    val wide = proc.widening(conf0, conf1)
+    val expected = emp ++ (a1 --> b1)
+    assert(conf0 isSubgraphOf wide, "conf0 not subgraph")
+    assert(conf1 isSubgraphOf wide, "conf1 not subgraph")
+    assert((expected isSubgraphOf wide) && (wide isSubgraphOf expected), "wide is not the expected result")
+  }
+
+  test("widening test 01") {
+    val proc = new DepthBoundedProcess[LocDBCT](Nil)
+    val conf0 = emp + a1
+    val conf1 = emp ++ (a1 --> b1)
+    val wide = proc.widening(conf0, conf1)
+    val expected = emp ++ (a1 --> b2)
+    assert(conf0 isSubgraphOf wide, "conf0 not subgraph")
+    assert(conf1 isSubgraphOf wide, "conf1 not subgraph")
+    assert((expected isSubgraphOf wide) && (wide isSubgraphOf expected), "wide is not the expected result")
+  }
+
+  test("widening test 02") {
+    val proc = new DepthBoundedProcess[LocDBCT](Nil)
+    val conf0 = emp + a1
+    val conf1 = emp ++ (a1 --> b0)
+    val wide1 = proc.widening(conf0, conf1)
+    val expected1 = emp ++ (a2 --> b1)
+    
+    //println("conf0:" + conf0)
+    //println("conf1:" + conf1)
+    //println("wide1:" + wide1)
+
+    assert(conf0 isSubgraphOf wide1, "conf0 not subgraph")
+    assert(conf1 isSubgraphOf wide1, "conf1 not subgraph")
+    assert((expected1 isSubgraphOf wide1) && (wide1 isSubgraphOf expected1), "wide1 is not the expected result")
+
+    val conf2 = emp + a1 + c0
+    val conf3 = emp ++ (a1 --> b0) ++ (c0 --> b0)
+    val wide2 = proc.widening(conf2, conf3)
+    val expected2 = emp ++ (a2 --> b1) ++ (c0 --> b1)
+    
+    //println("conf2:" + conf3)
+    //println("conf3:" + conf2)
+    //println("wide2:" + wide2)
+
+    assert(conf2 isSubgraphOf wide2, "conf2 not subgraph")
+    assert(conf3 isSubgraphOf wide2, "conf3 not subgraph")
+    assert((expected2 isSubgraphOf wide2) && (wide2 isSubgraphOf expected2), "wide2 is not the expected result")
+
   }
 
 

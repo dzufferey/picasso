@@ -127,12 +127,14 @@ class DepthBoundedConfSuite extends FunSuite {
     assert(gold3 isSubgraphOf fold3)
   }
 
-  test("flattening 000") {
+  test("flattening 00") {
     val conf0 = emp + a0 + b1 + c2
     val (flat0, _) = conf0.flatten
     val expected0 = emp + a0 + b1 + c1
-    println("conf0:" + conf0)
-    println("flat0:" + flat0)
+    //println("conf0:" + conf0)
+    //println("flat0:" + flat0)
+    assert(flat0 isSubgraphOf expected0)
+    assert(expected0 isSubgraphOf flat0)
 
     val conf1 = emp ++ (a0 --> b1) ++ (b1 --> c2) ++ (a0 --> cc2)
     val (flat1, _) = conf1.flatten
@@ -154,7 +156,7 @@ class DepthBoundedConfSuite extends FunSuite {
     IO.readTextFile(fn)
   }
 
-  test("flattening 001") {
+  test("flattening 01") {
     val graph = picasso.frontend.dbpGraph.DBPGraphParser.parseGraph(getFileContent("flatten_test_1.graph")).get
     val (flat, map) = graph.flatten
     //println("graph :\n" + graph)
@@ -162,6 +164,15 @@ class DepthBoundedConfSuite extends FunSuite {
     //println("map:\n" + map.mkString("  ", "\n  ", ""))
     assert(map.exists{case (a,b) => a != b})
     //TODO the result of this is what we expect, find out what generates the funny graph in the first place!
+  }
+  
+  test("flattening 02") {
+    val conf0 = emp ++ (a2 --> b1)
+    val (flat0, _) = conf0.flatten
+    assert(flat0 isSubgraphOf conf0)
+    assert(conf0 isSubgraphOf flat0)
+    //println("conf0:" + conf0)
+    //println("flat0:" + flat0)
   }
 
   test("subgraph 01") {

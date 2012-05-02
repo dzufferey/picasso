@@ -43,10 +43,11 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
   }
 
   // use def instead of val if caching requires too much space
-  lazy val undirectedAdjacencyMap = {
-    val out = adjacencyMap mapValues (_.foldLeft(Set.empty[V])((xs, e) => e._2 ++ xs))
-    out.foldLeft(out)((acc, p) => p._2.foldLeft(acc)((acc, x) => acc + ((x, acc.getOrElse(x, Set.empty[V]) + p._1))))
-  }
+  lazy val undirectedAdjacencyMap = this.undirect
+  //{
+  //  val out = adjacencyMap mapValues (_.foldLeft(Set.empty[V])((xs, e) => e._2 ++ xs))
+  //  out.foldLeft(out)((acc, p) => p._2.foldLeft(acc)((acc, x) => acc + ((x, acc.getOrElse(x, Set.empty[V]) + p._1))))
+  //}
 
   /*
   protected def propagate(ms: MorphState[P], i : Int, j : Int) = {
@@ -168,7 +169,8 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
   
   def degree(v: V): Int = undirectedAdjacencyMap(v).size
 
-  protected def getComponent1(undirected: Self, node: V): Set[V] = {
+  def getComponent(node: V): Set[V] = {
+    val undirected = undirectedAdjacencyMap
     val depth = node.depth
     //take all the nodes conntected with depth greater or equal, repeat until fixpoint.
     def process(acc: Set[V], frontier: Set[V]): Set[V] = frontier.headOption match {
@@ -180,22 +182,17 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     process(Set(node), Set(node))
   }
 
-  def getComponent(node: V): Set[V] = {
-    val undirected = this.undirect
-    getComponent1(undirected, node)
-  }
-
   /** getComponent + parents componements up to the top componement. */
   def getComponentsPyramide(node: V): Seq[Set[V]] = {
-    val undirected = this.undirect
-    val cmp1 = getComponent1(undirected, node)
+    val undirected = undirectedAdjacencyMap
+    val cmp1 = getComponent(node)
     def process(acc: List[Set[V]], current: Set[V]): List[Set[V]] = {
       //get one level down from the current cmp
       val lowest = current.map(_.depth).min
       val next = current.flatMap(undirected(_)).find(n => n.depth == (lowest - 1))
       next match {
         case Some(v) => 
-          val current1 = getComponent1(undirected, v)
+          val current1 = getComponent(v)
           assert(current subsetOf current1)
           process(current :: acc, current1)
         case None =>
@@ -206,10 +203,9 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
   }
 
   def decomposeInComponents: Seq[Set[V]] = {
-    val undirected = this.undirect
     def process(todo: List[V], acc: List[Set[V]]): Seq[Set[V]] = todo match {
       case x :: xs =>
-        val cmp = getComponent1(undirected, x)
+        val cmp = getComponent(x)
         val todo2 = xs.filterNot(cmp(_))
         process(todo2, cmp :: acc)
       case Nil => acc
@@ -219,14 +215,14 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
   
   def decomposeInDisjointComponents: DiGraph[GT.ULGT{type V = Set[P#V]}] = {
     val cmps = decomposeInComponents
-    val edges = cmps.flatMap( x => cmps.flatMap( y => if (y subsetOf x) Some(x -> y) else None) )
-    val directEdges = edges.filter{ case (a,b) => a.head.depth == b.head.depth - 1 }
+    val edges = cmps.flatMap( x => cmps.flatMap( y => if (x != y && (y subsetOf x) ) Some(x -> y) else None) )
     def trim(cmp: Set[V]): Set[V] = {
       val minDepth = cmp.map(_.depth).reduceLeft(math.min)
       cmp.filter(_.depth == minDepth)
     }
     val trimedEdges = edges.map{ case (a,b) => (trim(a), trim(b)) }
-    DiGraph[GT.ULGT{type V = Set[P#V]}](trimedEdges)
+    val allVertices = cmps.map(trim)
+    DiGraph[GT.ULGT{type V = Set[P#V]}](trimedEdges).addVertices(allVertices)
   }
 
   /** Unfold the nodes in this graph which are replicated and in the codomain of the morphism.
@@ -335,35 +331,61 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
   def fold(implicit wpo: WellPartialOrdering[P#State]): Self = foldWithWitness._1
 
   def widenWithWitness(newThreads: Set[V]): (Self, Morphism) = {
-    Logger("DBP", LogWarning, "widenWithWitness: TODO this method is broken, it needs to be fixed. It produces \"larger\" graph that are actually incomparable!")
-    //TODO rephrase in terms of components rather than the undirectedAdjacencyMap ?
-    //and flatten at the end ?
+    //(1) decompose into cmpts
+    //(2) go cmpts by cmpts
+    //(3) first is height 0, with seeds going from 0 to 1.
+    //    if a cmpt node of depth 1 is connected to a seed, the cmpt of that nodes needs to be increased
+    //(4) recurse into the cmpts
+    //    from step3, it is possible that some seeds have already been increased
+    //(5) (maybe) flatten: should not be needed, but it should not hurt either
 
-    def processSeed(depth: Int, newThreads: Set[V], threadsInc: Map[V, V]): Map[V, V] = {
-      newThreads find (v => (v.depth == depth) && (depth == 0 || (undirectedAdjacencyMap(v) exists (w => (w.depth == depth) && !(newThreads contains w))))) match {
-        case Some(seed) =>
-          def processComponent(todo: Set[V], newThreads: Set[V], threadsInc: Map[V, V]): Map[V, V] = {
-            todo headOption match {
-              case Some(v) => {
-                val vInc = v++
-                val newTodo = todo ++ (undirectedAdjacencyMap(v) filter (newThreads contains)) - v
-                processComponent(newTodo, newThreads - v, threadsInc + (v -> vInc))
-              }
-              case None =>
-                processSeed(depth, newThreads, threadsInc)
-            }
-          }
-          processComponent(Set(seed), newThreads, threadsInc)
-        case None => 
-          val newThreads1 = newThreads filter (_.depth > depth)
-          if (!newThreads1.isEmpty) 
-            processSeed(depth + 1, newThreads1, threadsInc)
-          else threadsInc
-      }
+    val cmpGraph = decomposeInDisjointComponents
+    //println("cmpGraph: " + cmpGraph)
+    val processingOrder = cmpGraph.topologicalSort
+    
+    /*
+    val cmpGraphRTC = cmpGraph.reflexiveTransitiveClosure
+    val incrementCmp(cmp:Set[V], threadsInc: Map[V, Int]): Map[V, Int] = {
+      val allNodes = cmpGraphRTC(cmp).flatten
+      (threadsInc /: cmp)( (acc, n) => acc + (n, acc(n) + 1))
+    }
+    */
+    
+    def processCmp(cmp: Set[V], toWiden: Set[V], threadsInc: Map[V, Int]): (Set[V], Map[V, Int]) = {
+      val (inCmp, rest) = toWiden.partition(cmp contains _)
+      //compute the list of replicated nodes that are affected by the nodes inCmp
+      val curDepth = cmp.head.depth
+      assert(cmp forall (_.depth == curDepth))
+      val affected = for (n1 <- inCmp; n2 <- undirectedAdjacencyMap(n1) if n2.depth == curDepth + 1; n3 <- getComponent(n2)) yield n3
+      //println("cmp: " + cmp)
+      //println("inCmp: " + inCmp)
+      //println("affected: " + affected)
+      val threadsInc2 = (threadsInc /: (inCmp ++ affected))( (acc, n) => acc + ((n, acc(n) + 1): (V,Int)))
+      (rest, threadsInc2)
     }
 
-    val mapping = processSeed(0, newThreads, Map.empty[V,V])
-    (this morph mapping, mapping)
+    val defaultTreadsInc = vertices.map(v => (v, 0)).toMap[V,Int]
+    val (left, increment) = ( (newThreads, defaultTreadsInc) /: processingOrder )( (acc, cmp) => acc match {
+      case (newThreads, threadsInc) => processCmp(cmp, newThreads, threadsInc)
+    })
+    assert(left.isEmpty)
+      
+    val mapping: Morphism = increment.flatMap[(V,V), Map[V,V]]{ case (v, i) =>
+      if (v == 0) {
+        None
+      } else {
+        val v2 = (v /: (0 until i))( (v,_) => v++ )
+        Some(v -> v2)
+      }
+    }
+    //flatten
+    val tmp = this morph mapping
+    val (result, mapping2) = tmp.flatten
+    //println("tmp: " + tmp)
+    //println("result: " + result)
+    val resultMapping = mapping.map[(V,V), Map[V,V]]{ case (a,b) => (a, mapping2.getOrElse(b, b) ) }
+    (result, resultMapping)
+
   }
   
   def widen(newThreads: Set[V]): Self = widenWithWitness(newThreads)._1
@@ -389,7 +411,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     val eqGraph = DiGraph[GT.ULGT{type V = P#V}](eqEdges1 ++ eqEdges2).addVertices(replicated)
     
     //- create a set of constraints between nodes: lt
-    val ltEdges = replicated.toSeq.flatMap(v => this(v).toSeq.filter(_.depth > v.depth).map(v -> _))
+    val ltEdges = replicated.toSeq.flatMap(v => undirectedAdjacencyMap(v).toSeq.filter(_.depth > v.depth).map(v -> _))
     val ltGraph = DiGraph[GT.ULGT{type V = P#V}](ltEdges).addVertices(replicated)
 
     //- merge nodes that are equal
