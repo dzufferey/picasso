@@ -133,7 +133,9 @@ extends Transition[DepthBoundedConf[P]]
         witness.unfoldedAfterPost = postUnfolded
         witness.folding = folding
         witness.to = post
-      
+        
+        //assert( post.noUnneededNesting, witness )
+
         (witness, post)
       }
     }

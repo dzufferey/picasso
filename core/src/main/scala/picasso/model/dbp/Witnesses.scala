@@ -47,6 +47,21 @@ class TransitionWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
   /** how the configuration was folded */
   var folding: Morphism = null
 
+  override def toString = {
+    "TransitionWitness\n" +
+    "transition: " + transition +
+    "\nfrom: " + from +
+    "\nunfolding: " + unfolding.mkString("\n", "\n", "\n") +
+    "\nunfolded: " + unfolded +
+    "\ninhibited nodes: " + inhibitedNodes.mkString(", ") +
+    "\ninhibited flattening: " + inhibitedFlattening.mkString("\n", "\n", "\n") +
+    "\ninhibited: " + inhibited +
+    "\npost: " + post.mkString("\n", "\n", "\n") +
+    "\npost unfolded: " + unfoldedAfterPost +
+    "\nfolding: " + folding.mkString("\n", "\n", "\n") +
+    "\nto: " + to
+  }
+
 }
 
 class WideningWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])

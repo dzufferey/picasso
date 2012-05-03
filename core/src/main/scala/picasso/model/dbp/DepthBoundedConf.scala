@@ -313,19 +313,24 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
   def foldWithWitness(implicit wpo: WellPartialOrdering[P#State]): (Self, Morphism) = {
     val iter = this morphisms this
 
-    def loop() : (Self, Morphism) = {
-      if (iter.hasNext) { 
-        val m = iter.next
-
+    def loop(accFolded: Self, accFolding: Morphism): (Self, Morphism) = {
+      val iter = accFolded morphisms accFolded
+      val changes = iter find ( m => {
         val used: Set[V] = (Set.empty[V] /: m)((acc, p) => acc + p._2)
-        val redundant = vertices &~ used
-        
-        if (redundant.isEmpty) loop()
-        else (this -- redundant, m)
-      } else (this, Map())
+        val redundant = accFolded.vertices &~ used
+        !redundant.isEmpty
+      })
+      changes match {
+        case Some(m) =>
+          val redundant = (accFolded.vertices /: m.values)(_ - _)
+          val accFolded2 = accFolded -- redundant
+          val accFolding2: Morphism = accFolding.map[(V,V), Map[V,V]]{ case (a,b) => ( a, m.getOrElse(b,b) ) }
+          loop(accFolded2, accFolding2)
+        case None => (accFolded, accFolding)
+      }
     }
 
-    loop()    
+    loop(this, vertices.map(v => (v,v)).toMap[V,V])    
   }
 
   def fold(implicit wpo: WellPartialOrdering[P#State]): Self = foldWithWitness._1
@@ -443,6 +448,23 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     assert(other.forall(v => !morphism.contains(v)))
     val morphismFull = morphism ++ other.map(x => (x,x) )
     (this morph morphism, morphismFull)
+  }
+
+  //if this methods returns true, then flattening is not required
+  //purpose: detect where thing are going wrong (and fix the bugs) rather than flattening all the time
+  def noUnneededNesting: Boolean = {
+    //a fixpoint algo where nodes can be maked as good or bad.
+    //a node is good if it has depth 0/1 or if it has a good neighbor of its depth +/- 1
+    val goodEdges1: Iterable[(V, Boolean, V)] = edges.map{ case (a, _, b) => (a, math.abs(a.depth - b.depth) <= 1, b) }
+    val goodEdges2 = goodEdges1.map{ case (a,b,c) => (c,b,a) }
+    val goodEdges = goodEdges1 ++ goodEdges2
+    val graph = EdgeLabeledDiGraph[GT.ELGT{type V = P#V; type EL = Boolean}](goodEdges).addVertices(vertices)
+    def post(a: Boolean, label: Boolean) = a && label
+    def join(a: Boolean, b: Boolean) = a || b
+    def cover(a: Boolean, b: Boolean) = !b || a
+    def default(v: V) = v.depth <= 1
+    val validNodes = graph.aiFixpoint[Boolean]( post, join, cover, default, true)
+    validNodes.forall(_._2)
   }
 
 

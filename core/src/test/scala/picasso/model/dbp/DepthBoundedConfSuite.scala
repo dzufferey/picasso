@@ -135,18 +135,24 @@ class DepthBoundedConfSuite extends FunSuite {
     //println("flat0:" + flat0)
     assert(flat0 isSubgraphOf expected0)
     assert(expected0 isSubgraphOf flat0)
+    assert(!conf0.noUnneededNesting)
+    assert(flat0.noUnneededNesting)
 
     val conf1 = emp ++ (a0 --> b1) ++ (b1 --> c2) ++ (a0 --> cc2)
     val (flat1, _) = conf1.flatten
     val expected1 = emp ++ (a0 --> b1) ++ (a0 --> cc1) ++ (b1 --> c2)
     assert(flat1 isSubgraphOf expected1)
     assert(expected1 isSubgraphOf flat1)
+    assert(!conf1.noUnneededNesting)
+    assert(flat1.noUnneededNesting)
     
     val conf2 = emp ++ (a2 --> b2) ++ (b2 --> c2)
     val (flat2, _) = conf2.flatten
     val expected2 = emp ++ (a1 --> b1) ++ (b1 --> c1)
     assert(flat2 isSubgraphOf expected2)
     assert(expected2 isSubgraphOf flat2)
+    assert(!conf2.noUnneededNesting)
+    assert(flat2.noUnneededNesting)
 
   }
   
@@ -162,8 +168,10 @@ class DepthBoundedConfSuite extends FunSuite {
     //println("graph :\n" + graph)
     //println("flat :\n" + flat)
     //println("map:\n" + map.mkString("  ", "\n  ", ""))
+    assert(!graph.noUnneededNesting)
+    assert(flat.noUnneededNesting)
     assert(map.exists{case (a,b) => a != b})
-    //TODO the result of this is what we expect, find out what generates the funny graph in the first place!
+    //the result of this is what we expect, find out what generates the funny graph in the first place!
   }
   
   test("flattening 02") {
@@ -173,6 +181,7 @@ class DepthBoundedConfSuite extends FunSuite {
     assert(conf0 isSubgraphOf flat0)
     //println("conf0:" + conf0)
     //println("flat0:" + flat0)
+    assert(flat0.noUnneededNesting)
   }
 
   test("subgraph 01") {
