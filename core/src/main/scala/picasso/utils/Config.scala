@@ -133,7 +133,9 @@ class Config {
 
   //about the termination analysis
   var termination = false
+  var useTree = false
   val termination1 = ("--termination", Arg.Unit(() => termination = true), "Compute the termination of the system.")
+  val termination2 = ("--useTree", Arg.Unit(() => useTree = true), "Termination analysis using the KM tree (default is to use only the cover).")
 
   val usage = "..."
 
@@ -141,7 +143,7 @@ class Config {
     verbose, quiet, hide,
     reportQuick, reportFull,
     tree1, tree2,
-    termination1
+    termination1, termination2
   )
 
   def apply(args: Seq[String]) {

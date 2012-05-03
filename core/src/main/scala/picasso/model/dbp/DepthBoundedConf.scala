@@ -376,7 +376,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     assert(left.isEmpty)
       
     val mapping: Morphism = increment.flatMap[(V,V), Map[V,V]]{ case (v, i) =>
-      if (v == 0) {
+      if (i == 0) {
         None
       } else {
         val v2 = (v /: (0 until i))( (v,_) => v++ )
@@ -386,9 +386,12 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     //flatten
     val tmp = this morph mapping
     val (result, mapping2) = tmp.flatten
+    val resultMapping = mapping.map[(V,V), Map[V,V]]{ case (a,b) => (a, mapping2.getOrElse(b, b) ) }
     //println("tmp: " + tmp)
     //println("result: " + result)
-    val resultMapping = mapping.map[(V,V), Map[V,V]]{ case (a,b) => (a, mapping2.getOrElse(b, b) ) }
+    //println("mapping: " + mapping.mkString(", "))
+    //println("mapping2: " + mapping2.mkString(", "))
+    //println("resultMapping: " + resultMapping.mkString(", "))
     (result, resultMapping)
 
   }
@@ -437,11 +440,11 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     //- expand to the whole SCC
     val lowerDepth = mergeCmp.map[(V,Int), Map[V,Int]]{ case (v, repr) => v -> mergedDepths(repr) }
 
-    val newDepths = lowerDepth
-    val changingDepths = newDepths.filter{ case (a,i) => a.depth != i }
-    val morphism: Morphism = changingDepths.map[(V,V), Map[V,V]]{ case (a, i) =>
+    //val newDepths = lowerDepth
+    //val changingDepths = newDepths.filter{ case (a,i) => a.depth != i }
+    val morphism: Morphism = lowerDepth.map[(V,V), Map[V,V]]{ case (a, i) =>
       val delta = a.depth - i
-      assert(delta > 0)
+      assert(delta >= 0)
       val a2 = (a /: (0 until delta))( (a, _) => a--)
       (a, a2)
     }

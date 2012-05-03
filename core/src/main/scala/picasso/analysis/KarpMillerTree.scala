@@ -195,7 +195,7 @@ trait KarpMillerTree {
   //when the depth of the tree increases, it becomes very slow.
   //I am wondering if I should do a periodic restart (keep the current cover, but drop the trees.)
 
-  final val restartThresold = 300000
+  final val restartThresold = 600000
   protected var sinceRestart = java.lang.System.currentTimeMillis
   protected def start = sinceRestart = java.lang.System.currentTimeMillis
   protected def checkRestart: Boolean = {

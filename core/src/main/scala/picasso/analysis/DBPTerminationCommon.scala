@@ -135,7 +135,7 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
     val stmts1 = for ( (n1, n2) <- replicating) yield {
       getCardinality(map2, n2) match {
         case v @ Variable(_) => Affect(v, Plus(v, getCardinality(map1, n1)))
-        case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+        case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable for "+n2+", found: " + other)
       }
     }
     val stmts2 = for ( (n1, _) <- replicating) yield {
@@ -220,7 +220,8 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
                                        " to " + to +
                                        " with " + inhibited +
                                        "\nfrom.vertices: " + from.vertices +
-                                       "\nto.vertices: " + to.vertices)
+                                       "\nto.vertices: " + to.vertices +
+                                       "\nflattening: " + flattening.mkString(", "))
     assert(from != to)
     val (pc1, map1) = getPC(from)
     val (pc2, map2) = getPC(to)
@@ -365,8 +366,10 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
     new Transition(pc1, pc2, Literal(true), stmts, "morphing, " + tr.id)
   }
 
+  protected val emptyConf = DepthBoundedConf.empty[P]
+
   protected def initialize(init: S, allVariables: Set[Variable]): Transition = {
-    val (pc0, _) = getPC(DepthBoundedConf.empty[P])
+    val (pc0, _) = getPC(emptyConf)
     val (pc1, map1) = getPC(init)
     //the inital transition is similar to the widening transitions ... 
     val components: DiGraph[GT.ULGT{type V = Set[P#V]}] = init.decomposeInDisjointComponents
@@ -413,7 +416,7 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
   }
   protected def isFoldingTrivial(from: S, folding: Map[P#V,P#V], to: S) = {
     if (from == to) {
-      assert(folding.isEmpty)
+      assert(folding.isEmpty || folding.forall{ case (a,b) => a == b})
       true
     } else {
       false
