@@ -125,7 +125,6 @@ trait DBPTermination[P <: DBCT] extends DBPTerminationCommon[P] {
     Logger("DBPTermination", LogNotice, "Extraction done. Simplifying ... ")
     val program2 = program1.simplifyForTermination
     (tree, program2)
-    //sys.error("TODO print and call ARMC")
   }
 
 }

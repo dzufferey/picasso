@@ -12,20 +12,22 @@ object Misc {
   }
   
   def graphvizToSvgDot(dot: String): String = {
-    SysCmd.execWithInputAndGetOutput(Array("dot", "-Tsvg"), Nil, dot) match {
-      case Left(bytes) => new String(bytes)
-      case Right(err) =>
-        Logger("basic", LogWarning, "error running dot (code: "+err+").")
-        "<pre>\n" + dot + "\n</pre>"
+    val (code, out, err) = SysCmd(Array("dot", "-Tsvg"), dot)
+    if (code == 0) {
+      out
+    } else {
+      Logger("basic", LogWarning, "error running dot (code: "+code+").")
+      "<pre>\n" + dot + "\n</pre>"
     }
   }
   
   def graphvizToSvgFdp(dot: String): String = {
-    SysCmd.execWithInputAndGetOutput(Array("fdp", "-Tsvg", "-GK=1"), Nil, dot) match {
-      case Left(bytes) => new String(bytes)
-      case Right(err) =>
-        Logger("basic", LogWarning, "error running fdp (code: "+err+").")
-        "<pre>\n" + dot + "\n</pre>"
+    val (code, out, err) = SysCmd(Array("fdp", "-Tsvg", "-GK=1"), dot)
+    if (code == 0) {
+      out
+    } else {
+      Logger("basic", LogWarning, "error running fdp (code: "+code+").")
+      "<pre>\n" + dot + "\n</pre>"
     }
   }
   
