@@ -363,4 +363,21 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     new Program(initPC, trs2)
   }
 
+
+  //TODO given a program: heuristically guess possible parts of the ranking function / transition predicates
+  //What is the best way to do this
+  //-> find the elementary cycles: for each cycle we should be able to find a simple candidate ranking fct
+  //-> combining elementary cycles ...
+  //what is a candidate ranking function ? -> a linear combination of terms + a lower bound
+  //simple version of ranking fct: set of var (take the sum), the lower bounf is 0 (or any constant).
+
+  //finding a candidate ranking for an elementary cycle:
+  //for simple cases, we can track the variation on a per variable basis
+  //for more complex cases -> doing what rank finder is doing ...
+  //for the intermediate cases, i.e. merge of variables, ??
+  def transitionPredicates(cycle: Seq[Transition]): Iterable[Set[Variable]] = {
+    //take a subset of variables: look at the relation in which they apprears -> sum -> look at the constant term.
+    sys.error("TODO")
+  }
+
 }

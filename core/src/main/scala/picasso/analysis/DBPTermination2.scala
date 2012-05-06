@@ -10,7 +10,7 @@ import scala.collection.GenIterable
 trait DBPTermination2[P <: DBCT] extends DBPTerminationCommon[P] {
   self: DepthBoundedProcess[P] =>
 
-  //TODO rather than build the program using the full tree, use only the cover
+  //rather than build the program using the full tree, use only the cover
   //from the cover -> take the one step successors -> find out the back edges for each sucessors
   //initialisation: to any element of the cover with "any" counter value
 
