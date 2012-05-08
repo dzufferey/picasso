@@ -96,6 +96,25 @@ object Expression {
     (posVar3.toList, negVar3.toList, Constant(cst2))
   }
 
+  //returns a vector of coefficients (variables) and a constant term.
+  def decomposeVector(e: Expression, vars: Seq[Variable]): (Seq[Int], Int) = {
+    val coeffArray = Array[Int](vars.length)
+    val idxMap = vars.zipWithIndex.toMap
+    var constantTerm = 0
+    val (pos, neg) = getPositiveNegativeTerms(e)
+    pos.foreach{
+      case v @ Variable(_) => coeffArray(idxMap(v)) += 1
+      case Constant(c) => constantTerm += c
+      case other => Logger.logAndThrow("integer.AST", LogError, "expected Variable or Constant, found: " + other)
+    }
+    neg.foreach{
+      case v @ Variable(_) => coeffArray(idxMap(v)) -= 1
+      case Constant(c) => constantTerm -= c
+      case other => Logger.logAndThrow("integer.AST", LogError, "expected Variable or Constant, found: " + other)
+    }
+    (coeffArray, constantTerm)
+  }
+
   def recompose(pos: List[Variable], neg: List[Variable], cst: Constant): Expression = {
     val posSum = if (pos.isEmpty) None else Some((pos: List[Expression]).reduceLeft(Plus(_, _)))
     val afterSubtract =
