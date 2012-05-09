@@ -98,7 +98,7 @@ object Expression {
 
   //returns a vector of coefficients (variables) and a constant term.
   def decomposeVector(e: Expression, vars: Seq[Variable]): (Seq[Int], Int) = {
-    val coeffArray = Array[Int](vars.length)
+    val coeffArray = Array.ofDim[Int](vars.length)
     val idxMap = vars.zipWithIndex.toMap
     var constantTerm = 0
     val (pos, neg) = getPositiveNegativeTerms(e)

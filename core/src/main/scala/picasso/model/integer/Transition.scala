@@ -1,6 +1,7 @@
 package picasso.model.integer
 
 import picasso.utils._
+import picasso.graph._
 
 class Transition(val sourcePC: String,
                  val targetPC: String,
@@ -497,4 +498,75 @@ object Transition {
     }
   }
 
+  //finding candidate ranking functions for a cycle:
+  //simple version of ranking fct: set of var (take the sum), the lower bounf is 0 (or any constant).
+  def transitionPredicates(cycle: Seq[Transition]): Iterable[Set[Variable]] = {
+    assert(!cycle.isEmpty && cycle.head.sourcePC == cycle.last.targetPC)
+    //take a subset of variables: look at the relation in which they apprears -> sum -> look at the constant term.
+    //step 1: partition the variables (~ cone of influence)
+    val edges = cycle.flatMap( tr => {
+      val transients = tr.transientVariables
+      val e1 = tr.updates.flatMap( st => {
+        val pre = Statement.getReadVariables(st) -- transients
+        val post = Statement.getUpdatedVars(st) -- transients
+        pre.flatMap(a => post.map(b => (a,b)))
+      })
+      val e2 = e1.map{ case (a,b) => (b,a) }
+      val e3 = tr.variables.map( v => (v,v) )
+      e1 ++ e2 ++ e3
+    })
+    val graph = DiGraph[GT.ULGT{type V = Variable}](edges)
+    val partition = graph.SCC(true)
+    //println("partitions: " + partition.mkString(", "))
+    //step 3: compute the delta for each element of the partition
+    def delta(part: Set[Variable]): Option[Int] = {
+      //the first part is to make sure that there are no transient variables
+      //then that no variable appears with a coeff which is not +1.
+      val varSeq = part.toSeq
+      ( (Some(0): Option[Int]) /: cycle)( (acc, tr) => {
+        (acc /: tr.updates)( (acc2, up) => acc2.flatMap(i => up match {
+          case Relation(n, o) =>
+            val varN = Expression.variables(n)
+            val varO = Expression.variables(o)
+            if (varN.subsetOf(part) && varO.subsetOf(part)) {
+              val (vn, cn) = Expression.decomposeVector(n, varSeq)
+              val (vo, co) = Expression.decomposeVector(o, varSeq)
+              if (vn.forall(coeff => coeff == 0 || coeff == 1) &&
+                  vo.forall(coeff => coeff == 0 || coeff == 1) ) {
+                Some(i + co - cn)
+              } else {
+                None
+              }
+            } else {
+              assert((varN intersect part).isEmpty && (varO intersect part).isEmpty)
+              Some(i)
+            }
+          case _ => Some(i)
+        }))
+      })
+    }
+    val known = partition.flatMap( p => delta(p).map(i => i -> p) )
+    val knownGrouped = known.groupBy(_._1).mapValues( lst => lst.map(_._2) )
+    val deltaToPart = scala.collection.mutable.HashMap[Int, List[Set[Variable]]]( knownGrouped.toSeq : _* )
+    //step 4: build candidates (combination of elt of the partition s.t. the sum of deltas is < 0)
+    val seed = known.filter{ case (i,_) => i < 0 }
+    var candidates = scala.collection.mutable.HashSet[Set[Variable]](seed.map(_._2): _*)
+    def process(frontier: List[(Int, Set[Variable])]): Iterable[Set[Variable]] = frontier match {
+      case (i, x) :: xs =>
+        // compute the successors ...
+        val succ =  for ( (i2, lst) <- deltaToPart if i2 < -i;
+                          x2 <- lst )
+                    yield (i + i2, x ++ x2)
+        val newCandidates = for ( (j,y) <- succ if !candidates(y) ) yield {
+          candidates += y
+          val old: List[Set[Variable]] = deltaToPart.getOrElse(j, Nil)
+          deltaToPart += (j -> (y :: old) )
+          (j, y)
+        }
+        process(newCandidates ++: xs)
+      case Nil => candidates
+    }
+    process(seed.toList)
+
+  }
 }

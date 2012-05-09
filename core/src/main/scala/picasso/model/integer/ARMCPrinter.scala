@@ -41,22 +41,32 @@ object ARMCPrinter extends PrologLikePrinter {
     writer.newLine
   }
 
-  //TODO heurstically guess the transition predicates ...
-  protected def transPreds(vars: Seq[Variable], trs: GenSeq[Transition])(implicit writer: BufferedWriter) {
-    //first all vars >= 0
-    //then sum going down (strict + nonstrict pred)
-    //TODO get the elementaryCycles and look at the flow of the variable in each cycle ...
-    val cfa = EdgeLabeledDiGraph[GT.ELGT{type V = String; type EL = Transition}](trs.map(t => (t.sourcePC, t, t.targetPC)).seq)
-    val cycles = cfa.elementaryCycles.map(_.labels)
-    //step (1), for each cycle we need to be a bit of bookkeeping:
-    //what flow from one var to another ?
-    //what increase (how much)
-    //what decrease (how much)
-    //step (2), generating predicates for larger cycles
-    //elementaryCycles can be summed in order to generate larger cycles.
-    //using the bookkeeping from step (1) we should generate some additional predicates
-    //question: what large cycle to generate and when to stop ?
-    sys.error("TODO")
+  //TODO add v_prime >= 0
+  protected def transPreds(vars: Seq[Variable], prog: Program)(implicit writer: BufferedWriter) {
+    val vars2 = vars map primeVar
+    writer.write("trans_preds(")
+    writer.newLine
+    writer.write("  ")
+    loc(None, vars)
+    writer.write(",  ")
+    writer.newLine
+    writer.write("  ")
+    loc(None, vars2)
+    writer.write(",  ")
+    writer.newLine
+    writer.write("  [")
+    val preds = prog.transitionPredicates
+    val predsStr = preds.flatMap( varSet => {
+      val sum1 = varSet.reduceLeft[Expression](Plus(_,_))
+      val sum2 = varSet.map(primeVar).reduceLeft[Expression](Plus(_,_))
+      val c1 = printCondition( Lt(sum2, sum1) )
+      val c2 = printCondition( Eq(sum2, sum1) )
+      Seq(c1, c2)
+    } )
+    val varBoundsStr = preds.flatten.toSet[Variable].map( v => printCondition( Leq(Constant(0), primeVar(v)) ) )
+    writer.write((predsStr ++ varBoundsStr).mkString(" ",",\n    ","\n"))
+    writer.write("  ]).")
+    writer.newLine
   }
 
 
@@ -117,6 +127,7 @@ object ARMCPrinter extends PrologLikePrinter {
     writer.write(preamble); writer.newLine
     var2names(vars); writer.newLine
     preds(vars); writer.newLine
+    transPreds(vars, prog); writer.newLine
     start(prog.initialPC)
     cutpoints(prog.transitions); writer.newLine
     for ( (t, idx) <- prog.transitions.seq.zipWithIndex ) {
