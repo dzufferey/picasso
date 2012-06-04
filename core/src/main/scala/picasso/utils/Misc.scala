@@ -60,7 +60,6 @@ object Misc {
 
   def toInt(str: String): Option[Int] = safeCall((x: String) => x.toInt, str)
 
-  //TODO test
   def allSubLists[A](lst: Seq[A]): Seq[Seq[A]] = lst.headOption match {
     case Some(e) =>
       var sub = allSubLists(lst.tail)
@@ -80,7 +79,18 @@ object Misc {
   //Cartesian product from many dimensions, but with homogeneous type.
   def cartesianProduct[A](domains: Seq[Seq[A]]): Seq[Seq[A]] = domains.headOption match {
     case Some(lst) => for (xs <- cartesianProduct(domains.tail); x <- lst) yield x +: xs
-    case None => domains
+    case None => Seq(Nil)
+  }
+
+  def commonPrefix(x: String, y: String): Int = {
+    val bound = math.min(x.length, y.length)
+    for(i <- 0 until bound) {
+      if (x(i) != y(i)) {
+        return i
+      }
+    }
+    bound
+    //(v1.name zip v2.name).takeWhile{ case (a,b) => a == b}.length
   }
 
 }

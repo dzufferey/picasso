@@ -5,7 +5,7 @@ import picasso.model.dbp._
 import picasso.graph._
 import picasso.math.DownwardClosedSet
 import picasso.model.integer._
-import scala.collection.GenIterable
+import scala.collection.parallel.ParIterable
 
 trait DBPTermination2[P <: DBCT] extends DBPTerminationCommon[P] {
   self: DepthBoundedProcess[P] =>
@@ -15,7 +15,7 @@ trait DBPTermination2[P <: DBCT] extends DBPTerminationCommon[P] {
   //initialisation: to any element of the cover with "any" counter value
 
 
-  protected def oneStepPostWithWitness(current: S): GenIterable[TransitionWitness[P]] = {
+  protected def oneStepPostWithWitness(current: S): ParIterable[TransitionWitness[P]] = {
     val possible = transitions.filter(_ isDefinedAt current).par
     for( t <- possible;
          (w,_) <- t.applyWithWitness( current ) ) yield {
@@ -23,16 +23,16 @@ trait DBPTermination2[P <: DBCT] extends DBPTerminationCommon[P] {
     }
   }
 
-  protected def makeEdges(states: GenIterable[S]): GenIterable[(S, TransitionWitness[P], S)] = {
+  protected def makeEdges(states: ParIterable[S]): ParIterable[(S, TransitionWitness[P], S)] = {
     for ( s1 <- states;
           w <- oneStepPostWithWitness(s1);
           s2 <- states if ordering.lteq(w.to, s2)
         ) yield (s1, w, s2)
   }
 
-  protected def makeTransitions(edges: GenIterable[(S, TransitionWitness[P], S)]): GenIterable[Transition] = {
+  protected def makeTransitions(edges: ParIterable[(S, TransitionWitness[P], S)]): ParIterable[Transition] = {
     edges.flatMap{ case (a, w, b) =>
-      transitionForWitness1(w) ++ covering(w.to, b)
+      simplifyPath( transitionForWitness1(w) ) ++ covering(w.to, b) //todo if only one covering edges -> we can add the edge as part of the path to simplify
     }
   }
 

@@ -134,7 +134,6 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
 
   /** Return a map from PC location to the set of variables that may be non-zero at that location. */
   protected lazy val nonZeroVariable: Map[String, Set[Variable]] = {
-    //TODO this is not correct (join is wrong)
     val emp = EdgeLabeledDiGraph.empty[GT.ELGT{type V = String; type EL = Transition}]
     val cfa = emp ++ (transitions.map(t => (t.sourcePC, t, t.targetPC)).seq)
 
@@ -190,7 +189,7 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
       acc ++ edges
     })
     def affinity(v1: Variable, v2: Variable): Int = {
-      (v1.name zip v2.name).takeWhile{ case (a,b) => a == b}.length
+      Misc.commonPrefix(v1.name, v2.name)
     }
     val largeClique = nonZeroMap.values.maxBy(_.size)
     conflicts.smallColoring(affinity, largeClique)
@@ -198,7 +197,7 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
 
   //take a group of variables and return the transitions modified s.t. only one variable is used for the group
   protected def mergeVariables(group: Set[Variable], trs: GenSeq[Transition]): GenSeq[Transition] = {
-    Logger("integer.AST", LogDebug, "merging: " + group)
+    Logger("integer.Program", LogDebug, "merging: " + group)
     if (group.size <= 1) {
       trs
     } else {

@@ -69,7 +69,7 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
     val stmts1 = for ( (node, lst) <- backwardFolding ) yield {
        var rhs = lst.map(getCardinality(map1, _)).reduceLeft(Plus(_, _))
        getCardinality(map2, node) match {
-         case v @ Variable(_) => Affect(v, Plus(v, rhs))
+         case v @ Variable(_) => Affect(v, rhs)
          case Constant(c) => assert(rhs == Constant(c)); Skip
          case other =>
            Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
@@ -85,7 +85,7 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
     }
     val stmts3 = for (node <- frame) yield {
       getCardinality(map2, node) match {
-         case v @ Variable(_) => Affect(v, v)
+         case v @ Variable(_) => Affect(v, Constant(0))
          case Constant(c) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
       }
@@ -134,7 +134,7 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
     //first transition: add to the counter
     val stmts1 = for ( (n1, n2) <- replicating) yield {
       getCardinality(map2, n2) match {
-        case v @ Variable(_) => Affect(v, Plus(v, getCardinality(map1, n1)))
+        case v @ Variable(_) => Affect(v, getCardinality(map1, n1))
         case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable for "+n2+", found: " + other)
       }
     }
@@ -147,7 +147,7 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
     }
     val stmts3 = for (node <- frame ) yield {
        getCardinality(map2, node) match {
-         case v @ Variable(_) => Affect(v, Plus(v, getCardinality(map1, node)))
+         case v @ Variable(_) => Affect(v, getCardinality(map1, node))
          case Constant(c) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        }
@@ -167,7 +167,7 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
       val frame = to.vertices -- m.values
       val stmts1 = for ( (n3, n2) <- m) yield {
         getCardinality(map3, n3) match {
-          case v @ Variable(_) => Affect(v, Plus(v, getCardinality(map2, n2)))
+          case v @ Variable(_) => Affect(v, getCardinality(map2, n2))
           case Constant(_) => Skip
           case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
         }
@@ -177,7 +177,7 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
           case v @ Variable(_) => {
             getCardinality(map3, n3) match {
               case Variable(_) => Affect(v, Constant(0))
-              case c @ Constant(_) => Affect(v, Minus(v, c))
+              case c @ Constant(_) => assert(false); Affect(v, Minus(v, c))
               case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
             }
           }
@@ -187,7 +187,7 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
       }
       val stmts3 = for (node <- frame ) yield {
          getCardinality(map2, node) match {
-           case v @ Variable(_) => Affect(v, v)
+           case v @ Variable(_) => Affect(v, Constant(0))
            case Constant(c) => Skip
            case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
          }
@@ -299,7 +299,7 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
     }
     val variance1 = increases.map( n => {
       getCardinality(map2, n) match {
-         case v1 @ Variable(_) => Variance(v1, v1, true, false)
+         case v1 @ Variable(_) => Assume(Leq(Constant(0), v1))
          case Constant(c) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
       }
@@ -350,7 +350,7 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
     assert(changing forall (_.depth == 0))
     val stmts1 = for ((n1,n2) <- frame ) yield {
        getCardinality(map2, n2) match {
-         case v @ Variable(_) => Affect(v, Plus(v, getCardinality(map1, n1)))
+         case v @ Variable(_) => Affect(v, getCardinality(map1, n1))
          case Constant(c) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        }
@@ -460,5 +460,44 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
   protected def transitionForWitness(witness: (TransitionWitness[P], WideningWitnessSeq[P])): Seq[Transition] = {
     transitionForWitness1(witness._1) ++ witness._2.sequence.flatMap(transitionForWitness2)
   }
+
+  //this method assumes that each loc has its own variables (not true after the simplification)
+  protected def simplifyPath(trs: Seq[Transition]): Seq[Transition] = {
+    //reduce the number of #transitions and variables
+    if (trs.size > 1) {
+      //1 -> reduce the number of variables without changing the first and the last part
+      //conflicts are variables that are at one loc, between locs, no conflict
+      val varsAtLoc = trs.map(_.readVariables) //this ignores the last loc
+      val conflicts = (DiGraph.empty[GT.ULGT{type V = Variable}] /: varsAtLoc)( (acc, vs) => {
+        val edges = for (x <- vs; y <- vs if x != y) yield (x, (), y)
+        acc ++ edges
+      })
+      def affinity(v1: Variable, v2: Variable) = Misc.commonPrefix(v1.name, v2.name)
+      val largeClique = varsAtLoc.maxBy(_.size)
+      val coloring = conflicts.smallColoring(affinity, largeClique)
+      val headVariables = varsAtLoc.head //these variables should be preserved
+      val trs2 = (trs /: coloring)( (acc, grp) => {
+        if (grp.size > 1) {
+          val newVar = grp.find(headVariables contains _).getOrElse(grp.head)
+          acc.map( _.mergeVariables(grp, newVar) )
+        } else {
+          acc
+        }
+      })
+      //2 -> compact
+      val trs3 = Transition.compact(trs2)
+      //TODO
+      val trsNew = trs3
+      //3 -> useless split
+      //4 -> prune assume
+      //5 -> loop ?
+      //TODO assert that the variables at both ends are the same
+      //println("before = " + trs.size + ", after = " + trsNew.size)
+      trsNew
+    } else {
+      trs
+    }
+  }
+
 
 }

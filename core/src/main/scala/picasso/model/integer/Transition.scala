@@ -181,7 +181,7 @@ class Transition(val sourcePC: String,
       val neg2 = newVar :: neg.filterNot(group contains _)
       Expression.recompose(pos, neg2, cst)
     } else {
-      Expression.recompose(pos, neg, cst)
+      e
     }
   }
 
@@ -198,18 +198,18 @@ class Transition(val sourcePC: String,
 
   /** Return a transitions s.t. only one variable is used for the group 
    *  This method assumes that only one variable of the group can be nonZeros at the time (except for the initial state).
+   *  TODO this method seem to be quite slow: badly coded
    */
   def mergeVariables(group: Set[Variable], newVar: Variable): Transition = {
     //need to look which var is assigned to 0:
-    val anz = assignedToNonZero().filter(group contains _)
-    assert(anz.size <= 1)
+    //val anz = assignedToNonZero().filter(group contains _)
+    //assert(anz.size <= 1)
+    //TODO there should be some more sanity checks ? / make sanity heck faster
+
     //println("XXX tr: " + this)
     //println("XXX group: " + group)
     //println("XXX newVar: " + newVar)
     //println("XXX anz: " + anz)
-
- 
-    //TODO there should be some more sanity checks ?
 
     //look at all the left hand side, gather the ones with the variables in group
     //TODO checks that they are not involved with something else ...
@@ -474,7 +474,7 @@ object Transition {
   //try to remove intermediate state (substitution / constrains propagation) while preserving the termination
   def compact(trs: Seq[Transition]): Seq[Transition] = {
     for (i <- 0 until (trs.length -1) ) {
-      assert(trs(i).targetPC == trs(i+1).sourcePC)
+      assert(trs(i).targetPC == trs(i+1).sourcePC, trs)
     }
     if (trs.length <= 1) {
       trs
@@ -497,7 +497,7 @@ object Transition {
       (last :: revAcc).reverse
     }
   }
-
+  
   //finding candidate ranking functions for a cycle:
   //simple version of ranking fct: set of var (take the sum), the lower bounf is 0 (or any constant).
   def transitionPredicates(cycle: Seq[Transition]): Iterable[Set[Variable]] = {
