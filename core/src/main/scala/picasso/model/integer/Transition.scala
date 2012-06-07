@@ -639,16 +639,19 @@ object Transition {
     val known = partition.flatMap( p => delta(p).map(i => i -> p) )
     val knownGrouped = known.groupBy(_._1).mapValues( lst => lst.map(_._2) )
     val deltaToPart = scala.collection.mutable.HashMap[Int, List[Set[Variable]]]( knownGrouped.toSeq : _* )
+    //println("deltaToPart: " + deltaToPart.mkString(", "))
     //step 4: build candidates (combination of elt of the partition s.t. the sum of deltas is < 0)
     val seed = known.filter{ case (i,_) => i < 0 }
-    var candidates = scala.collection.mutable.HashSet[Set[Variable]](seed.map(_._2): _*)
+    val candidates = scala.collection.mutable.HashSet[Set[Variable]](seed.map(_._2): _*)
     def process(frontier: List[(Int, Set[Variable])]): Iterable[Set[Variable]] = frontier match {
       case (i, x) :: xs =>
+        //println("confirmed: " + (i, x))
         // compute the successors ...
-        val succ =  for ( (i2, lst) <- deltaToPart if i2 < -i;
+        val succ =  for ( (i2, lst) <- deltaToPart.iterator if i2 < -i;
                           x2 <- lst )
                     yield (i + i2, x ++ x2)
         val newCandidates = for ( (j,y) <- succ if !candidates(y) ) yield {
+          //println("newCandidate: " + (j,y) )
           candidates += y
           val old: List[Set[Variable]] = deltaToPart.getOrElse(j, Nil)
           deltaToPart += (j -> (y :: old) )
@@ -657,7 +660,9 @@ object Transition {
         process(newCandidates ++: xs)
       case Nil => candidates
     }
-    process(seed.toList)
+    val res = process(seed.toList)
+    Logger("integer.Transition", LogDebug, "transitionPredicates for:\n  " + cycle.mkString("\n  ") + "\n are\n" + res.mkString("\n"))
+    res
 
   }
 }
