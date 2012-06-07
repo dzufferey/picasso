@@ -97,7 +97,7 @@ object Expression {
   }
 
   //returns a vector of coefficients (variables) and a constant term.
-  def decomposeVector(e: Expression, vars: Seq[Variable]): (Seq[Int], Int) = {
+  def decomposeVector(e: Expression, vars: Seq[Variable]): (Array[Int], Int) = {
     val coeffArray = Array.ofDim[Int](vars.length)
     val idxMap = vars.zipWithIndex.toMap
     var constantTerm = 0
@@ -125,6 +125,12 @@ object Expression {
     else if (cst.i == 0) afterSubtract.get
     else if (cst.i > 0) Plus(afterSubtract.get, cst)
     else Minus(afterSubtract.get, Constant(- cst.i))
+  }
+  
+  def recomposeVector(coeffs: Seq[Int], cst: Int, vars: Seq[Variable]): Expression = {
+    val pos = for (i <- 0 until coeffs.length; j <- 0 until coeffs(i)) yield vars(i)
+    val neg = for (i <- 0 until coeffs.length; j <- 0 until -coeffs(i)) yield vars(i)
+    recompose(pos.toList, neg.toList, Constant(cst))
   }
 
   def simplify(e: Expression): Expression = {

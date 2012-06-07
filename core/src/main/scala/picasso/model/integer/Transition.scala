@@ -41,6 +41,13 @@ class Transition(val sourcePC: String,
     (Set[Variable]() /: updates)(_ ++ Statement.getTransientVariables(_))
   }
 
+  def allVariables: Set[Variable] = {
+    val updatesAll = (Set[Variable]() /: updates)(_ ++ Statement.getAllVariables(_))
+    Condition.variables(guard) ++ updatesAll
+  }
+
+  lazy val sequencedAllVariables = allVariables.toSeq
+
   def updatedVars: Set[Variable] = {
     val updated = (Set[Variable]() /: updates)(_ ++ Statement.getUpdatedVars(_))
     val transient = (Set[Variable]() /: updates)(_ ++ Statement.getTransientVariables(_))
@@ -198,7 +205,6 @@ class Transition(val sourcePC: String,
 
   /** Return a transitions s.t. only one variable is used for the group 
    *  This method assumes that only one variable of the group can be nonZeros at the time (except for the initial state).
-   *  TODO this method seem to be quite slow: badly coded
    */
   def mergeVariables(group: Set[Variable], newVar: Variable): Transition = {
     //need to look which var is assigned to 0:
@@ -210,6 +216,89 @@ class Transition(val sourcePC: String,
     //println("XXX group: " + group)
     //println("XXX newVar: " + newVar)
     //println("XXX anz: " + anz)
+
+    val nonGroupIndex = (for (i <- 0 until sequencedAllVariables.length if !group(sequencedAllVariables(i)) ) yield i).toSeq
+    val groupIndex = (for (i <- 0 until sequencedAllVariables.length if group(sequencedAllVariables(i)) ) yield i).toSeq
+
+    var seenNew = Set[Variable]()
+    var seenOld = Set[Variable]()
+    val toSumNew = Array.ofDim[Int](sequencedAllVariables.length)
+    val toSumOld = Array.ofDim[Int](sequencedAllVariables.length)
+    var toSumCst = 0 //cst is on the old side
+
+    def processStmt(s: Statement): Statement = s match {
+      case Relation(_new, _old) =>
+        if (Expression.variables(_new).exists(group contains _)) {
+          val (newV, newC) = Expression.decomposeVector(_new, sequencedAllVariables)
+          val (oldV, oldC) = Expression.decomposeVector(_old, sequencedAllVariables)
+          //check if this is something we can handle
+          for (i <- groupIndex) {
+            if (newV(i) == 1) {
+              assert(!seenNew(sequencedAllVariables(i)), "TODO more complex sum: " + s)
+              seenNew += sequencedAllVariables(i)
+            } else if (newV(i) >= 1) {
+              assert(false, "TODO more complex sum: " + s)
+            }
+            if (oldV(i) == 1) {
+              assert(!seenOld(sequencedAllVariables(i)), "TODO more complex sum: " + s)
+              seenOld += sequencedAllVariables(i)
+            } else if (oldV(i) >= 1) {
+              assert(false, "TODO more complex sum: " + s)
+            }
+          }
+          //simple case: not more than once
+          for (idx <- nonGroupIndex) {
+            toSumNew(idx) += newV(idx)
+            toSumOld(idx) += oldV(idx)
+          }
+          toSumCst += (oldC - newC)
+          Skip //return nothing since the new constraint will be generated later
+        } else if (Expression.variables(_old).exists(group contains _)) {
+          //merge the rhs
+          Relation(_new, mergeInExpression(group, newVar, _old))
+        } else {
+          s
+        }
+      
+      case Assume(cond) =>
+        Statement.simplify(Assume(mergeInCondition(group, newVar, cond)))
+      
+      case Variance(_new, _old, greater, strict) =>
+        if (group(_new) || group(_old)) {
+          Logger("integer.Transition", LogWarning, "mergeVariables changing: " + s + ", dropping the constraint")
+          Skip
+        } else {
+          s
+        }
+      
+      case Skip | Transient(_) =>
+        s
+    }
+
+    val updates2 = updates.map(processStmt)
+
+    val updates3 =
+      if(!seenNew.isEmpty) {
+        val new1 = Expression.recomposeVector(toSumNew, 0, sequencedAllVariables)
+        val old1 = Expression.recomposeVector(toSumOld, toSumCst, sequencedAllVariables)
+        val new2 = if (seenNew.isEmpty) new1 else Plus(newVar, new1)
+        val old2 = if (seenOld.isEmpty) old1 else Plus(newVar, old1)
+        Relation(new2, old2) +: updates2
+      } else {
+        updates2
+      }
+    
+    val guard2 = mergeInCondition(group, newVar, guard)
+    
+    val t2 = new Transition(sourcePC, targetPC, guard2, updates3, comment)
+    
+    //println("mergeVariables: " + group + " -> " + newVar)
+    //println("old: " + this)
+    //println("new: " + t2)
+
+    t2.leaner
+
+    /*
 
     //look at all the left hand side, gather the ones with the variables in group
     //TODO checks that they are not involved with something else ...
@@ -253,6 +342,8 @@ class Transition(val sourcePC: String,
 
     val t2 = new Transition(sourcePC, targetPC, guard2, updates2, comment)
     t2.leaner
+
+    */
   }
   
   //HACK: works only in the context of lookForUselessSplitting
