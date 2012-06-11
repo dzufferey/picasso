@@ -379,35 +379,24 @@ class Transition(val sourcePC: String,
     mergePreVariablesDangerous(group, newVar).mergePostVariablesDangerous(group, newVar)
   }
 
-  def pruneAssume = {
-    //lowerBounds
-    def getLowerBound(c: Condition): Seq[(Variable, Int)] = c match {
+  protected def getGuardLowerBounds: Map[Variable, Int] = {
+    def process(c: Condition): Seq[(Variable, Int)] = c match {
       case Eq(v @ Variable(_), Constant(c)) => Seq(v -> c)
       case Eq(Constant(c), v @ Variable(_)) => Seq(v -> c)
       case Leq(Constant(c), v @ Variable(_)) => Seq(v -> c)
       case Lt(Constant(c), v @ Variable(_)) => Seq(v -> (c+1))
-      case And(c1, c2) => getLowerBound(c1) ++ getLowerBound(c2)
+      case And(c1, c2) => process(c1) ++ process(c2)
       case _ => Seq()
     }
-    val lowerBounds = (Map[Variable, Int]() /: getLowerBound(guard))( (acc, lb) => {
+    (Map[Variable, Int]() /: process(guard))( (acc, lb) => {
       if (acc contains lb._1) acc + (lb._1 -> math.max(acc(lb._1), lb._2))
       else acc + lb
     })
-    //upperBounds
-    def getUpperBound(c: Condition): Seq[(Variable, Int)] = c match {
-      case Eq(v @ Variable(_), Constant(c)) => Seq(v -> c)
-      case Eq(Constant(c), v @ Variable(_)) => Seq(v -> c)
-      case Leq(v @ Variable(_), Constant(c)) => Seq(v -> c)
-      case Lt(v @ Variable(_), Constant(c)) => Seq(v -> (c-1))
-      case And(c1, c2) => getLowerBound(c1) ++ getLowerBound(c2)
-      case _ => Seq()
-    }
-    val upperBounds = (Map[Variable, Int]() /: getUpperBound(guard))( (acc, lb) => {
-      if (acc contains lb._1) acc + (lb._1 -> math.min(acc(lb._1), lb._2))
-      else acc + lb
-    })
-    //updates
-    val postLowerBounds = (Map[Variable, Int]() /: updates)( (acc, s) => s match {
+  }
+  
+  //lower and upper bounds refer to the pre state/guards
+  protected def getPostLowerBounds(lowerBounds: Map[Variable, Int], upperBounds: Map[Variable, Int]) = {
+    (Map[Variable, Int]() /: updates)( (acc, s) => s match {
       case Relation(e1, e2) =>
         val (p1, n1, c1) = Expression.decompose(e1)
         if (p1.size != 1 || !n1.isEmpty) {
@@ -429,7 +418,24 @@ class Transition(val sourcePC: String,
         else acc + (v1 -> lb2)
       case _ => acc
     })
-    val postUpperBounds = (Map[Variable, Int]() /: updates)( (acc, s) => s match {
+  }
+
+  protected def getGuardUpperBounds: Map[Variable, Int] = {
+    def process(c: Condition): Seq[(Variable, Int)] = c match {
+      case Eq(v @ Variable(_), Constant(c)) => Seq(v -> c)
+      case Eq(Constant(c), v @ Variable(_)) => Seq(v -> c)
+      case Leq(v @ Variable(_), Constant(c)) => Seq(v -> c)
+      case Lt(v @ Variable(_), Constant(c)) => Seq(v -> (c-1))
+      case And(c1, c2) => process(c1) ++ process(c2)
+      case _ => Seq()
+    }
+    (Map[Variable, Int]() /: process(guard))( (acc, lb) => {
+      if (acc contains lb._1) acc + (lb._1 -> math.min(acc(lb._1), lb._2))
+      else acc + lb
+    })
+  }
+  protected def getPostUpperBounds(lowerBounds: Map[Variable, Int], upperBounds: Map[Variable, Int]) = {
+    (Map[Variable, Int]() /: updates)( (acc, s) => s match {
       case Relation(e1, e2) =>
         val (p1, n1, c1) = Expression.decompose(e1)
         if (p1.size != 1 || !n1.isEmpty) {
@@ -451,6 +457,15 @@ class Transition(val sourcePC: String,
         else acc + (v1 -> lb2)
       case _ => acc
     })
+  }
+
+  def pruneAssume = {
+    //guards
+    val lowerBounds = getGuardLowerBounds
+    val upperBounds = getGuardUpperBounds
+    //updates
+    val postLowerBounds = getPostLowerBounds(lowerBounds, upperBounds)
+    val postUpperBounds = getPostUpperBounds(lowerBounds, upperBounds)
     //prune
     def canProveExpr(e1: Expression, e2: Expression, strict: Boolean) = {
       //upper bound of e1 is less than lowerbound of e2
@@ -479,6 +494,29 @@ class Transition(val sourcePC: String,
       case other => other
     })
     new Transition(sourcePC, targetPC, guard, updates2, comment)
+  }
+
+  def variablesBounds(pre: Map[Variable,(Option[Int],Option[Int])]): Map[Variable,(Option[Int],Option[Int])] = {
+
+    //the pre bound is needed: in the case of increasing variables we keep the lower bound, same for upper
+    def merge(guardBounds: Map[Variable, Int],
+              select: Pair[Option[Int],Option[Int]] => Option[Int],
+              minOrMax: (Int, Int) => Int): Map[Variable, Int] = {
+      val merged = pre.flatMap{
+        case (v, lowHigh) =>
+          val preDefined: Option[Int] = select(lowHigh).map(b => minOrMax(b, guardBounds.getOrElse(v, b)))
+          val guardDefined: Option[Int] = preDefined.orElse(guardBounds.get(v))
+          guardDefined.map(b => (v, b))
+      }
+      merged.toMap
+    }
+
+    val lowerBounds = merge(getGuardLowerBounds, _._1, math.max)
+    val upperBounds = merge(getGuardUpperBounds, _._2, math.min)
+
+    //TODO updates and frame
+
+    sys.error("TODO")
   }
 
 

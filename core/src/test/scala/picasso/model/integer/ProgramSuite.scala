@@ -15,6 +15,16 @@ class ProgramSuite extends FunSuite {
   val c1 = Constant(1)
 
   test("test ranking fct candidates generation"){
+    //we are interested in the termination of t2^n; t3; t1^(n-1)
+    //candidate needed by this loop: X3, but if we change the order or relax #t1, we need X1 + X2 + X3
+    // X_1_prime = X_1 + (X_2 + n - 1) - (n - 1),
+    // X_2_prime = 0,
+    // X_3_prime = X_3 - n + (n - 1),
+    // X_4_prime = n - 1,
+    // X_5_prime = X_5 + (X4 + n - 1) - (n - 1),
+    // X_6_prime = X_6 + 1
+    //TODO narrow the #candiates and still get X1 + X2 + X3 ?
+
     // unfolding; morphing, client: Op2 Fail; folding; covering
     // 1 =< X_1,
     // 0 =< X_2,

@@ -132,10 +132,13 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     new Program(initPC, trs2)
   }
 
+  protected def cfa: EdgeLabeledDiGraph[GT.ELGT{type V = String; type EL = Transition}] = {
+    val emp = EdgeLabeledDiGraph.empty[GT.ELGT{type V = String; type EL = Transition}]
+    emp ++ (transitions.map(t => (t.sourcePC, t, t.targetPC)).seq)
+  }
+
   /** Return a map from PC location to the set of variables that may be non-zero at that location. */
   protected lazy val nonZeroVariable: Map[String, Set[Variable]] = {
-    val emp = EdgeLabeledDiGraph.empty[GT.ELGT{type V = String; type EL = Transition}]
-    val cfa = emp ++ (transitions.map(t => (t.sourcePC, t, t.targetPC)).seq)
 
     val allVars = variables
     def default(s: String) = if (s == initPC) allVars else Set[Variable]()
@@ -210,8 +213,6 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     //TODO this approach does not work
     //need to differentiate bewteen different from has not information
     //otherwise, the back edges prevent the equality information from propagating
-    val emp = EdgeLabeledDiGraph.empty[GT.ELGT{type V = String; type EL = Transition}]
-    val cfa = emp ++ (transitions.map(t => (t.sourcePC, t, t.targetPC)).seq)
 
     //the AI elements are sets of equivalence class (set of variables)
 
@@ -249,8 +250,6 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
   }
 
   protected def compactPath = {
-    val emp = EdgeLabeledDiGraph.empty[GT.ELGT{type V = String; type EL = Transition}]
-    val cfa = emp ++ (transitions.map(t => (t.sourcePC, t, t.targetPC)).seq)
     val trs2 = cfa.simplePaths.flatMap( path => {
       Transition.compact(path.labels)
     })
@@ -343,8 +342,6 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
         acc.reverse
     }
     //look for split+merge within simple paths.
-    val emp = EdgeLabeledDiGraph.empty[GT.ELGT{type V = String; type EL = Transition}]
-    val cfa = emp ++ (transitions.map(t => (t.sourcePC, t, t.targetPC)).seq)
     val trs2 = cfa.simplePaths.flatMap( path => {
       val trs = path.labels
       val uselessSplits = lookForCandidates(trs, Nil, Nil)
@@ -362,6 +359,41 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     new Program(initPC, trs2)
   }
 
+  type Bounds = (Option[Int],Option[Int])
+  type VarBounds = Map[Variable,Bounds]
+
+  /** Compute upper and lower bound for variables at each PC location.
+   *  This is a very coarse over-approximation of the actual bounds
+   *  since it only looks at the guards and the assume statements.
+   */
+  def variablesBounds: Map[String,VarBounds] = {
+    val vars = variables.toSeq 
+    //a degenerate AI fixedpoint (join and cover goes into the opposite direction)
+    def post(pre: VarBounds, t: Transition): VarBounds = t.variablesBounds(pre)
+    def join(a: VarBounds, b: VarBounds): VarBounds = {
+      a.map{ case (v, (aLow,aHigh)) =>
+        val (bLow, bHigh) = b(v)
+        val low = aLow.flatMap(v1 => bLow.map(v2 => math.min(v1,v2) ))
+        val high = aHigh.flatMap(v1 => bHigh.map(v2 => math.max(v1,v2) ))
+        (v -> (low, high))
+      }
+    }
+    //b and a are swapped since we have a decreasing fixedpoint (improve accuracy until it converges).
+    def cover(b: VarBounds, a: VarBounds): Boolean = {
+      vars.forall(v => {
+        val (aLow, aHigh) = a(v)
+        val (bLow, bHigh) = b(v)
+        val low = aLow.isEmpty || bLow.map(_ >= aLow.get).getOrElse(false)
+        val high = aHigh.isEmpty || bHigh.map(_ <= aHigh.get).getOrElse(false)
+        (low && high)
+      })
+    }
+    val default = Map[Variable,Bounds](vars.map(v => (v, (None, None))):_*)
+    
+    val map = cfa.aiFixpoint( post, join, cover, (_ => default))
+    Logger("integer.Program", LogDebug, "variablesBounds: " + map)
+    map
+  }
 
   //TODO given a program: heuristically guess possible parts of the ranking function / transition predicates
   //What is the best way to do this
@@ -370,7 +402,6 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
   //what is a candidate ranking function ? -> a linear combination of terms + a lower bound
   //simple version of ranking fct: set of var (take the sum), the lower bounf is 0 (or any constant).
   def transitionPredicates: Iterable[Set[Variable]] = {
-    val cfa = EdgeLabeledDiGraph[GT.ELGT{type V = String; type EL = Transition}](trs.map(t => (t.sourcePC, t, t.targetPC)).seq)
     val cycles = cfa.elementaryCycles.map(_.labels)
     val locToCycles = cycles.groupBy( c => c.head.sourcePC )
     val allCycles = locToCycles.values.flatMap( _.toSet.subsets ).filter( s => !s.isEmpty )
