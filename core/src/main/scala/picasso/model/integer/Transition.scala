@@ -495,6 +495,24 @@ class Transition(val sourcePC: String,
     })
     new Transition(sourcePC, targetPC, guard, updates2, comment)
   }
+  
+  abstract class VarChange
+  case object Fixed extends VarChange //both for stay unchanged and get a constant value
+  case object Increase extends VarChange
+  case object Decrease extends VarChange
+  case object Unknown extends VarChange
+
+  //TODO a method to say if a var increase, decrease, ...
+  def variablesChange: Map[Variable, VarChange] = {
+    val init: Map[Variable, VarChange] = variables.map(v => (v, Unknown)).toMap
+    //goes over each transition ...
+    def processStmt(knowledge: Map[Variable, VarChange], stmt: Statement): Map[Variable, VarChange] = stmt match {
+      case Transient(_) | Skip | Assume(_) => knowledge
+      case Relation(_new, _old) => sys.error("TODO")
+      case Variance(_new, _old, greater, strict) => sys.error("TODO")
+    }
+    (init /: updates)(processStmt)
+  }
 
   def variablesBounds(pre: Map[Variable,(Option[Int],Option[Int])]): Map[Variable,(Option[Int],Option[Int])] = {
 
