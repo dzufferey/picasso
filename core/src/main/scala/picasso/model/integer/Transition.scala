@@ -502,17 +502,52 @@ class Transition(val sourcePC: String,
   case object Decrease extends VarChange
   case object Unknown extends VarChange
 
-  //TODO a method to say if a var increase, decrease, ...
+  object VarChange {
+
+    def and(v1: VarChange, v2: VarChange) = (v1, v2) match {
+      case (Fixed, _) | (_, Fixed) | (Increase, Decrease) | (Decrease, Increase) => Fixed
+      case (Increase, _) | (_, Increase) => Increase
+      case (Decrease, _) | (_, Decrease) => Decrease
+      case _ => Unknown
+    }
+
+    def or(v1: VarChange, v2: VarChange) = (v1, v2) match {
+      case (Unknown, _) | (_, Unknown) | (Increase, Decrease) | (Decrease, Increase) => Unknown 
+      case (Increase, _) | (_, Increase) => Increase
+      case (Decrease, _) | (_, Decrease) => Decrease
+      case _ => Fixed 
+    }
+
+  }
+
+  //a method to say if a var increase, decrease, ...
   def variablesChange: Map[Variable, VarChange] = {
     val init: Map[Variable, VarChange] = variables.map(v => (v, Unknown)).toMap
     //goes over each transition ...
     def processStmt(knowledge: Map[Variable, VarChange], stmt: Statement): Map[Variable, VarChange] = stmt match {
+      case Relation(_new, _old) =>
+        val (pn,nn,cn) = Expression.decompose(_new)
+        if (pn.size + nn.size == 1) {
+          val (po,no,co) = Expression.decompose(_old)
+          if (pn == po && nn == no) {
+            val v = (pn ++ po).head
+            val p = !pn.isEmpty
+            val delta = co.i - cn.i
+            if (delta == 0) knowledge + (v -> VarChange.and(knowledge(v), Fixed))
+            else if (p && delta > 0) knowledge + (v -> VarChange.and(knowledge(v), Increase))
+            else knowledge + (v -> VarChange.and(knowledge(v), Decrease))
+          } else knowledge
+        } else knowledge
+      case Variance(_new, _old, greater, strict) if (_old == _new) =>
+        if (greater) knowledge + (_new -> VarChange.and(knowledge(_new), Increase))
+        else knowledge + (_new -> VarChange.and(knowledge(_new), Decrease))
       case Transient(_) | Skip | Assume(_) => knowledge
-      case Relation(_new, _old) => sys.error("TODO")
-      case Variance(_new, _old, greater, strict) => sys.error("TODO")
     }
     (init /: updates)(processStmt)
   }
+
+  //variablesBounds is accurate up to precision then goes to \infty
+  private final val precision = 10
 
   def variablesBounds(pre: Map[Variable,(Option[Int],Option[Int])]): Map[Variable,(Option[Int],Option[Int])] = {
 
@@ -533,6 +568,7 @@ class Transition(val sourcePC: String,
     val upperBounds = merge(getGuardUpperBounds, _._2, math.min)
 
     //TODO updates and frame
+    //simply executes ?!
 
     sys.error("TODO")
   }
