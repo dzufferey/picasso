@@ -746,4 +746,23 @@ object TransitionHeuristics {
     withSelf.map{ case (k,v) => (k, v - k) }
   }
 
+  def removeSinks(t: Transition, sinks: Set[Variable]): Transition = {
+    def removeInCond(c: Condition, pos: Boolean = true): Condition = c match {
+      case Eq(l,r) => if ((Expression.variables(l) ++ Expression.variables(r)) exists sinks) Literal(pos) else c
+      case Lt(l,r) => if ((Expression.variables(l) ++ Expression.variables(r)) exists sinks) Literal(pos) else c
+      case Leq(l,r) => if ((Expression.variables(l) ++ Expression.variables(r)) exists sinks) Literal(pos) else c
+      case And(l,r) => And(removeInCond(l, pos), removeInCond(r, pos))
+      case Or(l,r) => Or(removeInCond(l, pos), removeInCond(r, pos))
+      case Not(c) => Not(removeInCond(c, !pos))
+      case Literal(b) => Literal(b)
+    }
+    def removeInStmt(stmt: Statement): Statement = stmt match {
+      case Relation(_new, _old) if (Expression.variables(_new) ++ Expression.variables(_old)) exists sinks => Skip
+      case Variance(_new, _old, _, _) if (sinks(_new) || sinks(_old)) => Skip
+      case Assume(c) => Assume(removeInCond(c))
+      case other => other
+    }
+    new Transition(t.sourcePC, t.targetPC, removeInCond(t.guard), t.updates map removeInStmt, t.comment)
+  }
+
 }

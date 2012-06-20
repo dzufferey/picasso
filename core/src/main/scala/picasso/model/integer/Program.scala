@@ -433,4 +433,9 @@ object ProgramHeuritics {
     belowSinks ++ aboveSinks
   }
 
+  def removeSinks(p: Program): Program = {
+    val toRemove = sinks(p)
+    new Program(p.initialPC, p.transitions map (t => TransitionHeuristics.removeSinks(t, toRemove)))
+  }
+
 }
