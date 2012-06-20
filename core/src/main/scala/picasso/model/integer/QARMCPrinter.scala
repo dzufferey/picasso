@@ -14,7 +14,6 @@ object QARMCPrinter extends PrologLikePrinter {
   then ask QARMC to prove the transition relation disjunctively-well-funded.
   */
 
-  
   protected val namer = new Namer
   protected val tNames = new java.util.concurrent.ConcurrentHashMap[Transition, String]()
   protected val tNamesReversed = new java.util.concurrent.ConcurrentHashMap[String, Transition]()
@@ -144,12 +143,39 @@ object QARMCPrinter extends PrologLikePrinter {
     //we need to force that structure ... the easiest way is to use a PC variable
     //can we do better than a PC: yes -> a system of recursive equations
     val junctions = simpleTraces.flatMap(t => { val (a,b) = t.extremities; Seq(a,b) }).toSet
-    val pathStartingAt = junctions.map(pc => (pc -> simplePaths.filter(_.head.sourcePC == pc)) ).toMap
+    //val pathStartingAt = junctions.map(pc => (pc -> simplePaths.filter(_.head.sourcePC == pc)) ).toMap
+    val pathEndingAt = junctions.map(pc => (pc -> simplePaths.filter(_.last.targetPC == pc)) ).toMap
     //print the simplePaths and get the info
     val pathInfo = simplePaths.map(p => (p -> simplePath(p)) ).toMap
     writer.newLine
 
     for (state <- junctions) {
+      val predecessors = pathEndingAt(state)
+      if (predecessors.isEmpty) {
+        val pred = predDeclForState(state, vars, vars)
+        writer.write(pred + " :- 1=1.")
+        writer.newLine
+      } else {
+        for (path <- predecessors) {
+          val (name, pathVars) = pathInfo(path)
+          val interVar = vars map primeVar
+          val postVar = interVar.map(v => if (pathVars contains v) primeVar(v) else v)
+          val source = path.head.sourcePC
+          val targetPred = predDeclForState(state, vars, postVar)
+          val sourcePred = predDeclForState(source, vars, interVar)
+          val pathVars2 = pathVars map primeVar map asVar
+          val postPathVar = pathVars map (v => primeVar(primeVar(v))) map asVar
+          val pathPred = name + (pathVars2 ++ postPathVar).mkString("(",",",")")
+          writer.write(targetPred)
+          writer.write(" :- ")
+          writer.write(sourcePred)
+          writer.write(", ")
+          writer.write(pathPred)
+          writer.write(".")
+          writer.newLine
+        }
+      }
+      /*
       val successors = pathStartingAt(state)
       if (successors.isEmpty) {
         val pred = predDeclForState(state, vars, vars)
@@ -175,13 +201,23 @@ object QARMCPrinter extends PrologLikePrinter {
           writer.newLine
         }
       }
+      */
+    }
+
+    //what is well-funded ? all the loops
+    for (state <- junctions if !pathEndingAt(state).isEmpty) {
+      val atJunction = predDeclForState(state, vars, vars map primeVar)
+      writer.write("dwf(" + atJunction + ").")
+      writer.newLine
     }
     
+    /*
     val startPC = prog.initialPC
     assert(junctions(startPC))
     val startRel = predDeclForState(startPC, vars, vars map primeVar)
     writer.write("dwf(" + startRel + ").")
     writer.newLine
+    */
   }
 
   def apply(implicit writer: BufferedWriter, prog: Program) {

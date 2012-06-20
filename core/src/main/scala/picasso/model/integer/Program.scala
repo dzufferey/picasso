@@ -28,6 +28,8 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
 
   def transitions: GenSeq[T] = trs
 
+  lazy val pcs = (Set(initPC) /: trs)((acc, t) => acc + t.sourcePC + t.targetPC)
+
   def variables: Set[Variable] = {
     trs.aggregate(Set[Variable]())(_ ++ _.variables, _ ++ _)
   }
@@ -48,10 +50,6 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     str.toString
   }
   
-  def printForT2 = {
-    sys.error("TODO")
-  }
-
   /** try to simplify the program while preserving (non)termination. */
   def simplifyForTermination = {
     //repeat a few time ...
@@ -83,8 +81,7 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     val p7 = p6.pruneAssumes
     Logger("integer.Program", LogDebug, "assumed pruned:\n" + p7.printForQARMC)
     p7
-    //TODO remove (strictly increasing) 'sink' variables
-    //TODO transition in sequence that operates on disjoint set of variable might be merged (if the control flow is linear)
+    //TODO remove (strictly monotonic) 'sink' variables
   }
 
   def propagateZeros = {
@@ -263,18 +260,18 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     //take a look at the var that gets split
     def split(s: Statement): Option[(Variable, List[Variable])] = s match {
       case Relation(lhs, rhs) =>
-        val (lpos, lneg, lcst) = Expression.decompose(lhs)
-        val (rpos, rneg, rcst) = Expression.decompose(rhs)
-        if (lpos.size > 1 && lneg.isEmpty && rpos.size == 1 && rneg.isEmpty) Some(rpos.head -> lpos)
+        val (lpos, lcst) = Expression.decompose(lhs)
+        val (rpos, rcst) = Expression.decompose(rhs)
+        if (lpos.size > 1 && rpos.size == 1) Some(rpos.head -> lpos)
         else None
       case _ => None
     }
     //take a look at the var that gets merge
     def merge(s: Statement): Option[(List[Variable], Variable)] = s match {
       case Relation(lhs, rhs) =>
-        val (lpos, lneg, lcst) = Expression.decompose(lhs)
-        val (rpos, rneg, rcst) = Expression.decompose(rhs)
-        if(lpos.size == 1 && lneg.isEmpty && rneg.isEmpty && rpos.size > 1) Some(rpos -> lpos.head)
+        val (lpos, lcst) = Expression.decompose(lhs)
+        val (rpos, rcst) = Expression.decompose(rhs)
+        if(lpos.size == 1 && rpos.size > 1) Some(rpos -> lpos.head)
         else None
       case _ => None
     }
@@ -412,5 +409,28 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     allTrsPreds.flatten.toSet
   }
 
+
+}
+
+/** A place where to put the heuritics analysis that we use for simplification */
+object ProgramHeuritics {
+  
+  //TODO "from many places to few" abstraction
+  //TODO 'flow' from var to var
+
+  /** A sink is a variable that only 'receives' and is unbounded. */
+  def sinks(p: Program): Set[Variable] = {
+    val bounds = p.variablesBounds
+    val unboundedBelow = p.variables.filter(v => p.pcs.forall(bounds(_)(v)._1.isEmpty) )
+    val unboundedAbove = p.variables.filter(v => p.pcs.forall(bounds(_)(v)._2.isEmpty) )
+    //ignores the initialization transitions
+    assert(p.transitions forall (_.targetPC != p.initialPC))
+    import TransitionHeuristics._
+    val changes = p.transitions.filter(_.sourcePC != p.initialPC).map(variablesChange)
+    val belowSinks = unboundedBelow.filter( v => changes.forall( m => m(v) == Fixed || m(v) == Decrease ) )
+    val aboveSinks = unboundedAbove.filter( v => changes.forall( m => m(v) == Fixed || m(v) == Increase ) )
+    Logger("integer.Program", LogDebug, "sinks are: " + belowSinks + " and " + aboveSinks)
+    belowSinks ++ aboveSinks
+  }
 
 }

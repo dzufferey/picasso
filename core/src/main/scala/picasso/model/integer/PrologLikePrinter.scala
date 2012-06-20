@@ -24,8 +24,8 @@ class PrologLikePrinter {
 
   protected def primeNotTransient(e: Expression, transient: Set[Variable]): Expression = e match {
     case Plus(l,r) => Plus(primeNotTransient(l, transient), primeNotTransient(r, transient))
-    case Minus(l,r) => Minus(primeNotTransient(l, transient), primeNotTransient(r, transient))
-    case UMinus(u) => UMinus(primeNotTransient(u, transient))
+    //case Minus(l,r) => Minus(primeNotTransient(l, transient), primeNotTransient(r, transient))
+    //case UMinus(u) => UMinus(primeNotTransient(u, transient))
     case c @ Constant(_) => c
     case v @ Variable(_) => if (transient(v)) v else primeVar(v)
   }
@@ -46,8 +46,8 @@ class PrologLikePrinter {
   }
   protected def printExpression(e: Expression): String = e match {
     case Plus(l,r) => needParenthesis(Expression.priority(e), l) + " + " + needParenthesis(Expression.priority(e), r)
-    case Minus(l,r) => needParenthesis(Expression.priority(e), l) + " - " + needParenthesis(Expression.priority(e), r)
-    case UMinus(u) => "-" + needParenthesis(Expression.priority(e), u)
+    //case Minus(l,r) => needParenthesis(Expression.priority(e), l) + " - " + needParenthesis(Expression.priority(e), r)
+    //case UMinus(u) => "-" + needParenthesis(Expression.priority(e), u)
     case Constant(c) => c.toString
     case Variable(v) => asVar(v)
   }

@@ -4,8 +4,8 @@ import picasso.utils._
 
 abstract class Expression 
 case class Plus(l: Expression, r: Expression) extends Expression 
-case class Minus(l: Expression, r: Expression) extends Expression 
-case class UMinus(e: Expression) extends Expression 
+//case class Minus(l: Expression, r: Expression) extends Expression 
+//case class UMinus(e: Expression) extends Expression 
 case class Constant(i: Int) extends Expression 
 case class Variable(name: String) extends Expression 
 
@@ -13,8 +13,8 @@ object Expression {
 
   def priority(e: Expression): Int = e match {
     case Plus(_,_) => 11
-    case Minus(_,_) => 10
-    case UMinus(_) => 20
+    //case Minus(_,_) => 10
+    //case UMinus(_) => 20
     case Constant(_) => 30
     case Variable(_) => 30
   }
@@ -26,25 +26,24 @@ object Expression {
 
   def print(e: Expression): String = e match {
     case Plus(l,r) => needParenthesis(priority(e), l) + " + " + needParenthesis(priority(e), r)
-    case Minus(l,r) => needParenthesis(priority(e), l) + " - " + needParenthesis(priority(e), r)
-    case UMinus(u) => "-" + needParenthesis(priority(e), u)
+    //case Minus(l,r) => needParenthesis(priority(e), l) + " - " + needParenthesis(priority(e), r)
+    //case UMinus(u) => "-" + needParenthesis(priority(e), u)
     case Constant(c) => c.toString
     case Variable(v) => v
   }
 
   def variables(e: Expression): Set[Variable] = e match {
     case Plus(l,r) => variables(l) ++ variables(r)
-    case Minus(l,r) => variables(l) ++ variables(r)
-    case UMinus(u) => variables(u)
+    //case Minus(l,r) => variables(l) ++ variables(r)
+    //case UMinus(u) => variables(u)
     case Constant(_) => Set()
     case v @ Variable(_) => Set(v)
   }
 
-  def getPositiveNegativeTerms(e: Expression): (List[Expression], List[Expression]) = e match {
+  def getTerms(e: Expression): List[Expression] = e match {
     case Plus(l,r) => 
-      val (p1, n1) = getPositiveNegativeTerms(l)
-      val (p2, n2) = getPositiveNegativeTerms(r)
-      (p1 ::: p2, n1 ::: n2)
+      getTerms(l) ::: getTerms(r)
+    /*
     case Minus(l,r) => 
       val (p1, n1) = getPositiveNegativeTerms(l)
       val (p2, n2) = getPositiveNegativeTerms(r)
@@ -52,48 +51,55 @@ object Expression {
     case UMinus(u) => 
       val (p, n) = getPositiveNegativeTerms(u)
       (n, p)
-    case cstOrVar => (List(cstOrVar), Nil)
+    */
+    case cstOrVar => List(cstOrVar)
   }
   
-  def getPositiveTerms(e: Expression) = getPositiveNegativeTerms(e)._1
+  //def getPositiveTerms(e: Expression) = getPositiveNegativeTerms(e)._1
 
-  def getNegativeTerms(e: Expression) = getPositiveNegativeTerms(e)._2
+  //def getNegativeTerms(e: Expression) = getPositiveNegativeTerms(e)._2
 
   /** Returns a list of variables with positive polarity, then negative variables, then constant */
-  def decompose(e: Expression): (List[Variable], List[Variable], Constant) = {
-    val (pos, neg) = getPositiveNegativeTerms(e)
+  def decompose(e: Expression): (List[Variable], Constant) = {
+    val pos = getTerms(e)
     val (posVar, posCst) = pos.partition{
         case Variable(_) => true
         case Constant(_) => false
         case other => Logger.logAndThrow("integer.AST", LogError, "expected Variable or Constant, found: " + other)
       }
+    /*
     val (negVar, negCst) = neg.partition{
         case Variable(_) => true
         case Constant(_) => false
         case other => Logger.logAndThrow("integer.AST", LogError, "expected Variable or Constant, found: " + other)
       }
+    */
     val posVar2: List[Variable] = posVar.map{
         case v @ Variable(_) => v
         case other => Logger.logAndThrow("integer.AST", LogError, "expected Variable, found: " + other)
       }
+    /*
     val negVar2: List[Variable] = negVar.map{
         case v @ Variable(_) => v
         case other => Logger.logAndThrow("integer.AST", LogError, "expected Variable, found: " + other)
       }
-    val cst1 = (0 /: posCst)( (acc, c) => c match {
+    */
+    val cst = (0 /: posCst)( (acc, c) => c match {
         case Constant(value) => acc + value
         case other => Logger.logAndThrow("integer.AST", LogError, "expected Constant, found: " + other)
       })
+    /*
     val cst2 = (cst1 /: negCst)( (acc, c) => c match {
         case Constant(value) => acc - value
         case other => Logger.logAndThrow("integer.AST", LogError, "expected Constant, found: " + other)
       })
+    */
     //var that are added and removed -> sum to 0
-    val posMS = MultiSet(posVar2:_*)
-    val negMS = MultiSet(negVar2:_*)
-    val posVar3 = posMS -- negMS
-    val negVar3 = negMS -- posMS
-    (posVar3.toList, negVar3.toList, Constant(cst2))
+    //val posMS = MultiSet(posVar2:_*)
+    //val negMS = MultiSet(negVar2:_*)
+    //val posVar3 = posMS -- negMS
+    //val negVar3 = negMS -- posMS
+    (posVar2, Constant(cst))
   }
 
   //returns a vector of coefficients (variables) and a constant term.
@@ -101,22 +107,30 @@ object Expression {
     val coeffArray = Array.ofDim[Int](vars.length)
     val idxMap = vars.zipWithIndex.toMap
     var constantTerm = 0
-    val (pos, neg) = getPositiveNegativeTerms(e)
+    val pos /*neg*/ = getTerms(e)
     pos.foreach{
       case v @ Variable(_) => coeffArray(idxMap(v)) += 1
       case Constant(c) => constantTerm += c
       case other => Logger.logAndThrow("integer.AST", LogError, "expected Variable or Constant, found: " + other)
     }
+    /*
     neg.foreach{
       case v @ Variable(_) => coeffArray(idxMap(v)) -= 1
       case Constant(c) => constantTerm -= c
       case other => Logger.logAndThrow("integer.AST", LogError, "expected Variable or Constant, found: " + other)
     }
+    */
     (coeffArray, constantTerm)
   }
 
-  def recompose(pos: List[Variable], neg: List[Variable], cst: Constant): Expression = {
-    val posSum = if (pos.isEmpty) None else Some((pos: List[Expression]).reduceLeft(Plus(_, _)))
+  def recompose(pos: List[Variable], /*neg: List[Variable],*/ cst: Constant): Expression = {
+    if (pos.isEmpty) cst
+    else {
+      val posTerm = (pos: List[Expression]).reduceLeft(Plus(_, _))
+      if (cst.i == 0) posTerm
+      else Plus(posTerm, cst)
+    }
+    /*
     val afterSubtract =
       if (posSum.isDefined) Some( (posSum.get /: neg)( (acc, v) => Minus(acc, v) ) )
       else if (neg.isEmpty) None
@@ -125,24 +139,26 @@ object Expression {
     else if (cst.i == 0) afterSubtract.get
     else if (cst.i > 0) Plus(afterSubtract.get, cst)
     else Minus(afterSubtract.get, Constant(- cst.i))
+    */
   }
   
   def recomposeVector(coeffs: Seq[Int], cst: Int, vars: Seq[Variable]): Expression = {
+    assert(coeffs forall (_ >= 0) )
     val pos = for (i <- 0 until coeffs.length; j <- 0 until coeffs(i)) yield vars(i)
-    val neg = for (i <- 0 until coeffs.length; j <- 0 until -coeffs(i)) yield vars(i)
-    recompose(pos.toList, neg.toList, Constant(cst))
+    //val neg = for (i <- 0 until coeffs.length; j <- 0 until -coeffs(i)) yield vars(i)
+    recompose(pos.toList, /*neg.toList,*/ Constant(cst))
   }
 
   def simplify(e: Expression): Expression = {
-    val (p, n, c) = decompose(e)
-    recompose(p,n,c)
+    val (p, c) = decompose(e)
+    recompose(p,c)
   }
 
   //TODO lazyCopier
   def alpha(e: Expression, subst: Map[Variable,Expression]): Expression = e match {
     case Plus(l,r) => Plus(alpha(l, subst), alpha(r, subst)) 
-    case Minus(l,r) => Minus(alpha(l, subst), alpha(r, subst)) 
-    case UMinus(u) => UMinus(alpha(u, subst)) 
+    //case Minus(l,r) => Minus(alpha(l, subst), alpha(r, subst)) 
+    //case UMinus(u) => UMinus(alpha(u, subst)) 
     case c @ Constant(_) => c
     case v @ Variable(_) => subst.getOrElse(v, v)
   }
@@ -276,9 +292,9 @@ object Statement {
       (se1, se2) match {
         case (Constant(c1), Constant(c2)) => assert(c1 == c2); Skip
         case _ =>
-          val (p1,n1,c1) = Expression.decompose(se1)
-          val (p2,n2,c2) = Expression.decompose(se2)
-          Relation(Expression.recompose(p1,n1,Constant(0)), Expression.recompose(p2,n2, Constant(c2.i - c1.i)))
+          val (p1,c1) = Expression.decompose(se1)
+          val (p2,c2) = Expression.decompose(se2)
+          Relation(Expression.recompose(p1,Constant(0)), Expression.recompose(p2,Constant(c2.i - c1.i)))
       }
     case Assume(c) =>
       Condition.simplify(c) match {
@@ -397,5 +413,36 @@ object Condition {
     case Not(c) => Not(alpha(c, subst))
     case l @ Literal(_) => l
   }
+
+  def getLowerBounds(guard: Condition): Map[Variable, Int] = {
+    def process(c: Condition): Seq[(Variable, Int)] = c match {
+      case Eq(v @ Variable(_), Constant(c)) => Seq(v -> c)
+      case Eq(Constant(c), v @ Variable(_)) => Seq(v -> c)
+      case Leq(Constant(c), v @ Variable(_)) => Seq(v -> c)
+      case Lt(Constant(c), v @ Variable(_)) => Seq(v -> (c+1))
+      case And(c1, c2) => process(c1) ++ process(c2)
+      case _ => Seq()
+    }
+    (Map[Variable, Int]() /: process(guard))( (acc, lb) => {
+      if (acc contains lb._1) acc + (lb._1 -> math.max(acc(lb._1), lb._2))
+      else acc + lb
+    })
+  }
+
+  def getUpperBounds(guard: Condition): Map[Variable, Int] = {
+    def process(c: Condition): Seq[(Variable, Int)] = c match {
+      case Eq(v @ Variable(_), Constant(c)) => Seq(v -> c)
+      case Eq(Constant(c), v @ Variable(_)) => Seq(v -> c)
+      case Leq(v @ Variable(_), Constant(c)) => Seq(v -> c)
+      case Lt(v @ Variable(_), Constant(c)) => Seq(v -> (c-1))
+      case And(c1, c2) => process(c1) ++ process(c2)
+      case _ => Seq()
+    }
+    (Map[Variable, Int]() /: process(guard))( (acc, lb) => {
+      if (acc contains lb._1) acc + (lb._1 -> math.min(acc(lb._1), lb._2))
+      else acc + lb
+    })
+  }
+
 
 }

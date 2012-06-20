@@ -177,7 +177,7 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
           case v @ Variable(_) => {
             getCardinality(map3, n3) match {
               case Variable(_) => Affect(v, Constant(0))
-              case c @ Constant(_) => assert(false); Affect(v, Minus(v, c))
+              case c @ Constant(_) => assert(false); Skip
               case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
             }
           }

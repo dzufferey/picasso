@@ -61,13 +61,13 @@ class Transition(val sourcePC: String,
   }
     
   //is not exact but a superset
-  def assignedToNonZero(preNonZero: Set[Variable] = Set()): Set[Variable] = {
+  //this assumes the variables are positive
+  def assignedToNonZero(preNonZero: Set[Variable]): Set[Variable] = {
     val nonZeros = updates.flatMap{
       case Relation(lhs, rhs) =>
-        val (pos, neg, cst) = Expression.decompose(rhs)
+        val (pos, cst) = Expression.decompose(rhs)
         val pos2 = pos.filter(preNonZero)
-        val neg2 = neg.filter(preNonZero)
-        if (pos.isEmpty && neg.isEmpty && cst.i == 0) Set()
+        if (pos2.isEmpty && cst.i == 0) Set()
         else Expression.variables(lhs)
       case _ => None
     }
@@ -77,13 +77,13 @@ class Transition(val sourcePC: String,
   }
   
   //is not exact but a subset
-  def assignedToZero(preNonZero: Set[Variable] = Set()): Set[Variable] = {
+  //this assumes the variables are positive
+  def assignedToZero(preNonZero: Set[Variable]): Set[Variable] = {
     val zeros = updates.flatMap{
       case Relation(v1 @ Variable(_), rhs) =>
-        val (pos, neg, cst) = Expression.decompose(rhs)
+        val (pos, cst) = Expression.decompose(rhs)
         val pos2 = pos.filter(preNonZero)
-        val neg2 = neg.filter(preNonZero)
-        if (pos.isEmpty && neg.isEmpty && cst.i == 0) Some(v1)
+        if (pos2.isEmpty && cst.i == 0) Some(v1)
         else None
       case _ => None
     }
@@ -117,16 +117,15 @@ class Transition(val sourcePC: String,
     val simpleUpdates = updates2 flatMap (s => s match {
       case Affect(v, rhs) => Some(v -> Expression.decompose(rhs))
       case Relation(Plus(v @ Variable(_), Constant(c)), rhs) =>
-        val (p,n,c2) = Expression.decompose(rhs)
-        Some(v -> (p,n,Constant(c2.i - c)))
+        val (p,c2) = Expression.decompose(rhs)
+        Some(v -> (p,Constant(c2.i - c)))
       case _ => None
     })
     val knowledge = preEqClasses.flatten
     val byUpdate = simpleUpdates.groupBy(_._2).map{ case (k, v) => (k, v.map{_._1}.toSet) }
     val tv = transientVariables
-    val informedChoice = byUpdate.filterKeys{ case (pos, neg, cst) => 
-      val vars = pos ++ neg
-      vars forall (v => knowledge(v) || tv(v) )
+    val informedChoice = byUpdate.filterKeys{ case (pos, cst) => 
+      pos forall (v => knowledge(v) || tv(v) )
     }
     val newClasses = informedChoice.values.toSet
     val uv = updatedVars
@@ -179,14 +178,10 @@ class Transition(val sourcePC: String,
   }
 
   protected def mergeInExpression(group: Set[Variable], newVar: Variable, e: Expression): Expression = {
-    val (pos, neg, cst) = Expression.decompose(e)
+    val (pos, cst) = Expression.decompose(e)
     if (pos.exists(group contains _)) {
-      assert(! neg.exists(group contains _))
       val pos2 = newVar :: pos.filterNot(group contains _)
-      Expression.recompose(pos2, neg, cst)
-    } else if (neg.exists(group contains _)) {
-      val neg2 = newVar :: neg.filterNot(group contains _)
-      Expression.recompose(pos, neg2, cst)
+      Expression.recompose(pos2, cst)
     } else {
       e
     }
@@ -379,18 +374,29 @@ class Transition(val sourcePC: String,
     mergePreVariablesDangerous(group, newVar).mergePostVariablesDangerous(group, newVar)
   }
 
-  protected def getGuardLowerBounds: Map[Variable, Int] = {
-    def process(c: Condition): Seq[(Variable, Int)] = c match {
-      case Eq(v @ Variable(_), Constant(c)) => Seq(v -> c)
-      case Eq(Constant(c), v @ Variable(_)) => Seq(v -> c)
-      case Leq(Constant(c), v @ Variable(_)) => Seq(v -> c)
-      case Lt(Constant(c), v @ Variable(_)) => Seq(v -> (c+1))
-      case And(c1, c2) => process(c1) ++ process(c2)
-      case _ => Seq()
-    }
-    (Map[Variable, Int]() /: process(guard))( (acc, lb) => {
-      if (acc contains lb._1) acc + (lb._1 -> math.max(acc(lb._1), lb._2))
-      else acc + lb
+
+  //TODO unify the bounds computation
+
+  protected def mergeBounds(m1: Map[Variable, Int], m2: Map[Variable, Int], minOrMax: (Int, Int) => Int): Map[Variable, Int] = {
+    val keys = m1.keySet ++ m2.keySet
+    (Map[Variable,Int]() /: keys)( (acc, v) => {
+      val bound: Int = (m1.get(v), m2.get(v)) match {
+        case (Some(b1), Some(b2)) => minOrMax(b1, b2)
+        case (Some(b), None) => b
+        case (None, Some(b)) => b
+        case (None, None) => Logger.logAndThrow("integer.Transition", LogError, "mergeBounds -> no bounds")
+      }
+      acc + (v -> bound)
+    })
+  }
+
+  protected def getTransientLowerBounds: Map[Variable, Int] = {
+    val tr = transientVariables
+    (Map[Variable, Int]() /: updates)( (acc, s) => s match {
+      case Assume(c) =>
+        val lb = Condition.getLowerBounds(c).filterKeys(transientVariables)
+        mergeBounds(acc, lb, math.max)
+      case _ => acc
     })
   }
   
@@ -398,13 +404,13 @@ class Transition(val sourcePC: String,
   protected def getPostLowerBounds(lowerBounds: Map[Variable, Int], upperBounds: Map[Variable, Int]) = {
     (Map[Variable, Int]() /: updates)( (acc, s) => s match {
       case Relation(e1, e2) =>
-        val (p1, n1, c1) = Expression.decompose(e1)
-        if (p1.size != 1 || !n1.isEmpty) {
+        val (p1, c1) = Expression.decompose(e1)
+        if (p1.size != 1) {
           acc //cannot say anything
         } else {
-          val (p2, n2, c2) = Expression.decompose(e2)
-          if (p2.forall(lowerBounds contains _) && n2.forall(upperBounds contains _)) {
-            val lb2 = (0 /: p2.map(lowerBounds))(_ + _) - (0 /: n2.map(upperBounds))(_ + _) - c1.i + c2.i
+          val (p2, c2) = Expression.decompose(e2)
+          if (p2.forall(lowerBounds contains _)) {
+            val lb2 = (0 /: p2.map(lowerBounds))(_ + _) - c1.i + c2.i
             val v1 = p1.head
             if (acc contains v1) acc + (v1 -> math.max(acc(v1), lb2))
             else acc + (v1 -> lb2)
@@ -419,31 +425,27 @@ class Transition(val sourcePC: String,
       case _ => acc
     })
   }
-
-  protected def getGuardUpperBounds: Map[Variable, Int] = {
-    def process(c: Condition): Seq[(Variable, Int)] = c match {
-      case Eq(v @ Variable(_), Constant(c)) => Seq(v -> c)
-      case Eq(Constant(c), v @ Variable(_)) => Seq(v -> c)
-      case Leq(v @ Variable(_), Constant(c)) => Seq(v -> c)
-      case Lt(v @ Variable(_), Constant(c)) => Seq(v -> (c-1))
-      case And(c1, c2) => process(c1) ++ process(c2)
-      case _ => Seq()
-    }
-    (Map[Variable, Int]() /: process(guard))( (acc, lb) => {
-      if (acc contains lb._1) acc + (lb._1 -> math.min(acc(lb._1), lb._2))
-      else acc + lb
+  
+  protected def getTransientUpperBounds: Map[Variable, Int] = {
+    val tr = transientVariables
+    (Map[Variable, Int]() /: updates)( (acc, s) => s match {
+      case Assume(c) =>
+        val ub = Condition.getUpperBounds(c).filterKeys(transientVariables)
+        mergeBounds(acc, ub, math.min)
+      case _ => acc
     })
   }
+
   protected def getPostUpperBounds(lowerBounds: Map[Variable, Int], upperBounds: Map[Variable, Int]) = {
     (Map[Variable, Int]() /: updates)( (acc, s) => s match {
       case Relation(e1, e2) =>
-        val (p1, n1, c1) = Expression.decompose(e1)
-        if (p1.size != 1 || !n1.isEmpty) {
+        val (p1, c1) = Expression.decompose(e1)
+        if (p1.size != 1) {
           acc //cannot say anything
         } else {
-          val (p2, n2, c2) = Expression.decompose(e2)
-          if (p2.forall(upperBounds contains _) && n2.forall(lowerBounds contains _)) {
-            val lb2 = (0 /: p2.map(upperBounds))(_ + _) - (0 /: n2.map(lowerBounds))(_ + _) - c1.i + c2.i
+          val (p2, c2) = Expression.decompose(e2)
+          if (p2.forall(upperBounds contains _)) {
+            val lb2 = (0 /: p2.map(upperBounds))(_ + _) - c1.i + c2.i
             val v1 = p1.head
             if (acc contains v1) acc + (v1 -> math.min(acc(v1), lb2))
             else acc + (v1 -> lb2)
@@ -461,19 +463,19 @@ class Transition(val sourcePC: String,
 
   def pruneAssume = {
     //guards
-    val lowerBounds = getGuardLowerBounds
-    val upperBounds = getGuardUpperBounds
+    val lowerBounds = Condition.getLowerBounds(guard) ++ getTransientLowerBounds
+    val upperBounds = Condition.getUpperBounds(guard) ++ getTransientUpperBounds
     //updates
     val postLowerBounds = getPostLowerBounds(lowerBounds, upperBounds)
     val postUpperBounds = getPostUpperBounds(lowerBounds, upperBounds)
     //prune
     def canProveExpr(e1: Expression, e2: Expression, strict: Boolean) = {
       //upper bound of e1 is less than lowerbound of e2
-      val (p1, n1, c1) = Expression.decompose(e1)
-      val (p2, n2, c2) = Expression.decompose(e2)
+      val (p1, c1) = Expression.decompose(e1)
+      val (p2, c2) = Expression.decompose(e2)
       try {
-        val upper1 = (0 /: p1)(_ + postUpperBounds(_))  - (0 /: n1)(_ + postLowerBounds(_)) + c1.i
-        val lower2 = (0 /: p2)(_ + postLowerBounds(_))  - (0 /: n2)(_ + postUpperBounds(_)) + c2.i
+        val upper1 = (0 /: p1)(_ + postUpperBounds(_)) + c1.i
+        val lower2 = (0 /: p2)(_ + postLowerBounds(_)) + c2.i
         if (strict) upper1 < lower2 else upper1 <= lower2
       } catch {
         case _ => false
@@ -496,60 +498,12 @@ class Transition(val sourcePC: String,
     new Transition(sourcePC, targetPC, guard, updates2, comment)
   }
   
-  abstract class VarChange
-  case object Fixed extends VarChange //both for stay unchanged and get a constant value
-  case object Increase extends VarChange
-  case object Decrease extends VarChange
-  case object Unknown extends VarChange
-
-  object VarChange {
-
-    def and(v1: VarChange, v2: VarChange) = (v1, v2) match {
-      case (Fixed, _) | (_, Fixed) | (Increase, Decrease) | (Decrease, Increase) => Fixed
-      case (Increase, _) | (_, Increase) => Increase
-      case (Decrease, _) | (_, Decrease) => Decrease
-      case _ => Unknown
-    }
-
-    def or(v1: VarChange, v2: VarChange) = (v1, v2) match {
-      case (Unknown, _) | (_, Unknown) | (Increase, Decrease) | (Decrease, Increase) => Unknown 
-      case (Increase, _) | (_, Increase) => Increase
-      case (Decrease, _) | (_, Decrease) => Decrease
-      case _ => Fixed 
-    }
-
-  }
-
-  //a method to say if a var increase, decrease, ...
-  def variablesChange: Map[Variable, VarChange] = {
-    val init: Map[Variable, VarChange] = variables.map(v => (v, Unknown)).toMap
-    //goes over each transition ...
-    def processStmt(knowledge: Map[Variable, VarChange], stmt: Statement): Map[Variable, VarChange] = stmt match {
-      case Relation(_new, _old) =>
-        val (pn,nn,cn) = Expression.decompose(_new)
-        if (pn.size + nn.size == 1) {
-          val (po,no,co) = Expression.decompose(_old)
-          if (pn == po && nn == no) {
-            val v = (pn ++ po).head
-            val p = !pn.isEmpty
-            val delta = co.i - cn.i
-            if (delta == 0) knowledge + (v -> VarChange.and(knowledge(v), Fixed))
-            else if (p && delta > 0) knowledge + (v -> VarChange.and(knowledge(v), Increase))
-            else knowledge + (v -> VarChange.and(knowledge(v), Decrease))
-          } else knowledge
-        } else knowledge
-      case Variance(_new, _old, greater, strict) if (_old == _new) =>
-        if (greater) knowledge + (_new -> VarChange.and(knowledge(_new), Increase))
-        else knowledge + (_new -> VarChange.and(knowledge(_new), Decrease))
-      case Transient(_) | Skip | Assume(_) => knowledge
-    }
-    (init /: updates)(processStmt)
-  }
-
   //variablesBounds is accurate up to precision then goes to \infty
   private final val precision = 10
 
   def variablesBounds(pre: Map[Variable,(Option[Int],Option[Int])]): Map[Variable,(Option[Int],Option[Int])] = {
+
+    //TODO something not working here ...
 
     //the pre bound is needed: in the case of increasing variables we keep the lower bound, same for upper
     def merge(guardBounds: Map[Variable, Int],
@@ -564,13 +518,21 @@ class Transition(val sourcePC: String,
       merged.toMap
     }
 
-    val lowerBounds = merge(getGuardLowerBounds, _._1, math.max)
-    val upperBounds = merge(getGuardUpperBounds, _._2, math.min)
+    //guards
+    val lowerBounds = Condition.getLowerBounds(guard) ++ getTransientLowerBounds
+    val upperBounds = Condition.getUpperBounds(guard) ++ getTransientUpperBounds
+    //updates
+    val postLowerBounds = getPostLowerBounds(lowerBounds, upperBounds)
+    val postUpperBounds = getPostUpperBounds(lowerBounds, upperBounds)
+    //frame
+    val frame = pre -- updatedVars
+    //merged
+    val lowerBoundsMerged = merge(postLowerBounds, _._1, math.max)
+    val upperBoundsMerged = merge(postUpperBounds, _._2, math.min)
 
-    //TODO updates and frame
-    //simply executes ?!
-
-    sys.error("TODO")
+    val res = pre.map{ case (v,_) => (v -> (lowerBoundsMerged.get(v), upperBoundsMerged.get(v))) } ++ frame
+    Logger("integer.Transition", LogDebug, "variablesBounds from "+sourcePC+" to "+targetPC+": " + res)
+    res
   }
 
 
@@ -605,55 +567,6 @@ object Transition {
     res.leaner
   }
   
-  //TODO this can be made much better
-  private def compactRight(tr1: Transition, tr2: Transition): Option[Transition] = {
-    assert(tr1.targetPC == tr2.sourcePC, "tr1, tr2 are not connected: " + tr1 + ", " + tr2)
-    assert(tr1.sourcePC != tr1.targetPC && tr2.sourcePC != tr2.targetPC, "removing self loop")
-    //part 1: check that the two transitions are mergable
-    val guardOK = tr2.guard == Literal(true) 
-    val updatesOK = tr2.updates forall {
-      case Relation(Variable(_), Variable(_))
-         | Relation(Variable(_), Plus(Variable(_), Constant(_)))
-         | Relation(Variable(_), Minus(Variable(_), Constant(_)))
-         | Skip => true
-      case _ => false
-    }
-    val changedIn1 = tr1.updatedVars
-    val compatible = tr2.updates.forall(s => {
-      val updating = Statement.getUpdatedVars(s)
-      val dependsOn = Statement.getReadVariables(s)
-      //each update can either be substituted or put as a frame.
-      (updating subsetOf changedIn1) || (dependsOn intersect changedIn1).isEmpty
-    })
-
-    if (guardOK && updatesOK && compatible) {
-      val (substitution, frame) = tr2.updates.partition( s => {
-        val updating = Statement.getUpdatedVars(s)
-        updating subsetOf changedIn1
-      })
-
-      val updatesMap = substitution.flatMap( s => s match {
-        case Relation(e, v @ Variable(_)) => Some(v -> e)
-        case Relation(e, Plus(v @ Variable(_), c @ Constant(_))) => Some(v -> Minus(e, c))
-        case Relation(e, Minus(v @ Variable(_), c @ Constant(_))) => Some(v -> Plus(e, c))
-        case Skip => None
-        case other => Logger.logAndThrow("integer.Transition", LogError, "not compactable: " + other)
-      }).toMap
-
-      val newTr1 = tr1.alphaPost(updatesMap)
-      val resultUpdates = newTr1.updates ++ frame
-      val resultTr = new Transition(tr1.sourcePC, tr2.targetPC, tr1.guard, resultUpdates, tr1.comment + "; " + tr2.comment)
-      //println("compactRight:" +
-      //        tr1.updates.filter(_ != Skip).mkString("\n","\n","\n---------") +
-      //        tr2.updates.filter(_ != Skip).mkString("\n","\n","\n---------") +
-      //        resultTr.updates.filter(_ != Skip).mkString("\n","\n","\n========="))
-      Some(resultTr.leaner)
-    } else {
-      None
-    }
-
-  }
-
   //try to remove intermediate state (substitution / constrains propagation) while preserving the termination
   def compact(trs: Seq[Transition]): Seq[Transition] = {
     for (i <- 0 until (trs.length -1) ) {
@@ -669,14 +582,6 @@ object Transition {
         else (t1::revAcc, t2)
       })
       //println(last::revAcc)
-      //second pass: compactRight
-      val (acc, head) = ((List[Transition](), last) /: revAcc)( (acc, t2) => {
-        val (acc2, t1) = acc
-        compactRight(t2, t1) match {
-          case Some(t3) => (acc2, t3)
-          case None => (t1::revAcc, t2)
-        }
-      })
       (last :: revAcc).reverse
     }
   }
@@ -757,4 +662,88 @@ object Transition {
     res
 
   }
+}
+
+/** A place where to put the heuritics analysis that we use for simplification */
+object TransitionHeuristics {
+  
+  abstract class VarChange
+  case object Fixed extends VarChange //both for stay unchanged and get a constant value
+  case object Increase extends VarChange
+  case object Decrease extends VarChange
+  case object Unknown extends VarChange
+
+  object VarChange {
+
+    def and(v1: VarChange, v2: VarChange) = (v1, v2) match {
+      case (Fixed, _) | (_, Fixed) | (Increase, Decrease) | (Decrease, Increase) => Fixed
+      case (Increase, _) | (_, Increase) => Increase
+      case (Decrease, _) | (_, Decrease) => Decrease
+      case _ => Unknown
+    }
+
+    def or(v1: VarChange, v2: VarChange) = (v1, v2) match {
+      case (Unknown, _) | (_, Unknown) | (Increase, Decrease) | (Decrease, Increase) => Unknown 
+      case (Increase, _) | (_, Increase) => Increase
+      case (Decrease, _) | (_, Decrease) => Decrease
+      case _ => Fixed 
+    }
+
+  }
+
+  /** a method to say if a var increase, decrease, ... */
+  def variablesChange(t: Transition): Map[Variable, VarChange] = {
+    val init: Map[Variable, VarChange] = t.variables.map(v => (v, Unknown)).toMap
+    //goes over each transition ...
+    def processStmt(knowledge: Map[Variable, VarChange], stmt: Statement): Map[Variable, VarChange] = stmt match {
+      case Relation(_new, _old) =>
+        val (pn,cn) = Expression.decompose(_new)
+        if (pn.size == 1) {
+          val (po,co) = Expression.decompose(_old)
+          if (pn == po) {
+            val v = pn.head
+            val delta = co.i - cn.i
+            if (delta == 0) knowledge + (v -> VarChange.and(knowledge(v), Fixed))
+            else if (delta > 0) knowledge + (v -> VarChange.and(knowledge(v), Increase))
+            else knowledge + (v -> VarChange.and(knowledge(v), Decrease))
+          } else knowledge
+        } else knowledge
+      case Variance(_new, _old, greater, strict) if (_old == _new) =>
+        if (greater) knowledge + (_new -> VarChange.and(knowledge(_new), Increase))
+        else knowledge + (_new -> VarChange.and(knowledge(_new), Decrease))
+      case Transient(_) | Skip | Assume(_) => knowledge
+    }
+    (init /: t.updates)(processStmt)
+  }
+
+  /** Tell if a variable is changed by a constant (a maybe some other thing) */
+  def constantOffset(t: Transition): Map[Variable, Int] = {
+    def processStmt(acc: Map[Variable, Int], stmt: Statement): Map[Variable, Int] = stmt match {
+      case Relation(v @ Variable(_), _old) =>
+        val (_,co) = Expression.decompose(_old)
+        if (co.i != 0) {
+          assert(!acc.contains(v))
+          acc + (v -> co.i)
+        } else {
+          acc
+        }
+      case _ => acc 
+    }
+    (Map.empty[Variable, Int] /: t.updates)(processStmt)
+  }
+  
+  /** Tell if a variable is merged into other variables. */
+  def variableFlow(t: Transition): Map[Variable, Set[Variable]] = {
+    val transients = t.transientVariables
+    def processStmt(acc: Map[Variable, Set[Variable]], stmt: Statement): Map[Variable, Set[Variable]] = stmt match {
+      case Relation(_new, _old) =>
+        val (pn,_) = Expression.decompose(_new)
+        val (po,_) = Expression.decompose(_old)
+        (acc /: pn)( (acc, v) => acc + (v -> (acc.getOrElse(v, Set[Variable]()) ++ po -- transients)) )
+      case _ => acc 
+    }
+    val withSelf = (Map.empty[Variable, Set[Variable]] /: t.updates)(processStmt)
+    withSelf.map{ case (k,v) => (k, v - k) }
+  }
+
 }
