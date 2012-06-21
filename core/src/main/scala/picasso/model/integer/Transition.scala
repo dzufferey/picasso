@@ -214,6 +214,7 @@ class Transition(val sourcePC: String,
 
     val nonGroupIndex = (for (i <- 0 until sequencedAllVariables.length if !group(sequencedAllVariables(i)) ) yield i).toSeq
     val groupIndex = (for (i <- 0 until sequencedAllVariables.length if group(sequencedAllVariables(i)) ) yield i).toSeq
+    val varToIdx = sequencedAllVariables.view.zipWithIndex.toMap
 
     var seenNew = Set[Variable]()
     var seenOld = Set[Variable]()
@@ -224,8 +225,8 @@ class Transition(val sourcePC: String,
     def processStmt(s: Statement): Statement = s match {
       case Relation(_new, _old) =>
         if (Expression.variables(_new).exists(group contains _)) {
-          val (newV, newC) = Expression.decomposeVector(_new, sequencedAllVariables)
-          val (oldV, oldC) = Expression.decomposeVector(_old, sequencedAllVariables)
+          val (newV, newC) = Expression.decomposeVector(_new, varToIdx)
+          val (oldV, oldC) = Expression.decomposeVector(_old, varToIdx)
           //check if this is something we can handle
           for (i <- groupIndex) {
             if (newV(i) == 1) {

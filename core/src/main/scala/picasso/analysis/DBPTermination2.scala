@@ -42,7 +42,6 @@ trait DBPTermination2[P <: DBCT] extends DBPTerminationCommon[P] {
     val variables = (Set[Variable]() /: trs)(_ ++ _.variables)
     val initials = for (init <- cover.basis.toSeq.par) yield initialize(init, variables)
     val initState = initials.head.sourcePC
-    //TODO
     new Program(initState, (initials ++ trs): ParSeq[Transition] )
   }
 

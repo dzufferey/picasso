@@ -30,7 +30,7 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
 
   lazy val pcs = (Set(initPC) /: trs)((acc, t) => acc + t.sourcePC + t.targetPC)
 
-  def variables: Set[Variable] = {
+  lazy val variables: Set[Variable] = {
     trs.aggregate(Set[Variable]())(_ ++ _.variables, _ ++ _)
   }
 
@@ -81,17 +81,15 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     val p7 = p6.pruneAssumes
     Logger("integer.Program", LogDebug, "assumed pruned:\n" + p7.printForQARMC)
     p7
-    //TODO remove (strictly monotonic) 'sink' variables
   }
 
   def propagateZeros = {
     val allVars = variables
     val nonZeros = nonZeroVariable
     val zeros = nonZeros.map{ case (k, nz) => (k, allVars -- nz) }
-    val trs2 = transitions.map(t => {
+    val trs2 = trs.par.map(t => {
       val preSubst = zeros(t.sourcePC).map( _ -> Constant(0) ).toMap
-      //val postSubst = zeros(t.targetPC).map( _ -> Constant(0) ).toMap
-      t.alphaPre(preSubst)/*.alphaPost(postSubst)*/.leaner
+      t.alphaPre(preSubst).leaner
     })
     new Program(initPC, trs2)
   }
@@ -99,7 +97,7 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
   def reduceNumberOfVariables = {
     //if two variables are not live at the same moment, we can merge them!
     val groups = computeVariableMergeApprox
-    val trs2 = (transitions /: groups)( (trs, grp) => mergeVariables(grp, trs) )
+    val trs2 = (trs /: groups)( (trs, grp) => mergeVariables(grp, trs) )
     val p2 = new Program(initPC, trs2)
     Logger("integer.Program", LogInfo, "reduceNumberOfVariables: #variables before = " + variables.size + ", after = " + p2.variables.size)
     p2.renameVariables
@@ -109,7 +107,7 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
   def renameVariables = {
     val namer = new Namer
     val subst = variables.map(v => (v, Variable(namer("X")) ) ).toMap
-    val trs2 = transitions.map(_.alpha(subst))
+    val trs2 = trs.map(_.alpha(subst))
     new Program(initPC, trs2)
   }
 
@@ -125,7 +123,7 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     //val substMap = eqClasses.map{ case (k, v) => (k -> classesToSubst(v))}
     val subst = classesToSubst(alwaysEqual).filter{ case (k,v) => k != v }
     Logger("integer.Program", LogDebug, "removeEqualsVariables is merging: " + subst)
-    val trs2 = transitions.map(t => t.alpha(subst).leaner)
+    val trs2 = trs.map(t => t.alpha(subst).leaner)
     new Program(initPC, trs2)
   }
 
@@ -202,7 +200,7 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
       trs
     } else {
       val newVar = Variable("Merge_" + group.map(_.name).mkString("_"))
-      trs.map( _.mergeVariables(group, newVar) )
+      trs.par.map( _.mergeVariables(group, newVar) )
     }
   }
   
@@ -352,7 +350,7 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
   }
 
   def pruneAssumes = {
-    val trs2 = transitions.map(_.pruneAssume)
+    val trs2 = trs.par.map(_.pruneAssume)
     new Program(initPC, trs2)
   }
 

@@ -873,6 +873,7 @@ extends GraphLike[GT.ULGT,P,DiGraph](_edges, ((x: P#V) => ())) {
    *  - affinity: given two nodes returns a guess on whether they should use the same color (higher = better)
    *  - largeClique: a large clique in the graph (used to seed the coloring)
    *  returns the groups of nodes that have the same color
+   *  TODO in parallel for large graphs (10k nodes)
    */
   def smallColoring( affinity: (V, V) => Int = (_,_) => 0,
                        largeClique: Set[V] = Set()
@@ -882,12 +883,13 @@ extends GraphLike[GT.ULGT,P,DiGraph](_edges, ((x: P#V) => ())) {
     Logger("graph", LogDebug, "minimalColoring for a graph of size " + vertices.size)
 
     val averageAffinity = {
-      var total = 0
       var sum = 0
-      val edges = for (x <- vertices; y <- vertices if x != y)  {
-        total += 1
-        sum += affinity(x, y)
+      val vertSeq = vertices.toSeq
+      val size = vertSeq.size
+      for (i <- 0 until size; j <- i+1 until size) {
+        sum += affinity(vertSeq(i), vertSeq(j))
       }
+      val total = (size * (size - 1)) / 2
       if (total > 0) sum.toDouble / total.toDouble
       else 0
     }
@@ -913,11 +915,10 @@ extends GraphLike[GT.ULGT,P,DiGraph](_edges, ((x: P#V) => ())) {
         colorToVar += (newColor -> (v :: colorToVar.getOrElse(newColor, Nil)))
         newColor += 1
       } else {
-        val scored = available.map(c => {
+        val (c, score) = available.view.map(c => {
           val others = colorToVar(c)
-          (c, others.map(v2 => affinity(v, v2)).max)
-        })
-        val (c, score) = scored.maxBy(_._2)
+          (c, others.view.map(v2 => affinity(v, v2)).max)
+        }).maxBy(_._2)
         if(score >= averageAffinity) {
           varToColor += (v -> c)
           colorToVar += (c -> (v :: colorToVar.getOrElse(c, Nil)))
