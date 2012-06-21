@@ -5,7 +5,7 @@ import picasso.model.dbp._
 import picasso.graph._
 import picasso.math.DownwardClosedSet
 import picasso.model.integer._
-import scala.collection.parallel.ParIterable
+import scala.collection.parallel.{ParIterable, ParSeq}
 
 trait DBPTermination2[P <: DBCT] extends DBPTerminationCommon[P] {
   self: DepthBoundedProcess[P] =>
@@ -42,7 +42,8 @@ trait DBPTermination2[P <: DBCT] extends DBPTerminationCommon[P] {
     val variables = (Set[Variable]() /: trs)(_ ++ _.variables)
     val initials = for (init <- cover.basis.toSeq.par) yield initialize(init, variables)
     val initState = initials.head.sourcePC
-    new Program(initState, initials ++ trs)
+    //TODO
+    new Program(initState, (initials ++ trs): ParSeq[Transition] )
   }
 
   def termination(initState: S) = {
