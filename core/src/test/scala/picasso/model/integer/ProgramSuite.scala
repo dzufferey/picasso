@@ -13,6 +13,7 @@ class ProgramSuite extends FunSuite {
 
   val c0 = Constant(0)
   val c1 = Constant(1)
+  val m1 = Constant(-1)
 
   test("test ranking fct candidates generation"){
     //we are interested in the termination of t2^n; t3; t1^(n-1)
@@ -39,7 +40,7 @@ class ProgramSuite extends FunSuite {
     // X_5_prime = X_5 - 1
     // X_6_prime = X_6,
     val g1 = And(And(And(And(And(Leq(c1, v1), Leq(c0, v2)), Leq(c0, v3)), Leq(c0, v4)), Leq(c1, v5)), Leq(c1, v6))
-    val u1 = Seq(Relation(v1, Minus(v1, c1)), Relation(v2, v2), Relation(v3, Plus(v3, c1)), Relation(v4, Plus(v4, c1)), Relation(v5, Minus(v5, c1)), Relation(v6, v6))
+    val u1 = Seq(Relation(v1, Plus(v1, m1)), Relation(v2, v2), Relation(v3, Plus(v3, c1)), Relation(v4, Plus(v4, c1)), Relation(v5, Plus(v5, m1)), Relation(v6, v6))
     val t1 = new Transition("1", "1", g1, u1, "t1")
 
     // unfolding; morphing, client: Op1 -> Op2; folding; covering
@@ -56,7 +57,7 @@ class ProgramSuite extends FunSuite {
     // X_5_prime = X_5,
     // X_6_prime = X_6
     val g2 = And(And(And(And(And(Leq(c0, v1), Leq(c0, v2)), Leq(c1, v3)), Leq(c0, v4)), Leq(c0, v5)), Leq(c0, v6))
-    val u2 = Seq(Relation(v1, v1), Relation(v2, Plus(v2, c1)), Relation(v3, Minus(v3, c1)), Relation(v4, Plus(v4, c1)), Relation(v5, v5), Relation(v6, v6))
+    val u2 = Seq(Relation(v1, v1), Relation(v2, Plus(v2, c1)), Relation(v3, Plus(v3, m1)), Relation(v4, Plus(v4, c1)), Relation(v5, v5), Relation(v6, v6))
     val t2 = new Transition("1", "1", g2, u2, "t2")
 
     // unfolding; morphing, client: Op2 Success; folding; covering
@@ -73,7 +74,7 @@ class ProgramSuite extends FunSuite {
     // X_5_prime = X_4 + X_5 - 1,
     // X_6_prime = X_6 + 1,
     val g3 = And(And(And(And(And(Leq(c0, v1), Leq(c1, v2)), Leq(c0, v3)), Leq(c1, v4)), Leq(c0, v5)), Leq(c0, v6))
-    val u3 = Seq(Relation(v1, Minus(Plus(v1, v2), c1)), Relation(v2, c0), Relation(v3, v3), Relation(v4, c0), Relation(v5, Minus(Plus(v4, v5), c1)), Relation(v6, Plus(v6, c1)))
+    val u3 = Seq(Relation(v1, Plus(Plus(v1, v2), m1)), Relation(v2, c0), Relation(v3, v3), Relation(v4, c0), Relation(v5, Plus(Plus(v4, v5), m1)), Relation(v6, Plus(v6, c1)))
     val t3 = new Transition("1", "1", g3, u3, "t3")
 
     val p = new Program("1", List(t1,t2,t3))

@@ -427,8 +427,8 @@ object ProgramHeuritics {
     assert(p.transitions forall (_.targetPC != p.initialPC))
     import TransitionHeuristics._
     val changes = p.transitions.filter(_.sourcePC != p.initialPC).map(variablesChange)
-    val belowSinks = unboundedBelow.filter( v => changes.forall( m => m(v) == Fixed || m(v) == Decrease ) )
-    val aboveSinks = unboundedAbove.filter( v => changes.forall( m => m(v) == Fixed || m(v) == Increase ) )
+    val belowSinks = unboundedBelow.filter( v => changes.forall( m => m.getOrElse(v, Fixed) == Fixed || m(v) == Decrease ) )
+    val aboveSinks = unboundedAbove.filter( v => changes.forall( m => m.getOrElse(v, Fixed) == Fixed || m(v) == Increase ) )
     Logger("integer.Program", LogDebug, "sinks are: " + belowSinks + " and " + aboveSinks)
     belowSinks ++ aboveSinks
   }

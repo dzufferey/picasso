@@ -56,7 +56,6 @@ trait GraphAlgorithms[PB <: GT, P <: PB, G[P1 <: PB] <: GraphLike[PB, P1, G]] {
    * @param join join (associative and commutative)
    * @param cover covering test (_ \geq _)
    * @param defaultValue the initial abstract values
-   * TODO process edges and vertices concurrently ?
    */
   def aiFixpoint[D](post: (D, EL) => D,
                     join: (D, D) => D,
@@ -64,43 +63,43 @@ trait GraphAlgorithms[PB <: GT, P <: PB, G[P1 <: PB] <: GraphLike[PB, P1, G]] {
                     defaultValue: V => D,
                     forceMonotonicity: Boolean = false
                    ): Map[V, D] = {
-    val fp1 = new scala.collection.mutable.HashMap[P#V, D]()
-    val fp2 = new scala.collection.mutable.HashMap[P#V, D]()
-    val fpTemp = new scala.collection.mutable.HashMap[P#V, scala.collection.mutable.ListBuffer[D]]()
+    import scala.collection.parallel.immutable.ParMap
+    import scala.collection.parallel.immutable.ParIterable
+    //initialisation
+    var fp2 = ParMap[P#V, D]( vertices.toSeq.map(v => (v -> defaultValue(v)) ) :_* )
+    var fp1 = fp2
+    val workLists = ParMap[P#V, ParIterable[(P#V,P#EL,P#V)]]( vertices.toSeq.map(v => (v -> edges.par.filter( _._3 == v) )) :_* )
+    /*
     for (v <- vertices) {
-      fp2 += (v -> defaultValue(v)) //initialize fp2
-      fpTemp += (v -> scala.collection.mutable.ListBuffer[D]()) //initialize fpTemp
+      fp2 += (v -> defaultValue(v))
+      fpTemp += (v -> scala.collection.mutable.ListBuffer[D]())
     }
+    */
+    //big while loop
     var iteration = 0
     do {
-      //TODO some output like the status at the beginning of the iteration
       iteration += 1
       Logger("graph", LogDebug, "AI, status at begining of iteration " + iteration + ":\n" + fp2.mkString("\n"))
       //(1) copy fp2 into fp1
-      for (v <- vertices) fp1 += (v -> fp2(v))
+      fp1 = fp2
       //(2) compute the next iteration
-      for ((a,b,c) <- edges) {
-        //Console.println("iteration: edge = " + (a,b,c))
-        fpTemp(c) += post(fp1(a), b)
-      }
-      //(3) apply the join
-      for (v <- vertices) {
-        val buffer = fpTemp(v)
-        if (!buffer.isEmpty) {
-          val joined = buffer.reduceLeft(join)
-          buffer.clear
-          if (forceMonotonicity) {
-            fp2 += (v -> (join(joined, fp1(v))))
-          } else {
-            assert(cover(joined, fp1(v)), "not monotonic @ "+v+": new " + joined + ", old " + fp1(v)) //make sure it is increasing
-            fp2 += (v -> joined)
-          }
+      fp2 = workLists.map{ case (c, edges) =>
+        edges.view.map{ case (a,b,c) => post(fp1(a), b) }.reduceOption(join) match {
+          case Some(joined) =>
+            if(forceMonotonicity) {
+              (c, join(joined, fp1(c)))
+            } else {
+              assert(cover(joined, fp1(c)), "not monotonic @ "+c+": new " + joined + ", old " + fp1(c)) //make sure it is increasing
+              (c, joined)
+            }
+          case None => (c -> fp1(c))
         }
       }
       //Console.println("iteration: fp1 = " + fp1)
       //Console.println("iteration: fp2 = " + fp2)
-    } while (vertices exists (v => !cover(fp1(v), fp2(v))))
-    fp1.toMap
+    } while (fp1 exists { case (v,d) => !cover(d, fp2(v)) })
+    //return the result
+    fp1.seq
   }
   
   def aiFixpointBackward[D](pre: (D, EL) => D,
