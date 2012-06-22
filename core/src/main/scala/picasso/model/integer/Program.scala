@@ -445,7 +445,10 @@ object ProgramHeuritics {
   case object ConstantFlow extends FlowKind
   case object TransferFlow extends FlowKind
 
-  def flow(p: Program): EdgeLabeledDiGraph[GT.ELGT{type V = Variable; type EL = FlowKind}] = {
+  type FlowGraphGT = GT.ELGT{type V = Variable; type EL = FlowKind}
+  type FlowGraph = EdgeLabeledDiGraph[FlowGraphGT]
+
+  def flow(p: Program): FlowGraph = {
     var offsetEdges: GenSeq[(Variable, FlowKind, Variable)] = p.transitions.flatMap(t => {
       val (incr1, decr1) = constantOffset(t).view.partition{ case (k,v) => v > 0 }
       val incr = incr1.map(_._1)
@@ -457,7 +460,9 @@ object ProgramHeuritics {
     })
     val edges: Iterable[(Variable, FlowKind, Variable)] = (offsetEdges ++ transferEdges).seq
     val edgesOnly = EdgeLabeledDiGraph[GT.ELGT{type V = Variable; type EL = FlowKind}](edges)
-    edgesOnly.addVertices(p.variables)
+    val graph = edgesOnly.addVertices(p.variables)
+    Logger("integer.ProgramHeuritics", LogInfo, graph.toGraphviz("flow"))
+    graph
   }
   
   //use the flow to try merging variables.
@@ -467,12 +472,39 @@ object ProgramHeuritics {
   def counterMerging(p: Program): Iterable[Iterable[Variable]] = {
     import math.Ordering._
     val graph = flow(p)
-    Logger("integer.ProgramHeuritics", LogInfo, graph.toGraphviz("flow"))
     val morhisms = graph.subgraphIsomorphismAll(graph)
     val toMergePairs = morhisms.toIterable.view.flatMap( m => m.toIterable.filter{ case (k,v) => k != v } )
     val uf = new UnionFind[Variable]()
     for ( (a,b) <- toMergePairs ) uf.union(a, b)
     uf.getEqClasses.map(_._2)
+  }
+  
+  def counterMergingMore(p: Program): Iterable[Iterable[Variable]] = {
+    import math.Ordering._
+    val graph = flow(p)
+    val morphs = graph.morphisms[FlowGraphGT](graph, (_ : FlowGraphGT#V) => true, (_:graph.MorphInfo[FlowGraphGT]) => Nil)
+    sys.error("TODO")
+
+    /* example: folding loop from the DBConf
+    def loop(accFolded: Self, accFolding: Morphism): (Self, Morphism) = {
+      val iter = accFolded morphisms accFolded
+      val changes = iter find ( m => {
+        val used: Set[V] = (Set.empty[V] /: m)((acc, p) => acc + p._2)
+        val redundant = accFolded.vertices &~ used
+        !redundant.isEmpty
+      })
+      changes match {
+        case Some(m) =>
+          val redundant = (accFolded.vertices /: m.values)(_ - _)
+          val accFolded2 = accFolded -- redundant
+          val accFolding2: Morphism = accFolding.map[(V,V), Map[V,V]]{ case (a,b) => ( a, m.getOrElse(b,b) ) }
+          loop(accFolded2, accFolding2)
+        case None => (accFolded, accFolding)
+      }
+    }
+
+    loop(this, vertices.map(v => (v,v)).toMap[V,V])    
+    */
   }
 
   //TODO "from many places to few" abstraction

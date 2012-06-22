@@ -552,21 +552,23 @@ extends Traceable[P#V,P#EL] with GraphAlgorithms[PB, P, G] {
 
   //TODO should return an iterator ?
   def morphisms[Q <: PB](bigger: G[Q], injective: Q#V => Boolean, comp: MorphInfo[Q] => Iterable[Clause[(P#V,Q#V)]])
-  (implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Set[Map[V,Q#V]] = 
-    (lazyMorphismsBySat(bigger, injective, comp)(lblOrd, ev0, ev1)).foldLeft(Set.empty[Map[V,Q#V]])(_ + _)
+  (implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Iterator[Map[V,Q#V]] = 
+    (lazyMorphismsBySat(bigger, injective, comp)(lblOrd, ev0, ev1))
 
   def morphism[Q <: PB](bigger: G[Q], injective: Q#V => Boolean, comp: MorphInfo[Q] => Iterable[Clause[(P#V,Q#V)]])
   (implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Option[Map[V,Q#V]] = {
-    val iter = lazyMorphismsBySat(bigger, injective, comp)(lblOrd, ev0, ev1)
-    if(iter.hasNext) Some(iter.next) else None
+    val iter = morphisms(bigger, injective, comp)(lblOrd, ev0, ev1)
+    if (iter.hasNext) Some(iter.next) else None
   }  
 
   def subgraphIsomorphism[Q <: PB](bigger: G[Q])
-  (implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Option[scala.collection.Map[V,Q#V]] = 
-    morphism(bigger, (_ : Q#V) => true, (_:MorphInfo[Q]) => Nil)(lblOrd, ev0, ev1)
+  (implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Option[scala.collection.Map[V,Q#V]] = {
+    val iter = subgraphIsomorphismAll(bigger)
+    if (iter.hasNext) Some(iter.next) else None
+  }
   
   def subgraphIsomorphismAll[Q <: PB](bigger: G[Q])
-  (implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Set[Map[V,Q#V]] = 
+  (implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Iterator[Map[V,Q#V]] = 
     morphisms(bigger, (_ : Q#V) => true, (_:MorphInfo[Q]) => Nil)(lblOrd, ev0, ev1)
 
 
