@@ -564,6 +564,10 @@ extends Traceable[P#V,P#EL] with GraphAlgorithms[PB, P, G] {
   def subgraphIsomorphism[Q <: PB](bigger: G[Q])
   (implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Option[scala.collection.Map[V,Q#V]] = 
     morphism(bigger, (_ : Q#V) => true, (_:MorphInfo[Q]) => Nil)(lblOrd, ev0, ev1)
+  
+  def subgraphIsomorphismAll[Q <: PB](bigger: G[Q])
+  (implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Set[Map[V,Q#V]] = 
+    morphisms(bigger, (_ : Q#V) => true, (_:MorphInfo[Q]) => Nil)(lblOrd, ev0, ev1)
 
 
   def isSubgraphOf[Q <: PB](bigger: G[Q])

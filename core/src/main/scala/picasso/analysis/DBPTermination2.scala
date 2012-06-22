@@ -53,6 +53,7 @@ trait DBPTermination2[P <: DBCT] extends DBPTerminationCommon[P] {
     val program2 = program1.simplifyForTermination
     Logger("DBPTermination", LogNotice, "Removing sinks")
     val program3 = ProgramHeuritics.removeSinks(program2)
+    Logger("DBPTermination", LogNotice, "Merging candidates = " + ProgramHeuritics.counterMerging(program3))
     (cover, tree, program3)
   }
 }

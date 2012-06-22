@@ -413,8 +413,7 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
 /** A place where to put the heuritics analysis that we use for simplification */
 object ProgramHeuritics {
   
-  //TODO "from many places to few" abstraction
-  //TODO 'flow' from var to var
+  import TransitionHeuristics._
 
   /** A sink is a variable that only 'receives' and is unbounded. */
   def sinks(p: Program): Set[Variable] = {
@@ -423,7 +422,6 @@ object ProgramHeuritics {
     val unboundedAbove = p.variables.filter(v => p.pcs.forall(bounds(_)(v)._2.isEmpty) )
     //ignores the initialization transitions
     assert(p.transitions forall (_.targetPC != p.initialPC))
-    import TransitionHeuristics._
     val changes = p.transitions.filter(_.sourcePC != p.initialPC).map(variablesChange)
     val belowSinks = unboundedBelow.filter( v => changes.forall( m => m.getOrElse(v, Fixed) == Fixed || m(v) == Decrease ) )
     val aboveSinks = unboundedAbove.filter( v => changes.forall( m => m.getOrElse(v, Fixed) == Fixed || m(v) == Increase ) )
@@ -432,8 +430,51 @@ object ProgramHeuritics {
   }
 
   def removeSinks(p: Program): Program = {
-    val toRemove = sinks(p)
-    new Program(p.initialPC, p.transitions map (t => TransitionHeuristics.removeSinks(t, toRemove)))
+    //sinks in a loop: removeing some var might create new sinks ...
+    var toRemove = Set[Variable]()
+    var p2 = p
+    do {
+      toRemove = sinks(p2)
+      Logger("DBPTermination", LogInfo, "sinks: " + toRemove.mkString(", "))
+      p2 = new Program(p2.initialPC, p2.transitions map (t => TransitionHeuristics.removeSinks(t, toRemove)))
+    } while (!toRemove.isEmpty)
+    p2
   }
+
+  abstract class FlowKind
+  case object ConstantFlow extends FlowKind
+  case object TransferFlow extends FlowKind
+
+  def flow(p: Program): EdgeLabeledDiGraph[GT.ELGT{type V = Variable; type EL = FlowKind}] = {
+    var offsetEdges: GenSeq[(Variable, FlowKind, Variable)] = p.transitions.flatMap(t => {
+      val (incr1, decr1) = constantOffset(t).view.partition{ case (k,v) => v > 0 }
+      val incr = incr1.map(_._1)
+      val decr = decr1.map(_._1)
+      for (x <- decr; y <- incr) yield (x, ConstantFlow, y)
+    })
+    var transferEdges: GenSeq[(Variable, FlowKind, Variable)] = p.transitions.flatMap( t => {
+      for ( (x, vs) <- variableFlow(t); y <- vs) yield (y, TransferFlow, x)
+    })
+    val edges: Iterable[(Variable, FlowKind, Variable)] = (offsetEdges ++ transferEdges).seq
+    val edgesOnly = EdgeLabeledDiGraph[GT.ELGT{type V = Variable; type EL = FlowKind}](edges)
+    edgesOnly.addVertices(p.variables)
+  }
+  
+  //use the flow to try merging variables.
+  //The idea is to if it is possible to have a non-trivial embedding of the flow graph into itself.
+  //Guess: the nodes that are not trivially mapped are good candidate for being merged.
+  //TODO the current way is not really doing much. maybe we should relax the injectivity and do something like the folding of DB conf ?
+  def counterMerging(p: Program): Iterable[Iterable[Variable]] = {
+    import math.Ordering._
+    val graph = flow(p)
+    Logger("integer.ProgramHeuritics", LogInfo, graph.toGraphviz("flow"))
+    val morhisms = graph.subgraphIsomorphismAll(graph)
+    val toMergePairs = morhisms.toIterable.view.flatMap( m => m.toIterable.filter{ case (k,v) => k != v } )
+    val uf = new UnionFind[Variable]()
+    for ( (a,b) <- toMergePairs ) uf.union(a, b)
+    uf.getEqClasses.map(_._2)
+  }
+
+  //TODO "from many places to few" abstraction
 
 }

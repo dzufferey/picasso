@@ -504,8 +504,6 @@ class Transition(val sourcePC: String,
 
   def variablesBounds(pre: Map[Variable,(Option[Int],Option[Int])]): Map[Variable,(Option[Int],Option[Int])] = {
 
-    //TODO something not working here ...
-
     //the pre bound is needed: in the case of increasing variables we keep the lower bound, same for upper
     def merge(guardBounds: Map[Variable, Int],
               select: Pair[Option[Int],Option[Int]] => Option[Int],
@@ -534,6 +532,12 @@ class Transition(val sourcePC: String,
     val res = pre.map{ case (v,_) => (v -> (lowerBoundsMerged.get(v), upperBoundsMerged.get(v))) } ++ frame
     Logger("integer.Transition", LogDebug, "variablesBounds from "+sourcePC+" to "+targetPC+": " + res)
     res
+  }
+  
+  def getPreBounds: Map[Variable,(Option[Int],Option[Int])] = {
+    val lowerBounds = Condition.getLowerBounds(guard) ++ getTransientLowerBounds
+    val upperBounds = Condition.getUpperBounds(guard) ++ getTransientUpperBounds
+    sequencedAllVariables.view.map( v => (v -> (lowerBounds.get(v), upperBounds.get(v))) ).toMap
   }
 
 
@@ -695,18 +699,41 @@ object TransitionHeuristics {
   /** a method to say if a var increase, decrease, ... */
   def variablesChange(t: Transition): Map[Variable, VarChange] = {
     val init: Map[Variable, VarChange] = t.variables.map(v => (v, Unknown)).toMap
+    //guards
+    lazy val bounds = t.getPreBounds
     //goes over each transition ...
     def processStmt(knowledge: Map[Variable, VarChange], stmt: Statement): Map[Variable, VarChange] = stmt match {
       case Relation(_new, _old) =>
         val (pn,cn) = Expression.decompose(_new)
         if (pn.size == 1) {
+          val v = pn.head
           val (po,co) = Expression.decompose(_old)
-          if (pn == po) {
-            val v = pn.head
-            val delta = co.i - cn.i
-            if (delta == 0) knowledge + (v -> VarChange.and(knowledge(v), Fixed))
-            else if (delta > 0) knowledge + (v -> VarChange.and(knowledge(v), Increase))
-            else knowledge + (v -> VarChange.and(knowledge(v), Decrease))
+          val delta = co.i - cn.i
+          if (po contains v) {
+            //better version ->
+            // check that po contains pn, then for the additional variable -> get the lower bounds (since we add)
+            // add the var lower bounds and the cst to get the final change
+            val other = po.filterNot(_ == v)
+            //fetch and sum lower and upper bounds for the other vars
+            val (low, up) = ((Some(0): Option[Int], Some(0): Option[Int]) /: other)( (acc, v) => {
+              val (vLow, vUp) = bounds(v)
+              val newLow = acc._1.flatMap(l => vLow.map(_ + l))
+              val newUp = acc._2.flatMap(u => vUp.map(_ + u))
+              (newLow, newUp)
+            })
+            val ch = (low, up) match {
+                case (Some(l), Some(u)) =>
+                  assert(l <= u)
+                  if (l + delta >= 0) {
+                    if (u + delta == 0) Fixed else Increase
+                  } else {
+                    if (u + delta <= 0) Decrease else Unknown
+                  }
+                case (Some(l), None) => if (l + delta >= 0) Increase else Unknown
+                case (None, Some(u)) => if (u + delta <= 0) Decrease else Unknown
+                case (None, None) => Unknown
+            }
+            knowledge + (v -> VarChange.and(knowledge(v), ch))
           } else knowledge
         } else knowledge
       case Variance(_new, _old, greater, strict) if (_old == _new) =>
