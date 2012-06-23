@@ -216,9 +216,11 @@ trait GraphAlgorithms[PB <: GT, P <: PB, G[P1 <: PB] <: GraphLike[PB, P1, G]] {
     loop(connections, inDegree, outDegree, this, Nil)
   }
   
+  /** algorithm from "Finding all the elementary cycles of a directed graph" by Donald B. Johnson, 1975 */
   def elementaryCycles: Seq[Trace[V,EL]] = {
 
-    //after Finding all the elementary cycles of a directed graph by Donald B. Johnson, 1975
+    //TODO as an iterator rather than a Seq
+    //since the number cycles of is quite large it might make sense to do it lazily
 
     val nodeOrder = vertices.zipWithIndex.toMap
     val idToNode: Map[Int, V] = nodeOrder.map( x => (x._2, x._1) )

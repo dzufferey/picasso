@@ -109,10 +109,11 @@ object QARMCPrinter extends PrologLikePrinter {
   }
 
   /** Check that the path respects the condition on the variables needed b simplePath. */
-  protected def variablesGoodForPath(path: Seq[Transition], other: Seq[Transition]): Boolean = {
+  protected def checkVariablesGoodForPath(path: Seq[Transition], other: Seq[Transition]) {
     val (publicVars, privateVars) = publicPrivateVariablesOfPath(path)
-    val otherVariables = (Set[Variable]() /: other)(_ ++ _.variables)
-    (privateVars intersect otherVariables).isEmpty
+    for (t <- other; v <- t.variables if privateVars(v)) {
+      Logger.logAndThrow("integer.QARMCPrinter", LogError, "path: " + path + "\nconflict: " + v + " in " + t)
+    }
   }
 
   protected def predDeclForState(pc: String, preVars: Seq[Variable], postVar: Seq[Variable]) = {
@@ -133,8 +134,8 @@ object QARMCPrinter extends PrologLikePrinter {
     val simpleTraces = cfa.simplePaths
     val simplePaths = simpleTraces.map(_.labels.map(l => tNamesReversed.get(l)))
     for (p <- simplePaths) {
-      var others = trs.filterNot(p contains _)
-      assert(variablesGoodForPath(p, others), "path: " + p + "\nothers: " + others)
+      var others = trs.view.filterNot(p contains _)
+      checkVariablesGoodForPath(p, others)
     }
     //all the variables for the global store.
     val vars = prog.variables.toSeq
