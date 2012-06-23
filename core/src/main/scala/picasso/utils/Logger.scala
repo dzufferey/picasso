@@ -79,6 +79,15 @@ class Logger {
       Console.println(indented)
     }
   }
+  
+  def apply(relatedTo: String, lvl: Level, content: java.io.BufferedWriter => Unit): Unit = synchronized {
+    if (apply(relatedTo, lvl)) {
+      //when content is on multiple lines, each line should be prefixed.
+      val prefix = "[" + lvl.color + lvl.message + Console.RESET + "]" + " @ " + relatedTo + ": " 
+      val writer = new java.io.BufferedWriter(new PrefixingWriter(prefix, Console.out))
+      content(writer)
+    }
+  }
 
   /** Log a message and throw an exception with the content. */
   def logAndThrow(relatedTo: String, lvl: Level, content: => String): Nothing = {

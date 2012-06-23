@@ -34,18 +34,28 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     trs.aggregate(Set[Variable]())(_ ++ _.variables, _ ++ _)
   }
 
-  def printForARMC = {
+  def printForARMC(writer: java.io.BufferedWriter) {
+    ARMCPrinter(writer, this)
+    writer.flush
+  }
+  
+  def printForARMC: String = {
     val str = new java.io.StringWriter()
     val writer = new java.io.BufferedWriter(str)
-    ARMCPrinter(writer, this)
+    printForARMC(writer)
     writer.close
     str.toString
   }
   
-  def printForQARMC = {
+  def printForQARMC(writer: java.io.BufferedWriter) {
+    QARMCPrinter(writer, this)
+    writer.flush
+  }
+
+  def printForQARMC: String = {
     val str = new java.io.StringWriter()
     val writer = new java.io.BufferedWriter(str)
-    QARMCPrinter(writer, this)
+    printForQARMC(writer)
     writer.close
     str.toString
   }
@@ -61,25 +71,26 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
   }
   
   def simplifyForTermination1 = {
-    Logger("integer.Program", LogDebug, "unsimplified program:\n" + this.printForQARMC)
+    Logger("integer.Program", LogDebug, "unsimplified program:\n" + printForQARMC)
+    Logger("integer.Program", LogDebug, (writer => printForQARMC(writer)))
     Logger("integer.Program", LogInfo, "propagating zeros.")
     val p2 = this.propagateZeros
-    Logger("integer.Program", LogDebug, "removing 0s:\n" + p2.printForQARMC)
+    Logger("integer.Program", LogDebug, writer => p2.printForQARMC(writer) )
     //Logger("integer.Program", LogInfo, "removing equal variables.")
     //val p3 = p2.removeEqualsVariables
     //Logger("integer.Program", LogDebug, "equal variables:\n" + p3.printForQARMC)
     Logger("integer.Program", LogInfo, "merging variables.")
     val p4 = p2.reduceNumberOfVariables
-    Logger("integer.Program", LogDebug, "merging variables:\n" + p4.printForQARMC)
+    Logger("integer.Program", LogDebug, writer => p4.printForQARMC(writer) )
     Logger("integer.Program", LogInfo, "compacting transitions.")
     val p5 = p4.compactPath
-    Logger("integer.Program", LogDebug, "compacting transitions:\n" + p5.printForQARMC)
+    Logger("integer.Program", LogDebug, writer => p5.printForQARMC(writer) )
     Logger("integer.Program", LogInfo, "removing useless split.")
     val p6 = p5.lookForUselessSplitting
-    Logger("integer.Program", LogDebug, "looking for useless splitting:\n" + p6.printForQARMC)
+    Logger("integer.Program", LogDebug, writer => p6.printForQARMC(writer) )
     Logger("integer.Program", LogInfo, "pruning Assume.")
     val p7 = p6.pruneAssumes
-    Logger("integer.Program", LogDebug, "assumed pruned:\n" + p7.printForQARMC)
+    Logger("integer.Program", LogDebug, writer => p7.printForQARMC(writer) )
     p7
   }
 

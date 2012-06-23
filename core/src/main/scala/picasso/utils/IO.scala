@@ -61,3 +61,47 @@ object IO {
   }
 
 }
+
+/** prefix as a writer */
+class PrefixingWriter(prefix: String, base: OutputStream) extends Writer {
+    
+  val out = new OutputStreamWriter(base)
+  var needPrefix = true
+
+  private def ifPrefixNeeded {
+    if (needPrefix) {
+      out.write(prefix)
+      needPrefix = false
+    }
+  }
+
+  def write(cbuf: Array[Char], off: Int, len: Int) {
+    val max = math.min(cbuf.size - off, off + len)
+    var start = off
+    while (start < max) {
+      val idx = cbuf.indexOf('\n', start)
+      if (idx == -1 || idx >= max) {
+        ifPrefixNeeded
+        out.write(cbuf, start, len + off - start)
+        start = max
+      } else {
+        ifPrefixNeeded
+        out.write(cbuf, start, idx - start + 1)
+        start = math.min(max, idx + 1)
+        if (start < max) {
+          needPrefix = true
+        }
+      }
+    }
+  }
+
+  def close {
+    out.close
+  }
+
+  def flush {
+    out.flush
+  }
+
+}
+
