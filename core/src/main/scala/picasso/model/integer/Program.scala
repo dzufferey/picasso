@@ -71,7 +71,7 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
   }
   
   def simplifyForTermination1 = {
-    Logger("integer.Program", LogDebug, "unsimplified program:\n" + printForQARMC)
+    Logger("integer.Program", LogDebug, "unsimplified program:")
     Logger("integer.Program", LogDebug, (writer => printForQARMC(writer)))
     Logger("integer.Program", LogInfo, "propagating zeros.")
     val p2 = this.propagateZeros
