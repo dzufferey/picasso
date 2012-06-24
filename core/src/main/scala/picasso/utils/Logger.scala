@@ -86,6 +86,7 @@ class Logger {
       val prefix = "[" + lvl.color + lvl.message + Console.RESET + "]" + " @ " + relatedTo + ": " 
       val writer = new java.io.BufferedWriter(new PrefixingWriter(prefix, Console.out))
       content(writer)
+      writer.flush
     }
   }
 
