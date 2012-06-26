@@ -1,6 +1,6 @@
 package picasso.analysis
 
-import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger, Misc, Namer}
+import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger, Misc, Namer, Config}
 import picasso.model.dbp._
 import picasso.graph._
 import picasso.model.integer._
@@ -22,9 +22,11 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
   //   -> replicating
   //   -> folding
 
+
   protected def variablesForNodes(conf: S): Map[P#V, Variable] = {
     val nodes = conf.vertices.toSeq
-    val pairs = nodes.filter(_.depth > 0).map( x => (x -> Variable(Namer(x.state.toString))))
+    val needed = if (Config.noCC) nodes.filter(_.depth > 0) else nodes
+    val pairs = needed.map( x => (x -> Variable(Namer(x.state.toString))))
     pairs.toMap
   }
 
@@ -49,6 +51,14 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
       assert(node.depth == 0, node)
       Constant(1)
     }
+  }
+
+  //TODO guardForConcreteNode: just the nodes we care about ...
+  protected def guardForConcreteNode(s: S, acc: Condition = Literal(true)): Condition = {
+    val (_, map) = getPC(s)
+    val concreteNodes = s.vertices.view.filter(_.depth == 0)
+    val cnd = concreteNodes.map(n => Eq(getCardinality(map, n), Constant(1)))
+    (acc /: cnd)(And(_,_))
   }
 
   protected def coverOrFold(from: S, morph: Map[P#V, P#V], to: S): (String, String, Seq[Statement]) = {
@@ -101,7 +111,7 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
                                        "\nfrom.vertices: " + from.vertices +
                                        "\nto.vertices: " + to.vertices)
     val (pc1, pc2, stmts) = coverOrFold(from, folding, to)
-    new Transition(pc1, pc2, Literal(true), stmts, "folding")
+    new Transition(pc1, pc2, guardForConcreteNode(from), stmts, "folding")
   }
   
   //send back the counters
@@ -113,7 +123,7 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
     val morphisms = smaller.morphisms(bigger)(self.stateOrdering)
     val trs = for (m <- morphisms) yield {
       val (pc1, pc2, stmts) = coverOrFold(smaller, m, bigger)
-      new Transition(pc1, pc2, Literal(true), stmts, "covering")
+      new Transition(pc1, pc2, guardForConcreteNode(smaller), stmts, "covering")
     }
     trs.toSeq
   }
@@ -160,7 +170,7 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
        }
     }
     val stmts = (stmts1 ++ stmts2 ++ stmts3 ++ stmts4).toSeq
-    val t1 = new Transition(pc1, pc2, Literal(true), stmts, "replicating 1")
+    val t1 = new Transition(pc1, pc2, guardForConcreteNode(from), stmts, "replicating 1")
     //second transition: back edge
     val morphisms = smaller.morphisms(to)(self.stateOrdering)
     var trs2 = for( m <- morphisms ) yield {
@@ -203,7 +213,7 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
           case _ => None
         }
       }
-      val guard = ((Literal(true): Condition) /: lowerBounds){
+      val guard = (guardForConcreteNode(to) /: lowerBounds){
         case (acc, Some(c)) => And(acc,c)
         case (acc, None) => acc
       }
@@ -242,7 +252,7 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
       }
     }
     val stmts = (stmts1 ++ stmts2).toSeq
-    new Transition(pc1, pc2, Literal(true), stmts, "inhibiting")
+    new Transition(pc1, pc2, guardForConcreteNode(from), stmts, "inhibiting")
   }
 
   // the reverse of folding ...
@@ -271,14 +281,19 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
     assert(from.vertices forall (backwardUnFolding contains _))
 
     val stmts1 = for ( (node, lst) <- backwardUnFolding ) yield {
-       var lhs = lst.map(getCardinality(map2, _)).reduceLeft(Plus(_, _))
-       getCardinality(map1, node) match {
-         case v @ Variable(_) =>
-           val rhs = lst.filter(_.depth > 0).map(getCardinality(map2, _)).reduceLeft(Plus(_, _))
-           Relation(lhs, Plus(rhs, v))
+       val (concrete, abstr) = lst.partition(_.depth == 0)
+       val lhs = abstr.map(getCardinality(map2, _)).foldLeft(Constant(concrete.size): Expression)(Plus(_, _))
+       val concreteUpd = concrete.map( getCardinality(map2, _) match {
+         case v @ Variable(_) => Affect(v, Constant(1))
+         case Constant(1) => Skip
+         case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+       })
+       val abstrUpd = getCardinality(map1, node) match {
+         case v @ Variable(_) => Relation(lhs, v)
          case Constant(1) => assert(lhs == Constant(1)); Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        }
+       concreteUpd :+ abstrUpd
     }
     val stmts2 = for ( node <- backwardUnFolding.keys ) yield {
       getCardinality(map1, node) match {
@@ -326,12 +341,11 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        }
     }
-    val guard = ((Literal(true): Condition) /: lowerBounds)(And(_,_))
-    val stmts = (stmts1 ++ stmts2 ++ variance1 ++ variance2).toSeq
+    val guard = (guardForConcreteNode(from) /: lowerBounds)(And(_,_))
+    val stmts = (stmts1.flatten ++ stmts2 ++ variance1 ++ variance2).toSeq
     new Transition(pc1, pc2, guard, stmts, "unfolding")
   }
 
-  //Actually, there is nothing to do here.
   //Just check that the transition does not change replicated things and transfer the frame
   protected def morphing(from: S, frame: Map[P#V, P#V], tr: T, to: S): Transition = {
     Logger("DBPTermination", LogDebug, "morphing transition from " + from +
@@ -346,24 +360,40 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
     assert(tr.rhs.vertices.forall(_.depth == 0))
     val (pc1, map1) = getPC(from)
     val (pc2, map2) = getPC(to)
-    val changing = from.vertices -- frame.keys
-    assert(changing forall (_.depth == 0))
-    val stmts1 = for ((n1,n2) <- frame ) yield {
+    val disappearing = from.vertices -- frame.keys
+    val appearing = to.vertices -- frame.values
+    assert(disappearing forall (_.depth == 0))
+    assert(appearing forall (_.depth == 0))
+    val stmts1 = for (n <- disappearing) yield {
+       getCardinality(map1, n) match {
+         case v @ Variable(_) => Affect(v, Constant(0))
+         case Constant(c) => Skip
+         case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+       }
+    }
+    val stmts2 = for (n <- appearing) yield {
+       getCardinality(map2, n) match {
+         case v @ Variable(_) => Affect(v, Constant(1))
+         case Constant(c) => Skip
+         case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+       }
+    }
+    val stmts3 = for ((n1,n2) <- frame) yield {
        getCardinality(map2, n2) match {
          case v @ Variable(_) => Affect(v, getCardinality(map1, n1))
          case Constant(c) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        }
     }
-    val stmts2 = for ((n1,n2) <- frame) yield {
+    val stmts4 = for ((n1,n2) <- frame) yield {
        getCardinality(map1, n1) match {
          case v @ Variable(_) => Affect(v, Constant(0))
          case Constant(c) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        }
     }
-    val stmts = (stmts1 ++ stmts2).toSeq
-    new Transition(pc1, pc2, Literal(true), stmts, "morphing, " + tr.id)
+    val stmts = (stmts1 ++ stmts2 ++ stmts3 ++ stmts4).toSeq
+    new Transition(pc1, pc2, guardForConcreteNode(from), stmts, "morphing, " + tr.id)
   }
 
   protected val emptyConf = DepthBoundedConf.empty[P]
@@ -387,7 +417,9 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
     }
     val stmts1 = for (node <- init.vertices) yield {
        getCardinality(map1, node) match {
-         case v @ Variable(_) => Affect(v, accelerationVariables(nodeToCmpId(node)))
+         case v @ Variable(_) =>
+          if (node.depth == 0) Affect(v, Constant(1))
+          else Affect(v, accelerationVariables(nodeToCmpId(node)))
          case Constant(c) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        }

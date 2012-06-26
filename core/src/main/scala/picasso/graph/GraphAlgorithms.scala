@@ -76,10 +76,10 @@ trait GraphAlgorithms[PB <: GT, P <: PB, G[P1 <: PB] <: GraphLike[PB, P1, G]] {
     }
     */
     //big while loop
+    Logger("graph", LogDebug, "AI, status at begining:\n" + fp2.mkString("\n"))
     var iteration = 0
     do {
       iteration += 1
-      Logger("graph", LogDebug, "AI, status at begining of iteration " + iteration + ":\n" + fp2.mkString("\n"))
       //(1) copy fp2 into fp1
       fp1 = fp2
       //(2) compute the next iteration
@@ -95,6 +95,7 @@ trait GraphAlgorithms[PB <: GT, P <: PB, G[P1 <: PB] <: GraphLike[PB, P1, G]] {
           case None => (c -> fp1(c))
         }
       }
+      Logger("graph", LogDebug, "AI, status after iteration " + iteration + ":\n" + fp2.mkString("\n"))
       //Console.println("iteration: fp1 = " + fp1)
       //Console.println("iteration: fp2 = " + fp2)
     } while (fp1 exists { case (v,d) => !cover(d, fp2(v)) })

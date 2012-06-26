@@ -73,8 +73,8 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
   def simplifyForTermination1 = {
     Logger("integer.Program", LogDebug, "unsimplified program:")
     Logger("integer.Program", LogDebug, (writer => printForQARMC(writer)))
-    Logger("integer.Program", LogInfo, "propagating zeros.")
-    val p2 = this.propagateZeros
+    Logger("integer.Program", LogInfo, "propagating constants.")
+    val p2 = this.propagateCst
     Logger("integer.Program", LogDebug, writer => p2.printForQARMC(writer) )
     //Logger("integer.Program", LogInfo, "removing equal variables.")
     //val p3 = p2.removeEqualsVariables
@@ -103,6 +103,68 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
       t.alphaPre(preSubst).leaner
     })
     new Program(initPC, trs2)
+  }
+
+  /** not only propagate 0, but all the constants (especially 1) */
+  def propagateCst = {
+
+    //type of the abstract domain: Map[Variable, Option[Int]]
+    //None means it is not cst
+    //Some(i) means it has value i
+    //not in the map means we don't know
+
+    val allVars = variables
+    def default(s: String) = {
+      if (s == initPC) Map[Variable,Option[Int]]( allVars.toSeq.map( _ -> None) :_* )
+      else Map[Variable,Option[Int]]()
+    }
+
+    def transfer(cstMap: Map[Variable,Option[Int]], t: Transition): Map[Variable,Option[Int]] = {
+      val knows: Iterable[(Variable, Option[Int])] = t.simpleUpdates.flatMap{ case (v, (lst, c)) =>
+        if (lst forall (cstMap contains _)) { //means we have enough info
+          Some(
+            v -> ((Some(c.i): Option[Int]) /: lst)( (acc, v2) => acc.flatMap(i => cstMap(v2).map(j => i + j)))
+          )
+        } else {
+          None
+        }
+      }
+      val complexUpdate = t.updatedVars.filterNot(t.simpleUpdates contains _).map( _ -> None )
+      val frame: Map[Variable,Option[Int]] = cstMap -- t.updatedVars
+      frame ++ knows ++ complexUpdate
+    }
+
+    def join(a: Map[Variable,Option[Int]], b: Map[Variable,Option[Int]]) = {
+      val allKeys = a.keySet ++ b.keySet
+      val all = allKeys.view.map( v => {
+        val rhs = if(a.contains(v) && b.contains(v)) {
+          (a(v), b(v)) match {
+            case (Some(i1), Some(i2)) => if (i1 == i2) Some(i1) else None
+            case (_,_) => None
+          }
+        } else {
+          a.getOrElse(v, b(v))
+        }
+        (v -> rhs)
+      })
+      all.toMap
+    }
+
+    def cover(a: Map[Variable,Option[Int]], b: Map[Variable,Option[Int]]) = {
+      //all keys of b shoud be in a and they should be equal ...
+      b forall { case (k,v) => a.contains(k) && (a(k).isEmpty || a(k) == v) }
+    }
+
+    val map = cfa.aiFixpoint(transfer, join, cover, default)
+    Logger("integer.Program", LogDebug, "propagateCst: " + map)
+
+
+    val trs2 = trs.par.map(t => {
+      val preSubst = map(t.sourcePC).flatMap{ case (k, v) => v.map(i => (k, Constant(i))) }
+      t.alphaPre(preSubst).leaner
+    })
+    new Program(initPC, trs2)
+    
   }
 
   def reduceNumberOfVariables = {
@@ -153,7 +215,7 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
       val az = t.assignedToZero(nonZeros)
       val anz = t.assignedToNonZero(nonZeros)
       val res = nonZeros -- az ++ anz
-      //Logger("integer.Program", LogDebug, "transfer: " + t.sourcePC + " -> " + t.targetPC + ": " + nonZeros + " -- " + az + " ++ " + anz)
+      Logger("integer.Program", LogDebug, "transfer: " + t.sourcePC + " -> " + t.targetPC + ": " + nonZeros + " -- " + az + " ++ " + anz)
       res
     }
 

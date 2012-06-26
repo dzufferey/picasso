@@ -59,6 +59,15 @@ class Transition(val sourcePC: String,
     val transient = (Set[Variable]() /: updates)(_ ++ Statement.getTransientVariables(_))
     read -- transient
   }
+
+  /** Extract the simples updates that occurs in the transitions.
+   *  More complex updates are ignored */
+  lazy val simpleUpdates: Map[Variable, (List[Variable], Constant)] = {
+    updates.flatMap{
+      case Affect(v, expr) => Some(v -> Expression.decompose(expr))
+      case _ => None
+    }.toMap
+  }
     
   //is not exact but a superset
   //this assumes the variables are positive
@@ -66,7 +75,7 @@ class Transition(val sourcePC: String,
     val nonZeros = updates.flatMap{
       case Relation(lhs, rhs) =>
         val (pos, cst) = Expression.decompose(rhs)
-        val pos2 = pos.filter(preNonZero)
+        val pos2 = pos.filter(v => preNonZero(v) || updates.exists(_ == Transient(v)))
         if (pos2.isEmpty && cst.i == 0) Set()
         else Expression.variables(lhs)
       case _ => None
@@ -79,15 +88,12 @@ class Transition(val sourcePC: String,
   //is not exact but a subset
   //this assumes the variables are positive
   def assignedToZero(preNonZero: Set[Variable]): Set[Variable] = {
-    val zeros = updates.flatMap{
-      case Relation(v1 @ Variable(_), rhs) =>
-        val (pos, cst) = Expression.decompose(rhs)
-        val pos2 = pos.filter(preNonZero)
-        if (pos2.isEmpty && cst.i == 0) Some(v1)
+    simpleUpdates.view.flatMap{
+      case (v, (vars, cst)) =>
+        val vars2 = vars.filter(preNonZero)
+        if (vars2.isEmpty && cst.i == 0) Some(v)
         else None
-      case _ => None
-    }
-    zeros.toSet
+    }.toSet
   }
 
   def alpha(subst: Map[Variable, Expression]) = {

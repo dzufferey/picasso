@@ -74,7 +74,7 @@ object Expression {
     decomposeVector(e, idxMap)
   }
 
-  def recompose(pos: List[Variable], /*neg: List[Variable],*/ cst: Constant): Expression = {
+  def recompose(pos: List[Variable], cst: Constant): Expression = {
     if (pos.isEmpty) cst
     else {
       val posTerm = (pos: List[Expression]).reduceLeft(Plus(_, _))
