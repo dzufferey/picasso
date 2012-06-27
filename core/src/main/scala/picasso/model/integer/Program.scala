@@ -64,7 +64,7 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
   def simplifyForTermination = {
     //repeat a few time ...
     var p = this
-    for (i <- 0 until 3) {
+    for (i <- 0 until 2) {
       p = p.simplifyForTermination1
     }
     p
@@ -72,13 +72,10 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
   
   def simplifyForTermination1 = {
     Logger("integer.Program", LogDebug, "unsimplified program:")
-    Logger("integer.Program", LogDebug, (writer => printForQARMC(writer)))
+    Logger("integer.Program", LogDebug, writer => printForQARMC(writer) )
     Logger("integer.Program", LogInfo, "propagating constants.")
     val p2 = this.propagateCst
     Logger("integer.Program", LogDebug, writer => p2.printForQARMC(writer) )
-    //Logger("integer.Program", LogInfo, "removing equal variables.")
-    //val p3 = p2.removeEqualsVariables
-    //Logger("integer.Program", LogDebug, "equal variables:\n" + p3.printForQARMC)
     Logger("integer.Program", LogInfo, "merging variables.")
     val p4 = p2.reduceNumberOfVariables
     Logger("integer.Program", LogDebug, writer => p4.printForQARMC(writer) )
@@ -91,18 +88,8 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     Logger("integer.Program", LogInfo, "pruning Assume.")
     val p7 = p6.pruneAssumes
     Logger("integer.Program", LogDebug, writer => p7.printForQARMC(writer) )
+    Logger("integer.Program", LogDebug, writer => p7.reflow.printForQARMC(writer) ) //TODO
     p7
-  }
-
-  def propagateZeros = {
-    val allVars = variables
-    val nonZeros = nonZeroVariable
-    val zeros = nonZeros.map{ case (k, nz) => (k, allVars -- nz) }
-    val trs2 = trs.par.map(t => {
-      val preSubst = zeros(t.sourcePC).map( _ -> Constant(0) ).toMap
-      t.alphaPre(preSubst).leaner
-    })
-    new Program(initPC, trs2)
   }
 
   /** not only propagate 0, but all the constants (especially 1) */
@@ -184,22 +171,6 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     new Program(initPC, trs2)
   }
 
-  /** If two variables are always equal, we can keep only one */
-  def removeEqualsVariables = {
-    val eqClasses = computeEqualsVariable
-    def join(a: Set[Set[Variable]], b: Set[Set[Variable]]): Set[Set[Variable]] = {
-      val product = for (ec1 <- a; ec2 <- b) yield ec1 intersect ec2
-      product.filterNot(_.isEmpty)
-    }
-    val alwaysEqual = (eqClasses - initPC).values.reduceLeft(join)
-    def classesToSubst(classes: Set[Set[Variable]]) = classes.toSeq.flatMap( set => set.map(x => (x -> set.head)) ).toMap
-    //val substMap = eqClasses.map{ case (k, v) => (k -> classesToSubst(v))}
-    val subst = classesToSubst(alwaysEqual).filter{ case (k,v) => k != v }
-    Logger("integer.Program", LogDebug, "removeEqualsVariables is merging: " + subst)
-    val trs2 = trs.map(t => t.alpha(subst).leaner)
-    new Program(initPC, trs2)
-  }
-
   protected def cfa: EdgeLabeledDiGraph[GT.ELGT{type V = String; type EL = Transition}] = {
     val emp = EdgeLabeledDiGraph.empty[GT.ELGT{type V = String; type EL = Transition}]
     emp ++ (transitions.map(t => (t.sourcePC, t, t.targetPC)).seq)
@@ -231,18 +202,22 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
 
   protected lazy val nonZeroVariableButInit = nonZeroVariable - initPC
 
-  /** Return a list of groups of variables that may be merged safely.
-   *  A safe merge means that the variables in a group are never non-zero at the same time.
-   */
-  protected def computeVariableMerge: Seq[Set[Variable]] = {
+  protected def variableConflictGraph: DiGraph[GT.ULGT{type V = Variable}] = {
     val nonZeroMap = nonZeroVariableButInit
     //we can build a conflict graph where variables are in conflict iff they are live at the same time.
     val conflictsBase = (DiGraph.empty[GT.ULGT{type V = Variable}] /: variables)(_ + _)
-    val conflicts = (conflictsBase /: nonZeroMap)( (acc, kv) => {
+    (conflictsBase /: nonZeroMap)( (acc, kv) => {
       val group = kv._2
       val edges = for (x <- group; y <- group if x != y) yield (x, (), y)
       acc ++ edges
     })
+  }
+
+  /** Return a list of groups of variables that may be merged safely.
+   *  A safe merge means that the variables in a group are never non-zero at the same time.
+   */
+  protected def computeVariableMerge: Seq[Set[Variable]] = {
+    val conflicts = variableConflictGraph
     val varToColor = conflicts.minimalColoring
     val colorToVar = varToColor.groupBy(_._2)
     val groups = colorToVar.values.map(_.map(_._1).toSet).toSeq
@@ -251,19 +226,71 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
   }
 
   protected def computeVariableMergeApprox: Seq[Set[Variable]] = {
-    val nonZeroMap = nonZeroVariableButInit
-    //we can build a conflict graph where variables are in conflict iff they are live at the same time.
-    val conflictsBase = (DiGraph.empty[GT.ULGT{type V = Variable}] /: variables)(_ + _)
-    val conflicts = (conflictsBase /: nonZeroMap)( (acc, kv) => {
-      val group = kv._2
-      val edges = for (x <- group; y <- group if x != y) yield (x, (), y)
-      acc ++ edges
-    })
+    val conflicts = variableConflictGraph
     def affinity(v1: Variable, v2: Variable): Int = {
       Misc.commonPrefix(v1.name, v2.name)
     }
+    val nonZeroMap = nonZeroVariableButInit
     val largeClique = nonZeroMap.values.maxBy(_.size)
     conflicts.smallColoring(affinity, largeClique)
+  }
+
+  protected def reflow: Program = {
+    //what we want to improve: constant and variable swapping.
+
+    def node(pc: String, variable: Variable) = (pc,variable)
+
+    //for each variables in each control state we create on node in the graph
+    //connect them using TransitionHeuristics.variableFlow
+
+    val allNodes = variables.toSeq.flatMap(v => pcs.map( node(_, v)))
+
+    //var at the same loc are conlficting
+    val samePC = for (pc <- pcs; v1 <- variables; v2 <- variables if v1 != v2) yield (node(pc,v1),node(pc,v2))
+    val conflicts = DiGraph[GT.ULGT{type V = (String,Variable)}](samePC).addVertices(allNodes)
+
+    //affinity: look at the flow
+    //if there is an edge between the two vars: good
+    //if that edge is on a cycle: better
+    val edges = trs.flatMap(t => {
+      val flows = TransitionHeuristics.variableFlow(t)
+      val e = for ((x, ys) <- flows.iterator; y <- ys) yield (node(t.sourcePC, y), node(t.targetPC, x))
+      val frame = (variables -- t.allVariables)
+      val f = for (x <- frame.iterator) yield (node(t.sourcePC,x), node(t.targetPC,x))
+      e ++ f
+    })
+    val flow = DiGraph[GT.ULGT{type V = (String,Variable)}](edges.seq).addVertices(allNodes)
+
+    //there can be at most one var for each pc
+    def trim(nodes: Set[(String,Variable)]): Set[(String,Variable)] = {
+      nodes.groupBy(_._1).values.map(_.head).toSet
+    }
+
+    var scc = flow.SCC.map(trim)
+    //now we must "grow" the scc as long as there are edges
+    //  edges from/to a SCC and nothing from that pc
+    //the nodes that are no in a SCC are not changed
+    for ((a,b) <- edges.seq) {
+       val sccA = scc.find(_ contains a).getOrElse(Set(a))
+       val sccB = scc.find(_ contains b).getOrElse(Set(b))
+       if (sccA != sccB) {
+         //check if can be merged
+         if ( (sccA.map(_._1) intersect sccB.map(_._1)).isEmpty ) {
+           scc = scc.filterNot(cc => cc == sccA || cc == sccB) :+ (sccA ++ sccB)
+         }
+       }
+    }
+
+    //build the substitution
+    val finalSCC = scc.zipWithIndex.map{ case (scc, i) => (scc, Variable("_SCC_" + i) ) }
+    val pcToSubst: Map[String, Map[Variable, Variable]] = pcs.map( pc => {
+      (pc, finalSCC.flatMap{ case (scc, v) => scc.find(_._1 == pc).map(_._2 -> v) }.toMap)
+    }).toMap
+
+    //for each transition apply the pre and post alpha
+    val trs2 = trs.map( t => t.alphaPre(pcToSubst(t.sourcePC)).alphaPost(pcToSubst(t.targetPC)) )
+    val p2 = new Program(initPC, trs2)
+    p2//.reduceNumberOfVariables //TODO why deadlock ?
   }
 
   //take a group of variables and return the transitions modified s.t. only one variable is used for the group
@@ -277,46 +304,6 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     }
   }
   
-  protected def computeEqualsVariable: Map[String, Set[Set[Variable]]] = {
-    //TODO this approach does not work
-    //need to differentiate bewteen different from has not information
-    //otherwise, the back edges prevent the equality information from propagating
-
-    //the AI elements are sets of equivalence class (set of variables)
-
-    def default(pc: String): Set[Set[Variable]] = {
-      val allVars = variables
-      val zeros = allVars -- nonZeroVariable(pc)
-      if (pc == initPC) {
-        val rest = nonZeroVariable(pc)
-        (Set(zeros) /: rest)( (acc, v) => acc + Set(v) ).filterNot(_.isEmpty)
-      } else {
-        Set()
-      }
-    }
-
-    def transfer(eqClasses: Set[Set[Variable]], t: Transition) = {
-      t.equivalenceClasses(eqClasses, nonZeroVariable)
-    }
-
-    //TODO the join should be more complex since the equivalence classes do not contains all the nodes ...
-    def join(a: Set[Set[Variable]], b: Set[Set[Variable]]): Set[Set[Variable]] = {
-      //the join is a refinement of a and b
-      //println("join of " + a + " and " + b)
-      val product = for (ec1 <- a; ec2 <- b) yield ec1 intersect ec2
-      product.filterNot(_.isEmpty)
-    }
-
-    def cover(a: Set[Set[Variable]], b: Set[Set[Variable]]): Boolean = {
-      //b is a refinement of a, i.e. there is more info in a than in b
-      b forall (x => a exists (y => x subsetOf y))
-    }
-
-    val map = cfa.aiFixpoint( transfer, join, cover, default)
-    Logger("integer.Program", LogDebug, "equivalenceClasses: " + map)
-    map
-  }
-
   protected def compactPath = {
     val trs2 = cfa.simplePaths.flatMap( path => {
       Transition.compact(path.labels)
@@ -427,6 +414,12 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     new Program(initPC, trs2)
   }
 
+  /** Try to remove guards and assume. */
+  def pruneConditions = {
+    //TODO compute bounds a the program level and then simplify the assumptions and the also the guards
+    sys.error("TODO")
+  }
+
   type Bounds = (Option[Int],Option[Int])
   type VarBounds = Map[Variable,Bounds]
 
@@ -443,6 +436,7 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
         val (bLow, bHigh) = b(v)
         val low = aLow.flatMap(v1 => bLow.map(v2 => math.min(v1,v2) ))
         val high = aHigh.flatMap(v1 => bHigh.map(v2 => math.max(v1,v2) ))
+        assert(low.getOrElse(Int.MinValue) <= high.getOrElse(Int.MaxValue), "join of " + (aLow,aHigh) + " with " + (bLow, bHigh) )
         (v -> (low, high))
       }
     }
@@ -490,20 +484,29 @@ object ProgramHeuritics {
 
   /** A sink is a variable that only 'receives' and is unbounded. */
   def sinks(p: Program): Set[Variable] = {
-    val bounds = p.variablesBounds
-    val unboundedBelow = p.variables.filter(v => p.pcs.forall(bounds(_)(v)._1.isEmpty) )
-    val unboundedAbove = p.variables.filter(v => p.pcs.forall(bounds(_)(v)._2.isEmpty) )
-    //ignores the initialization transitions
+    //works only for the non-init part
     assert(p.transitions forall (_.targetPC != p.initialPC))
-    val changes = p.transitions.filter(_.sourcePC != p.initialPC).map(variablesChange)
+    //restrict to variables that do not occurs as RHS
+    val noInit = p.transitions.filter(_.sourcePC != p.initialPC)
+    val neverRead = (p.variables /: noInit)((acc, t) => acc -- t.readVariables)
+    val noRHS = (p.variables /: noInit)((acc, t) => acc -- t.readInUpdates)
+    //let's get the bounds
+    val bounds = p.variablesBounds
+    val unboundedBelow = noRHS.filter(v => p.pcs.forall(bounds(_)(v)._1.isEmpty) )
+    val unboundedAbove = noRHS.filter(v => p.pcs.forall(bounds(_)(v)._2.isEmpty) )
+    val unboundedBoth = unboundedAbove intersect unboundedBelow
+    //ignores the initialization transitions
+    val changes = noInit.map(variablesChange)
     val belowSinks = unboundedBelow.filter( v => changes.forall( m => m.getOrElse(v, Fixed) == Fixed || m(v) == Decrease ) )
     val aboveSinks = unboundedAbove.filter( v => changes.forall( m => m.getOrElse(v, Fixed) == Fixed || m(v) == Increase ) )
-    Logger("integer.Program", LogDebug, "sinks are: " + belowSinks + " and " + aboveSinks)
-    belowSinks ++ aboveSinks
+    Logger("integer.Program", LogDebug, "neverRead = " + neverRead)
+    Logger("integer.Program", LogDebug, "noRHS = " + noRHS)
+    Logger("integer.Program", LogDebug, "sinks are: " + unboundedBoth + ", " + belowSinks + " and " + aboveSinks)
+    neverRead ++ belowSinks ++ aboveSinks ++ unboundedBoth
   }
 
   def removeSinks(p: Program): Program = {
-    //sinks in a loop: removeing some var might create new sinks ...
+    //sinks in a loop: removing some var might create new sinks ...
     var toRemove = Set[Variable]()
     var p2 = p
     do {
@@ -512,6 +515,14 @@ object ProgramHeuritics {
       p2 = new Program(p2.initialPC, p2.transitions map (t => TransitionHeuristics.removeSinks(t, toRemove)))
     } while (!toRemove.isEmpty)
     p2
+  }
+
+  def simplifyMore(prog: Program): Program = {
+    var p = prog
+    for (i <- 0 until 2) {
+      p = removeSinks(p.simplifyForTermination)
+    }
+    p
   }
 
   abstract class FlowKind

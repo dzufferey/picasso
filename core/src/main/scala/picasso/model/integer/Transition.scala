@@ -54,10 +54,15 @@ class Transition(val sourcePC: String,
     updated -- transient
   }
 
-  def readVariables: Set[Variable] = {
+  def readInUpdates: Set[Variable] = {
     val read = (Set[Variable]() /: updates)(_ ++ Statement.getReadVariables(_))
     val transient = (Set[Variable]() /: updates)(_ ++ Statement.getTransientVariables(_))
     read -- transient
+  }
+  
+  def readVariables: Set[Variable] = {
+    val inGuard = Condition.variables(guard)
+    inGuard ++ readInUpdates
   }
 
   /** Extract the simples updates that occurs in the transitions.
@@ -113,51 +118,6 @@ class Transition(val sourcePC: String,
     new Transition(sourcePC, targetPC, guard, updates2, comment)
   }
 
-  /** given equals variable (equivalence classes),
-   *  returns the set of variable that are equal afterward.
-   *  This is not exact but a refinement of the actual equivalence classes.
-   */
-  def equivalenceClasses(preEqClasses: Set[Set[Variable]], nonZeros: Map[String, Set[Variable]]): Set[Set[Variable]] = {
-    var subst = preEqClasses.toSeq.flatMap( set => set.map(x => (x -> set.head)) ).toMap
-    val updates2 = updates map ( Statement.alphaPre(_, subst) )
-    val simpleUpdates = updates2 flatMap (s => s match {
-      case Affect(v, rhs) => Some(v -> Expression.decompose(rhs))
-      case Relation(Plus(v @ Variable(_), Constant(c)), rhs) =>
-        val (p,c2) = Expression.decompose(rhs)
-        Some(v -> (p,Constant(c2.i - c)))
-      case _ => None
-    })
-    val knowledge = preEqClasses.flatten
-    val byUpdate = simpleUpdates.groupBy(_._2).map{ case (k, v) => (k, v.map{_._1}.toSet) }
-    val tv = transientVariables
-    val informedChoice = byUpdate.filterKeys{ case (pos, cst) => 
-      pos forall (v => knowledge(v) || tv(v) )
-    }
-    val newClasses = informedChoice.values.toSet
-    val uv = updatedVars
-    //the frame is the variables that are not updated
-    val frame = preEqClasses.map( _.filterNot(uv contains) ).filterNot(_.isEmpty)
-    val simplyUpdated = simpleUpdates.map(_._1).toSet
-    val unknown = uv.filterNot(v => simplyUpdated contains v).map(v => Set(v))
-    //use the knowledge of the zero values
-    val allVars = knowledge ++ uv
-    val zeros = allVars -- nonZeros(targetPC)
-    val res = frame ++ newClasses ++ unknown
-    val (zeroUpdate, nonZeroUpdate) = res.partition(_ exists zeros)
-    val res2 = nonZeroUpdate + zeroUpdate.flatten
-    //TODO connection between old an new variables (more than just the 0 case)
-    //println("XXX: " + this)
-    //println("XXX: knowledge: " + knowledge.map(_.name).mkString(", "))
-    //println("XXX: byUpdate\n" + byUpdate.mkString("\n"))
-    //println("XXX: informedChoice\n" + informedChoice.mkString("\n"))
-    //println("XXX: updated vars: " + uv.mkString(", "))
-    //println("XXX: simple updates: " + simpleUpdates.map(_._1).mkString(", "))
-    //println("XXX: unknown: " + unknown.mkString(", "))
-    //println("XXX: before " + preEqClasses)
-    //println("XXX: after " + res2)
-    res2
-  }
-  
   //TODO can we have a method to eliminate the transient vars ?
   //as a special case of quantifier elimination ?
   //transient vars are used to preserve some difference between primed and unprimed
@@ -300,52 +260,6 @@ class Transition(val sourcePC: String,
 
     t2.leaner
 
-    /*
-
-    //look at all the left hand side, gather the ones with the variables in group
-    //TODO checks that they are not involved with something else ...
-    val (thingsThatMatter, affectingOther) = updates.partition(s => Statement.getUpdatedVars(s).exists(group contains _))
-    val (affectThatMatter, assumeThatMatters) = thingsThatMatter.partition{ case Relation(_,_) => true case _ => false }
-    val (lhsAcc, rhsAcc) = ((Constant(0): Expression, Constant(0): Expression) /: affectThatMatter)( (acc, stmt) => stmt match {
-      case Relation(x, y) => (Plus(x, acc._1), Plus(y, acc._2))
-      case other => Logger.logAndThrow("integer.Transition", LogError, "Expected Relation, found: " + other)
-    })
-    val mergedAffect = Relation(mergeInExpression(group, newVar, lhsAcc), mergeInExpression(group, newVar, rhsAcc))
-    val mergedAssumes = assumeThatMatters map {
-      case Assume(c) => Statement.simplify(Assume(mergeInCondition(group, newVar, c)))
-      case vr @ Variance(v1, v2, _, _) =>
-        assert(group(v1) || group(v2));
-        Logger("integer.Transition", LogWarning, "mergeVariables changing: " + vr + ", dropping the constraint")
-        Skip
-      case other => Logger.logAndThrow("integer.Transition", LogError, "Expected Assume or Variance, found: " + other)
-    }
-    val affectingOtherMerged = affectingOther.map{
-      case Relation(x, y) =>
-        assert(Expression.variables(x).forall(v => !group.contains(v)))
-        Relation(x, mergeInExpression(group, newVar, y))
-      case a @ Assume(c) =>
-        assert(Condition.variables(c).forall(v => !group.contains(v)))
-        a
-      case vr @ Variance(v1, v2, _, _) =>
-        assert(!group(v1))
-        if (group(v2)) {
-          Logger("integer.Transition", LogWarning, "mergeVariables changing: " + vr + ", dropping the constraint")
-          Skip
-        } else {
-          vr
-        }
-      case other => other
-    }
-    
-    val guard2 = mergeInCondition(group, newVar, guard)
-    //println("XXX guard2: " + guard2)
-    val updates2 = mergedAffect +: (mergedAssumes ++ affectingOtherMerged)
-    //println("XXX updates2: " + updates2)
-
-    val t2 = new Transition(sourcePC, targetPC, guard2, updates2, comment)
-    t2.leaner
-
-    */
   }
   
   //HACK: works only in the context of lookForUselessSplitting
@@ -526,16 +440,16 @@ class Transition(val sourcePC: String,
     //guards
     val lowerBounds = Condition.getLowerBounds(guard) ++ getTransientLowerBounds
     val upperBounds = Condition.getUpperBounds(guard) ++ getTransientUpperBounds
+    //merged
+    val lowerBoundsMerged = merge(lowerBounds, _._1, math.max)
+    val upperBoundsMerged = merge(upperBounds, _._2, math.min)
     //updates
-    val postLowerBounds = getPostLowerBounds(lowerBounds, upperBounds)
-    val postUpperBounds = getPostUpperBounds(lowerBounds, upperBounds)
+    val postLowerBounds = getPostLowerBounds(lowerBoundsMerged, upperBoundsMerged)
+    val postUpperBounds = getPostUpperBounds(lowerBoundsMerged, upperBoundsMerged)
     //frame
     val frame = pre -- updatedVars
-    //merged
-    val lowerBoundsMerged = merge(postLowerBounds, _._1, math.max)
-    val upperBoundsMerged = merge(postUpperBounds, _._2, math.min)
 
-    val res = pre.map{ case (v,_) => (v -> (lowerBoundsMerged.get(v), upperBoundsMerged.get(v))) } ++ frame
+    val res = pre.map{ case (v,_) => (v -> (postLowerBounds.get(v), postUpperBounds.get(v))) } ++ frame
     Logger("integer.Transition", LogDebug, "variablesBounds from "+sourcePC+" to "+targetPC+": " + res)
     res
   }
@@ -766,7 +680,9 @@ object TransitionHeuristics {
     (Map.empty[Variable, Int] /: t.updates)(processStmt)
   }
   
-  /** Tell if a variable is merged into other variables. */
+  /** for each var, tell which other var flow into it
+   *  TODO better handling of the transients (flow can go through a transient)
+   */
   def variableFlow(t: Transition): Map[Variable, Set[Variable]] = {
     val transients = t.transientVariables
     def processStmt(acc: Map[Variable, Set[Variable]], stmt: Statement): Map[Variable, Set[Variable]] = stmt match {

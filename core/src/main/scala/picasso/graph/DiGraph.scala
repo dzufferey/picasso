@@ -888,6 +888,7 @@ extends GraphLike[GT.ULGT,P,DiGraph](_edges, ((x: P#V) => ())) {
     assert(edges forall { case (a,_,b) => contains(b, a) })//symmetric
     Logger("graph", LogDebug, "minimalColoring for a graph of size " + vertices.size)
 
+    //TODO in large sparse graphs, this is the bottleneck
     val averageAffinity = {
       var sum = 0
       val vertSeq = vertices.toSeq
