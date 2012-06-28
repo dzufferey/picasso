@@ -215,14 +215,9 @@ extends Traceable[P#V,P#EL] with GraphAlgorithms[PB, P, G] {
 
   def edgesWith(v: V) = edges.filter{case (n1,l,n2) => n1 == v || n2 == v}
 
-    /*
-    def isTraceValid(t: Trace[B,C]): Boolean = {
-      def checkNext(current: Set[A], transition: C, target: B): Set[A] = {
-        current.foldLeft(Set.empty[A])((acc, c) => (this(c, transition).filter(label(_) == target) ++ acc))
-      }
-    ! (t.transitions.foldLeft(get(t.start))( (acc, tred) => checkNext(acc, tred._1, tred._2))).isEmpty
-    }
-    */
+  def isSymmetric = edges forall { case (a,b,c) => contains(c, b, a) }
+
+  def isAntiReflexive = vertices forall (v => !apply(v).contains(v))
 
   def isTraceValid(t: Trace[V,EL]): Boolean = {
     val startExists = contains(t.start)
@@ -241,18 +236,26 @@ extends Traceable[P#V,P#EL] with GraphAlgorithms[PB, P, G] {
   }
   
   def morphFull[Q <: PB](morphNode: V => Q#V, morphEdge: EL => Q#EL, labels: Q#V => Q#VL): G[Q] = {
+    val nodes = vertices map morphNode
+    val newEdges = edges.map{ case (a,b,c) => (morphNode(a), morphEdge(b), morphNode(c)) }
+    companion(Labeled.listToMap(nodes, newEdges), labels)
+    /*
+    //TODO cannot use: groupBy[K](f: ((A, B)) \u21d2 K): Map[K, Map[A, B]] 
     val groupedMap = adjacencyMap groupBy (ves => morphNode(ves._1))
     val morphedMap = groupedMap map { 
       case (v1, edges) =>
         val groupedEdges = edges flatMap (_._2.toList) groupBy (es => morphEdge(es._1))
         val morphedEdges = groupedEdges map { 
           case (el1, dests) => 
-            val morphedDests = (Set.empty[Q#V] /: dests)((acc, e) => acc ++ (e._2 map morphNode))
+            val morphedDests: Set[Q#V] = (Set.empty[Q#V] /: dests)((acc, e) => acc ++ (e._2 map morphNode))
             el1 -> morphedDests
           }
         v1 -> morphedEdges
       }
-    companion(morphedMap, labels)
+    val res = companion(morphedMap, labels)
+    assert(isSymmetric == res.isSymmetric)
+    res
+    */
   }
 
   sealed abstract class Lit[A]
@@ -771,12 +774,13 @@ extends GraphLike[GT.ULGT,P,DiGraph](_edges, ((x: P#V) => ())) {
   def reflexiveTransitiveClosure: DiGraph[P] = reflexiveTransitiveClosure((_, _) => (), ())
 
   /** Compute a minimal coloring of the graph.
+   *  @param cutOff the cutOff tells the solver to stop if the solution is at least as good as that value.
    *  The graph needs to be undirected/symmetric and anti-reflexive.
    *  Warning: this method can very very expensive ...
    *  TODO this encoding is bad, there are a lot of symmetry (permuation of the colors). So the solver blows-up (see pigeon hole problem)
    *  TODO a way to fix this to force that the ordering on the color respects the vertices index. 
    */
-  def minimalColoring: Map[V, Int] = {
+  def minimalColoring(cutOff: Int): Map[V, Int] = {
     assert(vertices forall (v => !contains(v,v)))//anti-reflexive
     assert(edges forall { case (a,_,b) => contains(b, a) })//symmetric
     Logger("graph", LogDebug, "minimalColoring for a graph of size " + vertices.size)
@@ -835,8 +839,9 @@ extends GraphLike[GT.ULGT,P,DiGraph](_edges, ((x: P#V) => ())) {
     var isSatisfiable = false
     val startTime = java.lang.System.currentTimeMillis
     var model: Array[Int] = null
+    var opt = cutOff + 1
     try {
-      while (solver.admitABetterSolution()) {
+      while (opt > cutOff && solver.admitABetterSolution()) {
         if (!isSatisfiable) {
           if (solver.nonOptimalMeansSatisfiable()) {
             if (solver.hasNoObjectiveFunction()) {
@@ -847,7 +852,7 @@ extends GraphLike[GT.ULGT,P,DiGraph](_edges, ((x: P#V) => ())) {
           isSatisfiable = true
         }
         model = solver.model()
-        val opt = solver.getObjectiveValue()
+        opt = solver.getObjectiveValue().intValue
         Logger("graph", LogDebug, "MAXSAT problem has a solution of " + opt)
         Logger("graph", LogDebug, "MAXSAT problem, optimizing further")
         solver.discardCurrentSolution();
@@ -863,7 +868,7 @@ extends GraphLike[GT.ULGT,P,DiGraph](_edges, ((x: P#V) => ())) {
       }
     }
     val stopTime = java.lang.System.currentTimeMillis
-    Logger("graph", LogDebug, "MAXSAT problem optimum found in " + ((startTime - stopTime) / 1000))
+    Logger("graph", LogDebug, "MAXSAT problem optimum found in " + ((stopTime - startTime) / 1000))
     //get the solution from the model
     val assignPart = model.filter(l => l > 0 && l <= assignMax )
     val varToAssign: Map[Int,(V,Int)] = assignToVar.map{ case(a,b) => (b,a) }.toMap
@@ -872,20 +877,16 @@ extends GraphLike[GT.ULGT,P,DiGraph](_edges, ((x: P#V) => ())) {
     assert(assignMap.size == vertices.size)
     assignMap
   }
+  def minimalColoring: Map[V, Int] = minimalColoring(-1)
 
-  /** Compute a small coloring of the graph using heuristics.
-   *  The graph needs to be undirected/symmetric and anti-reflexive.
-   *  Optional arguments:
-   *  - affinity: given two nodes returns a guess on whether they should use the same color (higher = better)
-   *  - largeClique: a large clique in the graph (used to seed the coloring)
-   *  returns the groups of nodes that have the same color
-   *  TODO in parallel for large graphs (10k nodes)
-   */
-  def smallColoring( affinity: (V, V) => Int = (_,_) => 0,
-                       largeClique: Set[V] = Set()
-                     ): Seq[Set[V]] = {
-    assert(vertices forall (v => !contains(v,v)))//anti-reflexive
-    assert(edges forall { case (a,_,b) => contains(b, a) })//symmetric
+  protected def smallColoring1(
+        affinity: (V, V) => Int = (_,_) => 0,
+        varToColor: scala.collection.mutable.HashMap[V, Int],
+        colorToVar: scala.collection.mutable.HashMap[Int, List[V]]
+      ): Seq[Set[V]] = {
+
+    assert(isAntiReflexive, "graph not anti-reflexive")
+    assert(isSymmetric, "graph not symmetric: " + edges.filter{ case (a,_,b) => !contains(b, a) })
     Logger("graph", LogDebug, "minimalColoring for a graph of size " + vertices.size)
 
     //TODO in large sparse graphs, this is the bottleneck
@@ -901,20 +902,11 @@ extends GraphLike[GT.ULGT,P,DiGraph](_edges, ((x: P#V) => ())) {
       else 0
     }
 
-    //greedy coloring:
-    val varToColor = scala.collection.mutable.HashMap[V, Int]()
-    val colorToVar = scala.collection.mutable.HashMap[Int, List[V]]()
-    var newColor = 0
-    
-    //seeding the coloring
-    for (v <- largeClique) {
-      varToColor += (v -> newColor)
-      colorToVar += (newColor -> (v :: colorToVar.getOrElse(newColor, Nil)))
-      newColor += 1
-    }
-    
+    var newColor = if (colorToVar.isEmpty) 0 else colorToVar.keysIterator.max
+
     //now coloring the rest
-    for (v <- (vertices -- largeClique)) {
+    val toColor = vertices -- varToColor.keysIterator
+    for (v <- toColor) {
       val conflicting: Set[Int] = apply(v).flatMap(varToColor get _)
       val available = (0 until newColor).filterNot( conflicting contains _ )
       if (available.isEmpty) {
@@ -942,6 +934,53 @@ extends GraphLike[GT.ULGT,P,DiGraph](_edges, ((x: P#V) => ())) {
     Logger("graph", LogDebug, "small coloring has size " + groups.size)
     assert(vertices forall (v => groups exists (_ contains v)))
     groups
+  }
+
+  def smallColoringFromSeed( affinity: (V, V) => Int = (_,_) => 0,
+                     partialColoring: Seq[Set[V]]) : Seq[Set[V]] = {
+    //check that the partial coloring is valid:
+    //-each node appears only once
+    assert(partialColoring.flatten.toSet.size == (0 /: partialColoring)(_ + _.size), "smallColoring: some node has two colors -> " + partialColoring)
+    //-no group with and edge
+    assert(partialColoring.forall(same => same.forall(x => same.forall(y => !apply(x).contains(y)))), "smallColoring: partialColoring has conflicts.")
+
+    val varToColor = scala.collection.mutable.HashMap[V, Int]()
+    val colorToVar = scala.collection.mutable.HashMap[Int, List[V]]()
+    var newColor = 0
+    
+    //seeding the coloring
+    for (same <- partialColoring) {
+      for (v <- same) varToColor += (v -> newColor)
+      colorToVar += (newColor -> same.toList)
+      newColor += 1
+    }
+    
+    smallColoring1(affinity, varToColor, colorToVar)
+  }
+
+  /** Compute a small coloring of the graph using heuristics.
+   *  The graph needs to be undirected/symmetric and anti-reflexive.
+   *  Optional arguments:
+   *  - affinity: given two nodes returns a guess on whether they should use the same color (higher = better)
+   *  - largeClique: a large clique in the graph (used to seed the coloring)
+   *  returns the groups of nodes that have the same color
+   *  TODO in parallel for large graphs (10k nodes)
+   */
+  def smallColoring( affinity: (V, V) => Int = (_,_) => 0,
+                     largeClique: Set[V] = Set()
+                     ): Seq[Set[V]] = {
+    val varToColor = scala.collection.mutable.HashMap[V, Int]()
+    val colorToVar = scala.collection.mutable.HashMap[Int, List[V]]()
+    var newColor = 0
+    
+    //seeding the coloring
+    for (v <- largeClique) {
+      varToColor += (v -> newColor)
+      colorToVar += (newColor -> (v :: colorToVar.getOrElse(newColor, Nil)))
+      newColor += 1
+    }
+    
+    smallColoring1(affinity, varToColor, colorToVar)
   }
 
 }

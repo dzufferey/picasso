@@ -88,8 +88,10 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     Logger("integer.Program", LogInfo, "pruning Assume.")
     val p7 = p6.pruneAssumes
     Logger("integer.Program", LogDebug, writer => p7.printForQARMC(writer) )
-    Logger("integer.Program", LogDebug, writer => p7.reflow.printForQARMC(writer) ) //TODO
-    p7
+    Logger("integer.Program", LogInfo, "reorganizing variables.")
+    val p8 = p7.reflow
+    Logger("integer.Program", LogDebug, writer => p8.printForQARMC(writer) )
+    p8
   }
 
   /** not only propagate 0, but all the constants (especially 1) */
@@ -245,9 +247,6 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
 
     val allNodes = variables.toSeq.flatMap(v => pcs.map( node(_, v)))
 
-    //var at the same loc are conlficting
-    val samePC = for (pc <- pcs; v1 <- variables; v2 <- variables if v1 != v2) yield (node(pc,v1),node(pc,v2))
-    val conflicts = DiGraph[GT.ULGT{type V = (String,Variable)}](samePC).addVertices(allNodes)
 
     //affinity: look at the flow
     //if there is an edge between the two vars: good
@@ -280,17 +279,58 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
          }
        }
     }
+    Logger("integer.Program", LogDebug, "reflow graph: " + flow.toGraphviz("flow"))
+    Logger("integer.Program", LogDebug, "reflow seed: " + scc.mkString(", "))
 
+    //to avoid increasing the number of variables, we should do it as a graph coloring.
+    //var at the same loc are conlficting
+    val samePC = for (pc <- pcs; v1 <- variables; v2 <- variables if v1 != v2) yield (node(pc,v1),node(pc,v2))
+    val conflicts = DiGraph[GT.ULGT{type V = (String,Variable)}](samePC).addVertices(allNodes)
+    //merge the scc into single nodes
+    val sccCollapse = scc.flatMap(set => for (s <- set) yield (s -> set.head)).toMap
+    //val sccExpand = scc.map(set => (set.head -> set)).toMap
+    val reducedConflicts = conflicts.morph(sccCollapse)
+
+    val minClr = reducedConflicts.minimalColoring(variables.size)
+    
     //build the substitution
-    val finalSCC = scc.zipWithIndex.map{ case (scc, i) => (scc, Variable("_SCC_" + i) ) }
     val pcToSubst: Map[String, Map[Variable, Variable]] = pcs.map( pc => {
-      (pc, finalSCC.flatMap{ case (scc, v) => scc.find(_._1 == pc).map(_._2 -> v) }.toMap)
+      pc -> variables.map( v => (v, Variable("X_" + minClr(sccCollapse.getOrElse((pc, v),(pc, v)))) ) ).toMap
     }).toMap
 
     //for each transition apply the pre and post alpha
     val trs2 = trs.map( t => t.alphaPre(pcToSubst(t.sourcePC)).alphaPost(pcToSubst(t.targetPC)) )
     val p2 = new Program(initPC, trs2)
-    p2//.reduceNumberOfVariables //TODO why deadlock ?
+    assert(p2.variables.size == variables.size)
+    p2
+
+    /*
+    //if in the same SCC then high affinity, if same name them medium, otherwise low.
+    val affinityMap = scc.flatMap(set => for (s <- set) yield (s -> set)).toMap
+    def affinity(v1: (String,Variable), v2: (String,Variable)): Int = {
+      val v1Set = sccExpand.getOrElse(v1, Set(v1))
+      val v2Set = sccExpand.getOrElse(v2, Set(v2))
+      val a = if (v1Set.exists(v1 => affinityMap.get(v1).map(set => !(set intersect v2Set).isEmpty).getOrElse(false))) 4 else 0
+      val b = (v1Set.map(_._2) intersect v2Set.map(_._2)).size
+      a + b
+    }
+    //println("XXX: " + conflicts.toGraphviz("conflicts"))
+    //println("YYY: " + reducedConflicts.toGraphviz("reducedConflicts"))
+
+    val coloring = reducedConflicts.smallColoring(affinity)
+    assert(coloring.size <= variables.size, "reflow increases the number of vars: " + coloring.size + " vs " + variables.size )
+    val colorMap = coloring.iterator.zipWithIndex.flatMap{ case (nodes, i) => for (n <- nodes) yield (n, Variable("SCC_"+i)) }.toMap
+
+    //build the substitution
+    val pcToSubst: Map[String, Map[Variable, Variable]] = pcs.map( pc => {
+      pc -> variables.map( v => (v, colorMap( sccCollapse.getOrElse((pc, v),(pc, v)) ) ) ).toMap
+    }).toMap
+
+    //for each transition apply the pre and post alpha
+    val trs2 = trs.map( t => t.alphaPre(pcToSubst(t.sourcePC)).alphaPost(pcToSubst(t.targetPC)) )
+    val p2 = new Program(initPC, trs2)
+    p2.reduceNumberOfVariables
+    */
   }
 
   //take a group of variables and return the transitions modified s.t. only one variable is used for the group

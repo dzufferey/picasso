@@ -66,6 +66,8 @@ class Logger {
   def apply(relatedTo: String, lvl: Level): Boolean =
     lvl.priority >= minPriority && !disallowed(relatedTo)
 
+  //The evaluation of the content should *NOT* print. It can cause deadlocks.
+
   /** Log a message to the console.
    * @param relatedTo The package/file/class from where this message comes from.
    * @param lvl The priority of the message.
