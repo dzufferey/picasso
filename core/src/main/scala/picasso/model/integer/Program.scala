@@ -238,6 +238,13 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
   }
 
   protected def reflow: Program = {
+
+    //give up if the graph is too large.
+    if (variables.size * pcs.size >= 1000) {
+      Logger("integer.Program", LogWarning, "reflow: expected graph is too large, giving up.")
+      return this
+    }
+
     //what we want to improve: constant and variable swapping.
 
     def node(pc: String, variable: Variable) = (pc,variable)

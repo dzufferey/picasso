@@ -781,8 +781,7 @@ extends GraphLike[GT.ULGT,P,DiGraph](_edges, ((x: P#V) => ())) {
    *  TODO a way to fix this to force that the ordering on the color respects the vertices index. 
    */
   def minimalColoring(cutOff: Int): Map[V, Int] = {
-    assert(vertices forall (v => !contains(v,v)))//anti-reflexive
-    assert(edges forall { case (a,_,b) => contains(b, a) })//symmetric
+    assert(isAntiReflexive && isSymmetric)
     Logger("graph", LogDebug, "minimalColoring for a graph of size " + vertices.size)
     //  create a set of colors (as many as there are vertices)
     //  create constraints: conflict + node has exactly one color
