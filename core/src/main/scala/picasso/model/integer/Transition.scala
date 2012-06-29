@@ -169,9 +169,23 @@ class Transition(val sourcePC: String,
    */
   def mergeVariables(group: Set[Variable], newVar: Variable): Transition = {
     //need to look which var is assigned to 0:
-    //val anz = assignedToNonZero().filter(group contains _)
-    //assert(anz.size <= 1)
-    //TODO there should be some more sanity checks ? / make sanity heck faster
+    //val anz = assignedToNonZero(allVariables).filter(group contains _)
+    //assert(anz.size <= 1, "mergeVariables: " + group + " -> " + this) TODO this is not true for the init transitions
+    //TODO there should be some more sanity checks ? / make sanity check faster
+
+    //TODO may return wrong results when x_1 := x_4, x_4 := x_1 - 1, x_10 := x_10 (merge x_4,x_10)
+    //works when x_1 := x_1, x_4 := x_4 - 1, x_10 := x_10 (merge x_4,x_10)
+
+    /*
+    assert( {
+        if ((allVariables intersect group).size > 1) {
+          updates.forall(s =>
+            if (Statement.getReadVariables(s).exists(group)) Statement.getUpdatedVars(s).exists(group)
+            else true)
+        } else true},
+      "mergeVariables: " + group + " -> " + this
+    )
+    */
 
     //println("XXX tr: " + this)
     //println("XXX group: " + group)

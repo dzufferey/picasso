@@ -886,7 +886,7 @@ extends GraphLike[GT.ULGT,P,DiGraph](_edges, ((x: P#V) => ())) {
 
     assert(isAntiReflexive, "graph not anti-reflexive")
     assert(isSymmetric, "graph not symmetric: " + edges.filter{ case (a,_,b) => !contains(b, a) })
-    Logger("graph", LogDebug, "minimalColoring for a graph of size " + vertices.size)
+    Logger("graph", LogDebug, "small coloring for a graph of size " + vertices.size)// + "\n" + this.toString)
 
     //TODO in large sparse graphs, this is the bottleneck
     val averageAffinity = {
@@ -901,7 +901,7 @@ extends GraphLike[GT.ULGT,P,DiGraph](_edges, ((x: P#V) => ())) {
       else 0
     }
 
-    var newColor = if (colorToVar.isEmpty) 0 else colorToVar.keysIterator.max
+    var newColor = if (colorToVar.isEmpty) 0 else (colorToVar.keysIterator.max + 1)
 
     //now coloring the rest
     val toColor = vertices -- varToColor.keysIterator
@@ -931,7 +931,18 @@ extends GraphLike[GT.ULGT,P,DiGraph](_edges, ((x: P#V) => ())) {
     //return the coloring
     val groups = colorToVar.values.map(_.toSet).toSeq
     Logger("graph", LogDebug, "small coloring has size " + groups.size)
+    //Logger("graph", LogDebug, "small coloring is " + groups)
     assert(vertices forall (v => groups exists (_ contains v)))
+    assert(groups.forall(g => {
+        //println("group: " + g.mkString)
+        g.forall(x => {
+            //println("x = " + x + ", this(x) = " + this(x))
+            g.forall(y => {
+                //println("y = " + y)
+                !contains(x,y)
+            })
+        })
+    }), "invalid coloring")
     groups
   }
 

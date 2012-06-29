@@ -282,17 +282,19 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
 
     val stmts1 = for ( (node, lst) <- backwardUnFolding ) yield {
        val (concrete, abstr) = lst.partition(_.depth == 0)
-       val lhs = abstr.map(getCardinality(map2, _)).foldLeft(Constant(concrete.size): Expression)(Plus(_, _))
        val concreteUpd = concrete.map( getCardinality(map2, _) match {
          case v @ Variable(_) => Affect(v, Constant(1))
          case Constant(1) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        })
-       val abstrUpd = getCardinality(map1, node) match {
-         case v @ Variable(_) => Relation(lhs, v)
-         case Constant(1) => assert(lhs == Constant(1)); Skip
-         case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
-       }
+       val abstrUpd = if (!abstr.isEmpty) {
+         val lhs = abstr.map(getCardinality(map2, _)).foldLeft(Constant(concrete.size): Expression)(Plus(_, _))
+         getCardinality(map1, node) match {
+           case v @ Variable(_) => Relation(lhs, v)
+           //case Constant(1) => assert(lhs == Constant(1)); Skip
+           case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+         }
+       } else Skip
        concreteUpd :+ abstrUpd
     }
     val stmts2 = for ( node <- backwardUnFolding.keys ) yield {

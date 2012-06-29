@@ -4,15 +4,6 @@ import scala.collection.GenSeq
 import picasso.graph._
 import picasso.utils._
 
-  //what is an ARMC/T2/integer program:
-  // program location
-  // variables
-  // transition (var updates for T2, set of constraints for ARMC)
-  // a start location
-  // cutpoints (for ARMC)
-  //the simplest thing might be to have somthing between T2 and ARMC:
-  // get updates like T2, but with an all at the same time semantics like ARMC.
-
 /** Integer Program.
  *  Integer program are use during the termination proof of DBP.
  *  Right now their purpose is just these termination check (not safety).
@@ -94,17 +85,16 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     p8
   }
 
-  /** not only propagate 0, but all the constants (especially 1) */
-  def propagateCst = {
+  /** Returns a map of which variable has a cst value at some location
+   *  Type of the abstract domain: Map[Variable, Option[Int]]
+   *  None means it is not cst
+   *  Some(i) means it has value i
+   *  not in the map means we don't know
+   */
+  def constantValueMap: Map[String,Map[Variable,Option[Int]]] = {
 
-    //type of the abstract domain: Map[Variable, Option[Int]]
-    //None means it is not cst
-    //Some(i) means it has value i
-    //not in the map means we don't know
-
-    val allVars = variables
     def default(s: String) = {
-      if (s == initPC) Map[Variable,Option[Int]]( allVars.toSeq.map( _ -> None) :_* )
+      if (s == initPC) Map[Variable,Option[Int]]( variables.toSeq.map( _ -> None) :_* )
       else Map[Variable,Option[Int]]()
     }
 
@@ -144,8 +134,18 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
       b forall { case (k,v) => a.contains(k) && (a(k).isEmpty || a(k) == v) }
     }
 
-    val map = cfa.aiFixpoint(transfer, join, cover, default)
+    cfa.aiFixpoint(transfer, join, cover, default)
+  }
+
+  /** not only propagate 0, but all the constants (especially 1) */
+  def propagateCst = {
+
+    val map = constantValueMap
     Logger("integer.Program", LogDebug, "propagateCst: " + map)
+
+    //check that we are at least as precise as nonZeroVariable
+    //assert( nonZeroVariable.forall{ case (loc, nz) => (variables -- nz).forall(v =>  map(loc)(v) == Some(0))},
+    //        "propagateCst not precise enough" )
 
 
     val trs2 = trs.par.map(t => {
@@ -159,6 +159,11 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
   def reduceNumberOfVariables = {
     //if two variables are not live at the same moment, we can merge them!
     val groups = computeVariableMergeApprox
+    //validate the groups: check the at most one of them is NZ (except for initPC)
+    assert(groups.forall(g => nonZeroVariableButInit.values.forall(nz => (g intersect nz).size <= 1)),
+           "Groups returned by computeVariableMergeApprox are not valid:\n" +
+           groups.mkString("\n") + "\n" +
+           variableConflictGraph.toGraphviz("conflicts"))
     val trs2 = (trs /: groups)( (trs, grp) => mergeVariables(grp, trs) )
     val p2 = new Program(initPC, trs2)
     Logger("integer.Program", LogInfo, "reduceNumberOfVariables: #variables before = " + variables.size + ", after = " + p2.variables.size)
@@ -199,10 +204,20 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
                     default
     )
     Logger("integer.Program", LogDebug, "nonZeroVariable: " + map)
+
+    //check that it is not more precise than propagateCst
+    //assert({
+    //  val cst = constantValueMap
+    //  map.forall{ case (loc, nz) => (variables -- nz).forall(v =>  cst(loc)(v) == Some(0))}
+    //}, "propagateCst more precise than constantValueMap" )
+
     map
   }
 
   protected lazy val nonZeroVariableButInit = nonZeroVariable - initPC
+
+  //underapprox
+  protected lazy val zeroVariables = nonZeroVariable.map{ case (pc, nz) => (pc, variables -- nz) }
 
   protected def variableConflictGraph: DiGraph[GT.ULGT{type V = Variable}] = {
     val nonZeroMap = nonZeroVariableButInit
@@ -240,7 +255,7 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
   protected def reflow: Program = {
 
     //give up if the graph is too large.
-    if (variables.size * pcs.size >= 1000) {
+    if (variables.size * pcs.size >= 100) {
       Logger("integer.Program", LogWarning, "reflow: expected graph is too large, giving up.")
       return this
     }
@@ -308,8 +323,12 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     //for each transition apply the pre and post alpha
     val trs2 = trs.map( t => t.alphaPre(pcToSubst(t.sourcePC)).alphaPost(pcToSubst(t.targetPC)) )
     val p2 = new Program(initPC, trs2)
-    assert(p2.variables.size == variables.size)
-    p2
+    if (p2.variables.size <= variables.size) {
+      p2
+    } else {
+      Logger("integer.Program", LogWarning, "reflow: increased #variables ("+p2.variables.size+" vs "+variables.size+"), using the old program.")
+      this
+    }
 
     /*
     //if in the same SCC then high affinity, if same name them medium, otherwise low.
@@ -459,12 +478,6 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
   def pruneAssumes = {
     val trs2 = trs.par.map(_.pruneAssume)
     new Program(initPC, trs2)
-  }
-
-  /** Try to remove guards and assume. */
-  def pruneConditions = {
-    //TODO compute bounds a the program level and then simplify the assumptions and the also the guards
-    sys.error("TODO")
   }
 
   type Bounds = (Option[Int],Option[Int])
