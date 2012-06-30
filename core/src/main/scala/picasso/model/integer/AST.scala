@@ -10,9 +10,8 @@ case class Variable(name: String) extends Expression
 object Expression {
 
   def priority(e: Expression): Int = e match {
-    case Plus(_,_) => 11
-    case Constant(_) => 30
-    case Variable(_) => 30
+    case Plus(_,_) => 10
+    case Constant(_) | Variable(_) => 20
   }
 
   def needParenthesis(currentPriority: Int, e: Expression): String = {
@@ -256,9 +255,7 @@ case class Literal(b: Boolean) extends Condition
 object Condition {
 
   def priority(e: Condition): Int = e match {
-    case Eq(_,_) => 30
-    case Lt(_,_) => 30
-    case Leq(_,_) => 30
+    case Eq(_,_) | Lt(_,_) | Leq(_,_) => 30
     case And(_,_) => 11
     case Or(_,_) => 10
     case Not(_) => 20

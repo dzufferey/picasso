@@ -322,7 +322,7 @@ abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expr
       }
     }
 
-    private def makeAliasings(nodes: Seq[PointsToNode]): Seq[Aliasing] = {
+    private def makeAliasings(nodes: Seq[PointsToNode]): Iterable[Aliasing] = {
       //first get all the PCs and do eager merging on them
       var (pcs, rest) = nodes partition { case PtsPCNode(_) => true; case _ => false }
       var pcSet = pcs.groupBy( x => x ).map{ case (k, v) => (k.uid, v.map(_.uid)) }

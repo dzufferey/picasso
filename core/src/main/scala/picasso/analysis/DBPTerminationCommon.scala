@@ -334,12 +334,10 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
     }
     // what is needed for the unfolding
     val lowerBounds = for ( (node, lst) <- backwardUnFolding ) yield {
-       var rhs = lst.map(getCardinality(map2, _))
-       var constants = rhs.map{ case Constant(c) => c; case _ => 0 }
-       val sum = ( 0 /: constants)(_ + _)
+       val concrete = lst.filter(_.depth == 0)
        getCardinality(map1, node) match {
-         case v @ Variable(_) => Leq(Constant(sum), v)
-         case Constant(c) => assert(c == sum); Literal(true)
+         case v @ Variable(_) => Leq(Constant(concrete.size), v)
+         case Constant(c) => assert(c == concrete.size); Literal(true)
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        }
     }

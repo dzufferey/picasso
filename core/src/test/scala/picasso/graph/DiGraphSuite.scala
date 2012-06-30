@@ -369,5 +369,18 @@ class DiGraphSuite extends FunSuite {
     assert(dg3.elementaryCycles.size == 7, dg3.elementaryCycles)
   }
 
+  test("enumerateSomeCycles"){
+    val emptyDG = DiGraph.empty[UIGT]
+    val dg0 = emptyDG ++ (N(0) --> 1) ++ (N(1) --> 2) ++ (N(2) --> 0) ++
+                         (N(0) --> 2) ++ (N(2) --> 1) ++ (N(1) --> 0) ++
+                         (N(1) --> 3) ++ (N(3) --> 2)
+    val cycles = dg0.enumerateSomeCycles
+    while(cycles.hasNext) {
+      val c = cycles.next
+      //println(c)
+      assert(dg0.isTraceValid(c))
+    }
+  }
+
 }
 

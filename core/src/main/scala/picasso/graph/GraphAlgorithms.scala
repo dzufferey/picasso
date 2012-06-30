@@ -294,4 +294,185 @@ trait GraphAlgorithms[PB <: GT, P <: PB, G[P1 <: PB] <: GraphLike[PB, P1, G]] {
     (acc flatMap mkRevTrace) map (_.reverse)
   }
 
+  //TODO return type scala.collection.parallel.Splitter[Trace[V,EL]]
+  //TODO it does not do all the cycles
+  def enumerateSomeCycles: Iterator[Trace[V,EL]] = {
+
+    //generate the skeleton for the cycles (i.e. forget about the labels on the edges)
+    val simpleGraph = DiGraph[GT.ULGT{type V = P#V}](edges.view.map{case (a,_,b) => (a,b)})
+    //each cycle is identified by an integer.
+    //later we can quickly identify the rotated cycle by looking at the id.
+    val cycles = simpleGraph.elementaryCycles.map(_.states).zipWithIndex
+    val cyclesByLoc = vertices.toSeq.view.map( v => {
+      val relevant = cycles.view.filter(_._1 contains v)
+      val startAtV = relevant.map{ case (c,idx) =>
+        if (c.head == v) (c, idx)
+        else {
+          val prefix = c.takeWhile(_ != v)
+          val suffix = c.dropWhile(_ != v)
+          (suffix ++ prefix.tail :+ v, idx)
+        }
+      }
+      val shortToLong = startAtV.sortWith((c1, c2) => c1._1.size < c2._1.size)
+      (v, shortToLong)
+    }).toMap
+    val idToCycle = cycles.view.map{case (a,b) => (b,a)}.toMap
+
+    def rebuildPath(path: Seq[V]): Iterable[Trace[V,EL]] = {
+      val edges = path.view.sliding(2).map(p => edgesBetween(p(0),p(1)).map(c => (p(0),c,p(1)) ) )
+      Misc.cartesianProduct(edges.toIterable).map(lst => new Trace(lst.head._1, lst.map{case (_,a,b) => (a,b) }.toList))
+    }
+
+    //an iterator that build longer and longer paths ...
+    def skeletons(bound: Int): Iterator[Seq[V]] = new Iterator[Seq[V]] {
+
+      private val seen = scala.collection.mutable.HashSet[BitSet]()
+      //first we can explore the elementary cycles of give length
+      //then we can try to compose cycles into longer ones
+
+      //the cycles that can be used for the trace skeleton
+      private val seeds = cycles.filter(_._1.size <= bound + 1) //+1 because the cycles are paths that start and end with same node
+
+      private var nextOne: Option[Seq[V]] = None
+
+      //the search tree: element at the top is the list of cycles and the length
+      private val stack = scala.collection.mutable.Stack[(List[Seq[V]],BitSet,Int)]((Nil, BitSet.empty, 0))
+      //the nodes that needs to be explored in the current cycle.
+      private val choices = scala.collection.mutable.Stack[(BitSet, List[V])]((BitSet.empty, Nil))
+      //the possible cycles to continue the search
+      private val subchoices = scala.collection.mutable.Stack[Seq[(List[V],Int)]](seeds)
+
+      private def tryChoice(sub: Boolean): Option[List[Seq[V]]] = {
+        //println("tryChoice " + sub)
+        if (sub) {
+          if (subchoices.isEmpty)
+            None
+          else {
+            val (cs, acc, lgth) = stack.top
+            val candidates = subchoices.pop.dropWhile(c => acc(c._2) || (lgth + c._1.length - 1) > bound)
+            //println("subchoices.candidates = " + candidates.toList)
+            if (candidates.isEmpty) {
+              tryChoice(false)
+            } else {
+              subchoices.push(candidates.tail)
+              val (c,idx) = candidates.head
+              val lgth2 = lgth + c.size - 1
+              val acc2 = acc + idx
+              if (lgth2 == bound && !seen(acc2)) {
+                //we have a winner
+                seen += acc2
+                Some((c :: cs).reverse)
+              } else if (lgth2 < bound){
+                //continue the exploration
+                stack.push((c :: cs, acc2, lgth2))
+                choices.push((BitSet.empty, c))
+                tryChoice(false)
+              } else {
+                tryChoice(true)
+              }
+            }
+          }
+        } else {
+          if (choices.isEmpty)
+            None
+          else {
+            val (explored, left) = choices.pop
+            left match {
+              case x::xs =>
+                val fromX = cyclesByLoc.getOrElse(x, Seq()).filter(c => !explored(c._2))
+                val explored2 = (explored /: fromX)(_ + _._2)
+                choices.push((explored2, xs))
+                subchoices.push(fromX)
+                tryChoice(true)
+              case Nil =>
+                //backtrack
+                stack.pop
+                tryChoice(false)
+            }
+          }
+        }
+      }
+
+      private def flattenCycles(elemCycles: List[Seq[V]]): Seq[V] = elemCycles match {
+        case x :: Nil => x
+        case x :: xs =>
+          val subCycle = flattenCycles(xs)
+          val startAt = x.indexOf(subCycle.head)
+          assert(startAt >= 0)
+          x.take(startAt) ++ subCycle ++ x.drop(startAt + 1)
+        case Nil => Logger.logAndThrow("graph", LogError, "flattenCycles: Nil")
+      }
+
+      private def findNext {
+        if (nextOne.isEmpty) {
+          nextOne = tryChoice(true).map( flattenCycles )
+        }
+      }
+
+      
+      def hasNext = {
+        findNext
+        nextOne.isDefined
+      }
+
+      def next = {
+        findNext
+        nextOne match {
+          case Some(n) =>
+            nextOne = None
+            n
+          case None =>
+            Logger.logAndThrow("graph", LogError, "empty iterator")
+        }
+      }
+    }
+
+    new Iterator[Trace[V,EL]]{
+
+
+      private var bound = 0
+      private var maxBound = (0 /: cycles)(_ + _._1.size)
+      private var currentBound: Iterator[Seq[V]] = Iterator.empty
+      private var currentReconstruction: Iterator[Trace[V,EL]] = Iterator.empty
+
+      private var nextOne: Option[Trace[V,EL]] = None
+
+      private def findNext {
+        if (nextOne.isEmpty) {
+          if (currentReconstruction.hasNext) {
+            nextOne = Some(currentReconstruction.next)
+          } else {
+            if (currentBound.hasNext) {
+              currentReconstruction = rebuildPath(currentBound.next).iterator
+              findNext
+            } else {
+              bound += 1
+              if (bound < maxBound) {
+                currentBound = skeletons(bound)
+                findNext 
+              }
+            }
+          }
+        }
+      }
+
+      def hasNext = {
+        findNext
+        nextOne.isDefined
+      }
+
+      def next: Trace[V,EL] = {
+        findNext
+        nextOne match {
+          case Some(n) =>
+            nextOne = None
+            n
+          case None =>
+            Logger.logAndThrow("graph", LogError, "empty iterator")
+        }
+      }
+
+    }
+  }
+
 }

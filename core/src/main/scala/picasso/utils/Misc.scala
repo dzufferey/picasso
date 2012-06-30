@@ -77,7 +77,7 @@ object Misc {
 
   //TODO test
   //Cartesian product from many dimensions, but with homogeneous type.
-  def cartesianProduct[A](domains: Seq[Seq[A]]): Seq[Seq[A]] = domains.headOption match {
+  def cartesianProduct[A](domains: Iterable[Iterable[A]]): Iterable[Seq[A]] = domains.headOption match {
     case Some(lst) => for (xs <- cartesianProduct(domains.tail); x <- lst) yield x +: xs
     case None => Seq(Nil)
   }

@@ -12,8 +12,9 @@ class Termination(fileName: String, content: String) extends AnalysisCommon("Ter
     val (code, file, err) = SysCmd(Array("mktemp"))
     if (code == 0) {
       try {
-        Logger("Termination", LogInfo, "ARMC program:\n" + prog.printForARMC)
-        IO.writeInFile(file, prog.printForARMC)
+        val armcProg = prog.printForARMC
+        Logger("Termination", LogInfo, "ARMC program:\n" + armcProg)
+        IO.writeInFile(file, armcProg)
         SysCmd.execRedirectToLogger(Array(Config.armcCmd, "live", file), None, "ARMC", LogNotice)
       } finally {
         SysCmd(Array("rm", file))

@@ -240,7 +240,7 @@ extends Traceable[P#V,P#EL] with GraphAlgorithms[PB, P, G] {
     val newEdges = edges.map{ case (a,b,c) => (morphNode(a), morphEdge(b), morphNode(c)) }
     companion(Labeled.listToMap(nodes, newEdges), labels)
     /*
-    //TODO cannot use: groupBy[K](f: ((A, B)) \u21d2 K): Map[K, Map[A, B]] 
+    //TODO cannot use: groupBy[K](f: ((A, B)) => K): Map[K, Map[A, B]] 
     val groupedMap = adjacencyMap groupBy (ves => morphNode(ves._1))
     val morphedMap = groupedMap map { 
       case (v1, edges) =>
