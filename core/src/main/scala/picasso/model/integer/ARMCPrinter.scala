@@ -41,7 +41,6 @@ object ARMCPrinter extends PrologLikePrinter {
     writer.newLine
   }
 
-  //TODO add v_prime >= 0
   protected def transPreds(vars: Seq[Variable], prog: Program)(implicit writer: BufferedWriter) {
     val vars2 = vars map primeVar
     writer.write("trans_preds(")
@@ -55,7 +54,7 @@ object ARMCPrinter extends PrologLikePrinter {
     writer.write(",  ")
     writer.newLine
     writer.write("  [")
-    val preds = prog.transitionPredicates
+    val preds = ProgramHeuristics.transitionPredicates(prog)
     val predsStr = preds.flatMap( varSet => {
       val sum1 = varSet.reduceLeft[Expression](Plus(_,_))
       val sum2 = varSet.map(primeVar).reduceLeft[Expression](Plus(_,_))

@@ -136,10 +136,14 @@ class Config {
   var useTree = false
   var armcCmd = "armc"
   var noCC = false
+  var moreTPreds = false
+  var cyclesBound = -1
   val termination1 = ("--termination", Arg.Unit(() => termination = true), "Compute the termination of the system.")
   val termination2 = ("--useTree", Arg.Unit(() => useTree = true), "Termination analysis using the KM tree (default is to use only the cover).")
   val termination3 = ("--armc", Arg.String(str => armcCmd = str), "The command to call ARMC.")
   val termination4 = ("--noCC", Arg.Unit(() => noCC = true), "Do not generate counters for concrete nodes.")
+  val termination5 = ("--moreTPreds", Arg.Unit(() => moreTPreds = true), "Generate (much) more transition predicates for ARMC.")
+  val termination6 = ("--cyclesBound", Arg.Int(i => cyclesBound = i), "bound for the number of cycles to consider when generating the transition predicates")
 
   val usage = "..."
 
@@ -147,7 +151,8 @@ class Config {
     verbose, quiet, hide,
     reportQuick, reportFull,
     tree1, tree2,
-    termination1, termination2, termination3, termination4
+    termination1, termination2, termination3,
+    termination4, termination5, termination6
   )
 
   def apply(args: Seq[String]) {

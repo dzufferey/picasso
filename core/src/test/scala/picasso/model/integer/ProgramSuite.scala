@@ -79,7 +79,7 @@ class ProgramSuite extends FunSuite {
 
     val p = new Program("1", List(t1,t2,t3))
 
-    val trs_pred = p.transitionPredicates
+    val trs_pred = ProgramHeuristics.transitionPredicates(p)
 
     println("Transition Predicates:")
     println(trs_pred.mkString("\n"))

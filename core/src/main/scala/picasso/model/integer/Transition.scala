@@ -525,82 +525,6 @@ object Transition {
     }
   }
   
-  //finding candidate ranking functions for a cycle:
-  //simple version of ranking fct: set of var (take the sum), the lower bounf is 0 (or any constant).
-  def transitionPredicates(cycle: Seq[Transition]): Iterable[Set[Variable]] = {
-    assert(!cycle.isEmpty && cycle.head.sourcePC == cycle.last.targetPC)
-    //take a subset of variables: look at the relation in which they apprears -> sum -> look at the constant term.
-    //step 1: partition the variables (~ cone of influence)
-    val edges = cycle.flatMap( tr => {
-      val transients = tr.transientVariables
-      val e1 = tr.updates.flatMap( st => {
-        val pre = Statement.getReadVariables(st) -- transients
-        val post = Statement.getUpdatedVars(st) -- transients
-        pre.flatMap(a => post.map(b => (a,b)))
-      })
-      val e2 = e1.map{ case (a,b) => (b,a) }
-      val e3 = tr.variables.map( v => (v,v) )
-      e1 ++ e2 ++ e3
-    })
-    val graph = DiGraph[GT.ULGT{type V = Variable}](edges)
-    val partition = graph.SCC(true)
-    //println("partitions: " + partition.mkString(", "))
-    //step 3: compute the delta for each element of the partition
-    def delta(part: Set[Variable]): Option[Int] = {
-      //the first part is to make sure that there are no transient variables
-      //then that no variable appears with a coeff which is not +1.
-      val varSeq = part.toSeq
-      ( (Some(0): Option[Int]) /: cycle)( (acc, tr) => {
-        (acc /: tr.updates)( (acc2, up) => acc2.flatMap(i => up match {
-          case Relation(n, o) =>
-            val varN = Expression.variables(n)
-            val varO = Expression.variables(o)
-            if (varN.subsetOf(part) && varO.subsetOf(part)) {
-              val (vn, cn) = Expression.decomposeVector(n, varSeq)
-              val (vo, co) = Expression.decomposeVector(o, varSeq)
-              if (vn.forall(coeff => coeff == 0 || coeff == 1) &&
-                  vo.forall(coeff => coeff == 0 || coeff == 1) ) {
-                Some(i + co - cn)
-              } else {
-                None
-              }
-            } else {
-              assert((varN intersect part).isEmpty && (varO intersect part).isEmpty)
-              Some(i)
-            }
-          case _ => Some(i)
-        }))
-      })
-    }
-    val known = partition.flatMap( p => delta(p).map(i => i -> p) )
-    val knownGrouped = known.groupBy(_._1).mapValues( lst => lst.map(_._2) )
-    val deltaToPart = scala.collection.mutable.HashMap[Int, List[Set[Variable]]]( knownGrouped.toSeq : _* )
-    //println("deltaToPart: " + deltaToPart.mkString(", "))
-    //step 4: build candidates (combination of elt of the partition s.t. the sum of deltas is < 0)
-    val seed = known.filter{ case (i,_) => i < 0 }
-    val candidates = scala.collection.mutable.HashSet[Set[Variable]](seed.map(_._2): _*)
-    def process(frontier: List[(Int, Set[Variable])]): Iterable[Set[Variable]] = frontier match {
-      case (i, x) :: xs =>
-        //println("confirmed: " + (i, x))
-        // compute the successors ...
-        val succ =  for ( (i2, lst) <- deltaToPart.iterator if i2 < -i;
-                          x2 <- lst )
-                    yield (i + i2, x ++ x2)
-        val newCandidates = for ( (j,y) <- succ if !candidates(y) ) yield {
-          //println("newCandidate: " + (j,y) )
-          candidates += y
-          val old: List[Set[Variable]] = deltaToPart.getOrElse(j, Nil)
-          deltaToPart += (j -> (y :: old) )
-          (j, y)
-        }
-        process(newCandidates ++: xs)
-      case Nil => candidates
-    }
-    val res = process(seed.toList)
-    Logger("integer.Transition", LogDebug, "transitionPredicates for:\n  " + cycle.mkString("\n  ") + "\n are\n" + res.mkString("\n"))
-    res
-
-  }
 }
 
 /** A place where to put the heuritics analysis that we use for simplification */
@@ -727,6 +651,77 @@ object TransitionHeuristics {
       case other => other
     }
     new Transition(t.sourcePC, t.targetPC, removeInCond(t.guard), t.updates map removeInStmt, t.comment)
+  }
+
+  def transitionPredicates(cycle: Seq[Transition]): Iterable[Set[Variable]] = {
+    assert(!cycle.isEmpty && cycle.head.sourcePC == cycle.last.targetPC)
+    //step 1: compact
+    val compactable = cycle.zipWithIndex.map{ case (t,i) => new Transition("tp_"+i,"tp_"+(i+1), t.guard, t.updates, t.comment) }
+    val compacted = Transition.compact(compactable)
+    //take a subset of variables: look at the relation in which they apprears -> sum -> look at the constant term.
+    //step 2: partition the variables (~ cone of influence)
+    val graph = ProgramHeuristics.flow(compacted).undirect
+    val maxPartition = graph.SCC(true)
+    val uf = new UnionFind[Variable]()
+    for ( (a,b,c) <- graph.edges if (b == ProgramHeuristics.TransferFlow) ) uf.union(a,c)
+    val transfers = uf.getEqClasses.map(_._2.toSet) //parts connected by transfers (refinement of maxPartition)
+    val partition = maxPartition.flatMap(p => {
+        val containedTransfer = transfers filter (_ subsetOf p)
+        val remaining = (p /: containedTransfer)(_ -- _)
+        for(trans <- Misc.subSeqences(containedTransfer);
+            rem <- remaining.subsets) yield trans.flatten.toSet ++ rem
+    })
+    //println("cycle: " + compacted.mkString(", "))
+    //println("partitions: " + partition.mkString(", "))
+    //step 3: compute the delta for each element of the partition
+    def deltaT(part: Set[Variable], t: Transition): Option[Int] = {
+      val relevant = t.updates.filter(s => Statement.getAllVariables(s) exists part)
+      val (lhs, rhs, cst) = ((MultiSet[Variable](), MultiSet[Variable](), 0) /: relevant)( (acc, s) => (acc,s) match {
+        case ((lhs, rhs, cst), Relation(_new, _old)) =>
+          val (vn, cn) = Expression.decompose(_new)
+          val (vo, co) = Expression.decompose(_old)
+          (lhs ++ vn, rhs ++ vo, cst - cn.i + co.i)
+        case _ => acc
+      })
+      //compare the lhs and the rhs to determine if we can handle that transition
+      if ((lhs --* rhs.multiplicities).isEmpty &&
+          (rhs --* lhs.multiplicities).isEmpty)
+        Some(cst)
+      else
+        None
+    }
+    def delta(part: Set[Variable]): Option[Int] = {
+      ((Some(0): Option[Int]) /: compacted)( (acc, t) => acc.flatMap(i => deltaT(part, t).map(_ + i)) )
+    }
+
+    val known = partition.flatMap( p => delta(p).map(i => i -> p) )
+    val moreTP = if (Config.moreTPreds) known.groupBy(_._1) else (known.groupBy(_._1) - 0)
+    val knownGrouped = moreTP.mapValues( lst => lst.map(_._2) )
+    val deltaToPart = scala.collection.mutable.HashMap[Int, List[Set[Variable]]]( knownGrouped.toSeq : _* )
+    //println("deltaToPart: " + deltaToPart.mkString(", "))
+    //step 4: build candidates (combination of elt of the partition s.t. the sum of deltas is < 0)
+    val seed = known.filter{ case (i,_) => i < 0 }
+    val candidates = scala.collection.mutable.HashSet[Set[Variable]](seed.map(_._2): _*)
+    def process(frontier: List[(Int, Set[Variable])]): Iterable[Set[Variable]] = frontier match {
+      case (i, x) :: xs =>
+        //println("confirmed: " + (i, x))
+        // compute the successors ...
+        val succ =  for ( (i2, lst) <- deltaToPart.iterator if i2 < -i;
+                          x2 <- lst )
+                    yield (i + i2, x ++ x2)
+        val newCandidates = for ( (j,y) <- succ if !candidates(y) ) yield {
+          //println("newCandidate: " + (j,y) )
+          candidates += y
+          val old: List[Set[Variable]] = deltaToPart.getOrElse(j, Nil)
+          deltaToPart += (j -> (y :: old) )
+          (j, y)
+        }
+        process(newCandidates ++: xs)
+      case Nil => candidates
+    }
+    val res = process(seed.toList)
+    Logger("integer.Transition", LogDebug, "transitionPredicates for:\n  " + cycle.mkString("\n  ") + "\n are\n" + res.mkString("\n"))
+    res
   }
 
 }

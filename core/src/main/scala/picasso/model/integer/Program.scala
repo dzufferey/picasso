@@ -178,7 +178,7 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     new Program(initPC, trs2)
   }
 
-  protected def cfa: EdgeLabeledDiGraph[GT.ELGT{type V = String; type EL = Transition}] = {
+  def cfa: EdgeLabeledDiGraph[GT.ELGT{type V = String; type EL = Transition}] = {
     val emp = EdgeLabeledDiGraph.empty[GT.ELGT{type V = String; type EL = Transition}]
     emp ++ (transitions.map(t => (t.sourcePC, t, t.targetPC)).seq)
   }
@@ -517,28 +517,10 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     map
   }
 
-  //TODO given a program: heuristically guess possible parts of the ranking function / transition predicates
-  //What is the best way to do this
-  //-> find the elementary cycles: for each cycle we should be able to find a simple candidate ranking fct
-  //-> combining elementary cycles ...
-  //what is a candidate ranking function ? -> a linear combination of terms + a lower bound
-  //simple version of ranking fct: set of var (take the sum), the lower bounf is 0 (or any constant).
-  def transitionPredicates: Iterable[Set[Variable]] = {
-    val cycles = cfa.elementaryCycles.map(_.labels)
-    val locToCycles = cycles.groupBy( c => c.head.sourcePC )
-    val allCycles = locToCycles.values.flatMap( _.toSet.subsets ).filter( s => !s.isEmpty )
-    //println("allCycles: " + allCycles.mkString("\n","\n",""))
-    val allTrsPreds = allCycles.map( ts => Transition.transitionPredicates(ts.toSeq.flatten) )
-    //val trsPreds = allTrsPreds.flatMap( candidates => if (candidates.isEmpty) None else Some(candidates.minBy(_.size))).toSet
-    //trsPreds
-    allTrsPreds.flatten.toSet
-  }
-
-
 }
 
 /** A place where to put the heuritics analysis that we use for simplification */
-object ProgramHeuritics {
+object ProgramHeuristics {
   
   import TransitionHeuristics._
 
@@ -592,20 +574,25 @@ object ProgramHeuritics {
   type FlowGraphGT = GT.ELGT{type V = Variable; type EL = FlowKind}
   type FlowGraph = EdgeLabeledDiGraph[FlowGraphGT]
 
-  def flow(p: Program): FlowGraph = {
-    var offsetEdges: GenSeq[(Variable, FlowKind, Variable)] = p.transitions.flatMap(t => {
+  def flow(trs: GenSeq[Transition]): FlowGraph = {
+    var offsetEdges: GenSeq[(Variable, FlowKind, Variable)] = trs.flatMap(t => {
       val (incr1, decr1) = constantOffset(t).view.partition{ case (k,v) => v > 0 }
       val incr = incr1.map(_._1)
       val decr = decr1.map(_._1)
       for (x <- decr; y <- incr) yield (x, ConstantFlow, y)
     })
-    var transferEdges: GenSeq[(Variable, FlowKind, Variable)] = p.transitions.flatMap( t => {
+    var transferEdges: GenSeq[(Variable, FlowKind, Variable)] = trs.flatMap( t => {
       for ( (x, vs) <- variableFlow(t); y <- vs) yield (y, TransferFlow, x)
     })
     val edges: Iterable[(Variable, FlowKind, Variable)] = (offsetEdges ++ transferEdges).seq
-    val edgesOnly = EdgeLabeledDiGraph[GT.ELGT{type V = Variable; type EL = FlowKind}](edges)
+    val vertices = trs.map(_.variables).flatten
+    EdgeLabeledDiGraph[GT.ELGT{type V = Variable; type EL = FlowKind}](edges).addVertices(vertices.seq)
+  }
+
+  def flow(p: Program): FlowGraph = {
+    val edgesOnly = flow(p.transitions)
     val graph = edgesOnly.addVertices(p.variables)
-    Logger("integer.ProgramHeuritics", LogInfo, graph.toGraphviz("flow"))
+    Logger("integer.ProgramHeuristics", LogInfo, graph.toGraphviz("flow"))
     graph
   }
   
@@ -623,33 +610,16 @@ object ProgramHeuritics {
     uf.getEqClasses.map(_._2)
   }
   
-  def counterMergingMore(p: Program): Iterable[Iterable[Variable]] = {
-    import math.Ordering._
-    val graph = flow(p)
-    val morphs = graph.morphisms[FlowGraphGT](graph, (_ : FlowGraphGT#V) => true, (_:graph.MorphInfo[FlowGraphGT]) => Nil)
-    sys.error("TODO")
-
-    /* example: folding loop from the DBConf
-    def loop(accFolded: Self, accFolding: Morphism): (Self, Morphism) = {
-      val iter = accFolded morphisms accFolded
-      val changes = iter find ( m => {
-        val used: Set[V] = (Set.empty[V] /: m)((acc, p) => acc + p._2)
-        val redundant = accFolded.vertices &~ used
-        !redundant.isEmpty
-      })
-      changes match {
-        case Some(m) =>
-          val redundant = (accFolded.vertices /: m.values)(_ - _)
-          val accFolded2 = accFolded -- redundant
-          val accFolding2: Morphism = accFolding.map[(V,V), Map[V,V]]{ case (a,b) => ( a, m.getOrElse(b,b) ) }
-          loop(accFolded2, accFolding2)
-        case None => (accFolded, accFolding)
-      }
-    }
-
-    loop(this, vertices.map(v => (v,v)).toMap[V,V])    
-    */
+  //given a program: heuristically guess possible parts of the ranking function / transition predicates
+  //what is a candidate ranking function ? -> a linear combination of terms + a lower bound
+  //simple version of ranking fct: set of var (take the sum), the lower bounf is 0 (or any constant).
+  def transitionPredicates(p: Program): Iterable[Set[Variable]] = {
+    val cyclesIterator = p.cfa.enumerateSomeCycles
+    val boundedIterator = if (Config.cyclesBound >= 0) cyclesIterator.take(Config.cyclesBound) else cyclesIterator
+    val candidates = boundedIterator.flatMap(c => TransitionHeuristics.transitionPredicates(c.labels))
+    candidates.toSet
   }
+
 
   //TODO "from many places to few" abstraction
 

@@ -75,10 +75,14 @@ object Misc {
     case None => Seq(lst -> lst)
   }
 
-  //TODO test
   //Cartesian product from many dimensions, but with homogeneous type.
   def cartesianProduct[A](domains: Iterable[Iterable[A]]): Iterable[Seq[A]] = domains.headOption match {
     case Some(lst) => for (xs <- cartesianProduct(domains.tail); x <- lst) yield x +: xs
+    case None => Seq(Nil)
+  }
+
+  def subSeqences[A](seq: Iterable[A]): Iterable[List[A]] = seq.headOption match {
+    case Some(x) => subSeqences(seq.tail).flatMap(xs => List(xs, x::xs))
     case None => Seq(Nil)
   }
 

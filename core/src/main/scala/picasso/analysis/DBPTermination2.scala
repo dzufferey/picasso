@@ -50,8 +50,8 @@ trait DBPTermination2[P <: DBCT] extends DBPTerminationCommon[P] {
     Logger("DBPTermination", LogNotice, "Extracting numerical abstraction from the cover.")
     val program1 = makeIntegerProgram(cover)
     Logger("DBPTermination", LogNotice, "Extraction done. Simplifying ... ")
-    val program2 = ProgramHeuritics.simplifyMore(program1)
-    //Logger("DBPTermination", LogNotice, "Merging candidates = " + ProgramHeuritics.counterMerging(program2)
+    val program2 = ProgramHeuristics.simplifyMore(program1)
+    //Logger("DBPTermination", LogNotice, "Merging candidates = " + ProgramHeuristics.counterMerging(program2)
     (cover, tree, program2)
   }
 }
