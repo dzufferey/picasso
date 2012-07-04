@@ -300,6 +300,8 @@ trait GraphAlgorithms[PB <: GT, P <: PB, G[P1 <: PB] <: GraphLike[PB, P1, G]] {
 
     //generate the skeleton for the cycles (i.e. forget about the labels on the edges)
     val simpleGraph = DiGraph[GT.ULGT{type V = P#V}](edges.view.map{case (a,_,b) => (a,b)})
+    Logger("graph", LogDebug, "enumerateSomeCycles, simpleGraph:\n" + simpleGraph.toGraphviz("Skeleton"))
+    Logger("graph", LogDebug, "enumerateSomeCycles, fullGraph:\n" + this.toGraphviz("Full"))
     //each cycle is identified by an integer.
     //later we can quickly identify the rotated cycle by looking at the id.
     val cycles = simpleGraph.elementaryCycles.map(_.states).zipWithIndex

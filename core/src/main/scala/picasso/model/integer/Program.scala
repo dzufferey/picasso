@@ -79,10 +79,13 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     Logger("integer.Program", LogInfo, "pruning Assume.")
     val p7 = p6.pruneAssumes
     Logger("integer.Program", LogDebug, writer => p7.printForQARMC(writer) )
-    Logger("integer.Program", LogInfo, "reorganizing variables.")
-    val p8 = p7.reflow
+    Logger("integer.Program", LogInfo, "removing duplicate transitions.")
+    val p8 = p7.duplicateTransitions
     Logger("integer.Program", LogDebug, writer => p8.printForQARMC(writer) )
-    p8
+    Logger("integer.Program", LogInfo, "reorganizing variables.")
+    val p9 = p8.reflow
+    Logger("integer.Program", LogDebug, writer => p8.printForQARMC(writer) )
+    p9
   }
 
   /** Returns a map of which variable has a cst value at some location
@@ -408,6 +411,8 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
       t.updatedVars -- ids
     }
     //
+    //generalized: not only exact match but also subsets (when not everything is merged)
+    //TODO refactor this methods!
     def lookForCandidates(trs: List[Transition],
                           candidates: List[(String, List[Variable])],
                           confirmed: List[(String, List[Variable], String)]
@@ -420,18 +425,31 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
           val ms1 = MultiSet(vars:_*)
           merged.exists{ case (vars2, _) => 
             val ms2 = MultiSet(vars2:_*)
-            val res = (ms1 -- ms2).isEmpty && (ms2 -- ms1).isEmpty //TODO: poor man's multiset equality
+            //val ms1InMs2 = (ms1 --* ms2.multiplicities).isEmpty
+            val ms2InMs1 = (ms2 --* ms1.multiplicities).isEmpty
+            val res = ms2InMs1 && ms2.size > 1 //ms2 is a non trivial subset of ms1
             //println("comparing: " + vars + " and " + vars2 + " -> " + res)
             //println("ms1: " + ms1 + ", ms2: " + ms2)
             //println("ms1 -- ms2: " + (ms1 -- ms2) + ", ms2 -- ms1: " + (ms2 -- ms1) )
             res
           }
         }
+        val maxConfirmed = confirmedCandidates.map{ case (src, vars) =>
+          val ms1 = MultiSet(vars:_*)
+          val vars2 = merged.flatMap{ case (sub,_) =>
+            val ms2 = MultiSet(sub:_*)
+            val ms2InMs1 = (ms2 --* ms1.multiplicities).isEmpty
+            if (ms2InMs1) Some(sub)
+            else None
+          }.maxBy(_.size)
+          assert(vars2.size > 0)
+          (src, vars2, t.targetPC)
+        }
         //println("dropping because changed: " + candidates2.filterNot{ case (_, vars) => vars forall (v => !changed(v)) })
         val candidates3 = candidates2.filter{ case (_, vars) => vars forall (v => !changed(v)) }
         val newCandidates = splitted.map{ case (_, vars) => (t.sourcePC, vars) }
         val candidates4 = newCandidates.toList ++ candidates3
-        val confirmed2 = confirmedCandidates.map{ case (src, vars) => (src, vars, t.targetPC) } ++ confirmed
+        val confirmed2 = maxConfirmed ++ confirmed
         lookForCandidates(ts, candidates4, confirmed2)
       case Nil =>
         //println("at the end, still candidates: " + candidates.mkString(", "))
@@ -467,7 +485,7 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
       val trs = path.labels
       val uselessSplits = lookForCandidates(trs, Nil, Nil)
       for ( (src, lst, trgt) <- uselessSplits ) {
-        Logger("integer.Program", LogInfo, "merging " + lst.mkString(", ") + " on the path from " + src + " to " + trgt )
+        Logger("integer.Program", LogInfo, "merging " + lst.mkString(", ") + " on the path (length "+path.length+") from " + src + " to " + trgt )
       }
       mergeConfirmed(trs, uselessSplits, Nil, Nil)
     })
@@ -478,6 +496,19 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
   def pruneAssumes = {
     val trs2 = trs.par.map(_.pruneAssume)
     new Program(initPC, trs2)
+  }
+
+  protected def duplicateTransitions: Program = {
+    val srcMap = trs.groupBy(_.sourcePC)
+    val pruned = srcMap.map{ case (_, ts) =>
+      (List[Transition]() /: ts.seq)( (acc, t) => {
+        if (acc exists (_ same t)) acc else t :: acc
+      })
+    }
+    val trs2 = pruned.seq.flatten.toSeq.par
+    val p2 = new Program(initPC, trs2)
+    Logger("integer.Program", LogInfo, "duplicateTransitions: #transitions before = " + transitions.size + ", after = " + p2.transitions.size)
+    p2
   }
 
   type Bounds = (Option[Int],Option[Int])

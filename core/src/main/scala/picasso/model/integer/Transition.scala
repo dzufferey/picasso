@@ -137,7 +137,7 @@ class Transition(val sourcePC: String,
     val transient = transientVariables
     val neededForChanging = (Set[Variable]() /: changing)(_ ++ Statement.getAllVariables(_))
     val toRemove = notChangingVars -- neededForGuard -- transient -- neededForChanging
-    val updates3 = updates2.filter{ case Affect(v1, v2) => v1 != v2 || !toRemove(v1) case _ => true }
+    val updates3 = updates2.filter{ case Affect(v1, v2) => v1 != v2 || !toRemove(v1) case Skip => false case _ => true }
     val t2 = new Transition(sourcePC, targetPC, guard2, updates3, comment)
     assert((t2.variables intersect toRemove).isEmpty)
     t2
@@ -433,9 +433,6 @@ class Transition(val sourcePC: String,
     new Transition(sourcePC, targetPC, guard, updates2, comment)
   }
   
-  //variablesBounds is accurate up to precision then goes to \infty
-  private final val precision = 10
-
   def variablesBounds(pre: Map[Variable,(Option[Int],Option[Int])]): Map[Variable,(Option[Int],Option[Int])] = {
 
     //the pre bound is needed: in the case of increasing variables we keep the lower bound, same for upper
@@ -472,6 +469,28 @@ class Transition(val sourcePC: String,
     val lowerBounds = Condition.getLowerBounds(guard) ++ getTransientLowerBounds
     val upperBounds = Condition.getUpperBounds(guard) ++ getTransientUpperBounds
     sequencedAllVariables.view.map( v => (v -> (lowerBounds.get(v), upperBounds.get(v))) ).toMap
+  }
+
+  //try structural equality
+  def same(that: Transition): Boolean = {
+    def sameGuard(c1: Condition, c2: Condition): Boolean = (c1, c2) match {
+      case (Eq(l1,r1), Eq(l2, r2)) => (l1 == l2 && r1 == r2) || (l1 == r2 && r1 == l2)
+      case (Lt(l1,r1), Lt(l2,r2)) => l1 == l2 && r1 == r2
+      case (Leq(l1,r1), Leq(l2,r2)) => l1 == l2 && r1 == r2
+      case (And(l1,r1), And(l2,r2))=> (sameGuard(l1,l2) && sameGuard(r1,r2)) || (sameGuard(l1,r2) && sameGuard(r1,l2))
+      case (Or(l1,r1), Or(l2,r2)) =>  (sameGuard(l1,l2) && sameGuard(r1,r2)) || (sameGuard(l1,r2) && sameGuard(r1,l2))
+      case (Not(c1), Not(c2)) => sameGuard(c1,c2)
+      case (Literal(b1), Literal(b2)) => b1 == b2
+      case _ => false
+    }
+    def sameUpdates(u1: Seq[Statement], u2: Seq[Statement]): Boolean = {
+      u1.forall(s1 => u2 exists (s2 => s1 == s2)) &&
+      u2.forall(s2 => u1 exists (s1 => s1 == s2))
+    }
+    sourcePC == that.sourcePC &&
+    targetPC == that.targetPC &&
+    sameGuard(guard, that.guard) &&
+    sameUpdates(updates, that.updates)
   }
 
 
