@@ -1,0 +1,151 @@
+//from Barners 93, A method from implementing lock-free shared data structures:
+//
+//  procedure Cooperate(stateptr: pointer to state);
+//     Load_Linked(stateptr), and determine which instruction should be executed next.
+//     while "the operation is not complete" do begin
+//        write_status := SUCCESS;
+//        if the next instruction reads or writes shared data then
+//           Use Load_Linked to read or Store_Conditional to write the pointer to the data.
+//           if the instruction was a write, and the Store_Conditional failed  then
+//              Load-Linked the pointer to the data.
+//              if the data does not match the values we were trying to write then
+//                  Write.status := FAILURE;
+//        nextptr := pointer to an updated version of state (based, if appropriate, on write_status)
+//        Store_Conditional( stateptr, nextptr);
+//        Load_Linked(stateptr), and determine which instruction should be executed next.
+//     end;
+//  end Cooperate.
+
+//How do we model that:
+// the shared memory are two nodes: the state and the data.
+// The state is either "empty" or "op".
+// The data is just a "data" node.
+// Each process come with an "op" to perform.
+// it first try to read the op, or it it is empty, put it's own op.
+// the it tries to execute the op it read
+// performing the op: read data, new data, CAS
+// if the op succeed and has already put its own op -> then ok
+// otherwise start again
+
+//first version: each client has has one op. then try to genealize to each client has many op.
+init
+  (d, data) -> (x, x)
+  (s, stateptr) -> (op, empty)
+  (cli, c1)* -> (c_op, op)* [op]
+
+//part 1: read the op (if empty try to put its own.)
+transition "read stateptr (empty)"
+pre
+  (s, stateptr) -> (op, empty)
+  (cli, c1) -> (c_op, op) [op]
+post
+  (s, stateptr) -> (c_op, op)
+  (cli, c2) -> (c_op, op) [cur]
+  (cli, c2) -> (e, empty) [op]
+==>
+  s -> s
+  cli -> cli
+  c_op -> c_op
+<==
+
+transition "read stateptr (not empty)"
+pre
+  (s, stateptr) -> (op, op)
+  (cli, c1) -> (c_op, op) [op]
+post
+  (s, stateptr) -> (op, op)
+  (cli, c2) -> (op, op) [cur]
+  (cli, c2) -> (c_op, op) [op]
+==>
+  s -> s
+  cli -> cli
+  c_op -> c_op
+  op -> op
+<==
+
+//part 2a: the op (read data)
+transition "read data"
+pre
+  (d, data) -> (x, x)
+  node (cli, c2)
+post
+  (d, data) -> (x, x)
+  (cli, c3) -> (x, x) [old]
+  (cli, c3) -> (y, x) [new]
+==>
+  d -> d
+  x -> x
+  cli -> cli
+<==
+
+//part 2b: the op (write data)
+transition "write data success"
+pre
+  (d, data) -> (x, x)
+  (cli, c3) -> (x, x) [old]
+  (cli, c3) -> (y, x) [new]
+post
+  (d, data) -> (y, x)
+  node (x, x)
+  node (cli, c4)
+==>
+  d -> d
+  x -> x
+  y -> y
+  cli -> cli
+<==
+
+transition "write data failure"
+pre
+  (d, data) -> (x, x)
+  (cli, c3) -> (z, x) [old]
+  (cli, c3) -> (y, x) [new]
+post
+  (d, data) -> (x, x)
+  node (cli, c4)
+  node (y, x)
+  node (z, x)
+==>
+  d -> d
+  x -> x
+  y -> y
+  z -> z
+  cli -> cli
+<==
+
+//part 3: update the stateptr
+transition "update state ptr (done 1)"
+pre
+  (s, stateptr) -> (c_op, op)
+  (cli, c4) -> (c_op, op) [cur]
+post
+  (s, stateptr) -> (f, empty)
+  node (cli, c1)
+  node (c_op, op)
+==>
+  s -> s
+  cli -> cli
+  c_op -> c_op
+<==
+
+transition "update state ptr (done 2)"
+pre
+  (s, stateptr) -> (c_op1, op)
+  (cli, c4) -> (c_op2, op) [cur]
+post
+  (s, stateptr) -> (c_op1, op)
+  node (cli, c1)
+  node (c_op2, op)
+==>
+  s -> s
+  cli -> cli
+  c_op1 -> c_op1
+  c_op2 -> c_op2
+<==
+
+transition "client done."
+pre
+  (cli, c1) -> (e, empty) [op]
+post
+==>
+<==
