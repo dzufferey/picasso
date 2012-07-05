@@ -35,12 +35,12 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     buffer.toString
   }
 
-  //override def toString = toGraphviz("DBC")
-  override def toString = {
-    val namer = new Namer
-    val nodeIds = vertices.map(v => (v, namer("n").replace("$","_"))).toMap[P#V, String]
-    toStringWithIds("DepthBoundedConf", nodeIds)
-  }
+  override def toString = toGraphviz("DBC")
+  //override def toString = {
+  //  val namer = new Namer
+  //  val nodeIds = vertices.map(v => (v, namer("n").replace("$","_"))).toMap[P#V, String]
+  //  toStringWithIds("DepthBoundedConf", nodeIds)
+  //}
 
   // use def instead of val if caching requires too much space
   lazy val undirectedAdjacencyMap = this.undirect

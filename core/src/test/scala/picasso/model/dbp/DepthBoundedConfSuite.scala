@@ -184,7 +184,7 @@ class DepthBoundedConfSuite extends FunSuite {
     assert(flat0.noUnneededNesting)
   }
 
-  test("subgraph 01") {
+  test("subgraph 00") {
     val conf0 = emp + a1 + c0
     val conf1 = emp ++ (a1 --> b0) ++ (c0 --> b0)
     val conf2 = emp ++ (a1 --> b1) ++ (c0 --> b1)
@@ -211,10 +211,10 @@ class DepthBoundedConfSuite extends FunSuite {
     assert(conf3 isSubgraphOf conf3)
   }
 
-  test("subgraph 02"){
+  def testNotSubgraphFromFiles(smallF: String, bigF: String){
     import picasso.frontend.dbpGraph._
-    val small = DBPGraphParser.parseGraph(getFileContent("widen_error_1_part_1.graph")).get
-    val big   = DBPGraphParser.parseGraph(getFileContent("widen_error_1_part_2.graph")).get
+    val small = DBPGraphParser.parseGraph(getFileContent(smallF)).get
+    val big   = DBPGraphParser.parseGraph(getFileContent(bigF)).get
     //println("small:\n" + small.toGraphviz("DBC"))
     //println("big:\n" + big.toGraphviz("DBC"))
     val ms = small morphisms big
@@ -222,18 +222,18 @@ class DepthBoundedConfSuite extends FunSuite {
     assert(! (small isSubgraphOf big) )
   }
 
+  test("subgraph 01"){
+    testNotSubgraphFromFiles("widen_error_1_part_1.graph", "widen_error_1_part_2.graph")
+  }
+
+
+  test("subgraph 02"){
+    testNotSubgraphFromFiles("widen_error_2_part_1.graph", "widen_error_2_part_2.graph")
+  }
 
   test("subgraph 03"){
-    import picasso.frontend.dbpGraph._
-    val small = DBPGraphParser.parseGraph(getFileContent("widen_error_2_part_1.graph")).get
-    val big   = DBPGraphParser.parseGraph(getFileContent("widen_error_2_part_2.graph")).get
-    //println("small:\n" + small.toGraphviz("DBC"))
-    //println("big:\n" + big.toGraphviz("DBC"))
-    val ms = small morphisms big
-    assert(ms.isEmpty)
-    assert(! (small isSubgraphOf big) )
+    testNotSubgraphFromFiles("widen_error_3_part_1.graph", "widen_error_3_part_2.graph")
   }
-
 
 
 }
