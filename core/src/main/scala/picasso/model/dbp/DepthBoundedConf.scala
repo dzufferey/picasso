@@ -35,19 +35,15 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     buffer.toString
   }
 
-  override def toString = toGraphviz("DBC")
-  //override def toString = {
-  //  val namer = new Namer
-  //  val nodeIds = vertices.map(v => (v, namer("n").replace("$","_"))).toMap[P#V, String]
-  //  toStringWithIds("DepthBoundedConf", nodeIds)
-  //}
+  //override def toString = toGraphviz("DBC")
+  override def toString = {
+    val namer = new Namer
+    val nodeIds = vertices.map(v => (v, namer("n").replace("$","_"))).toMap[P#V, String]
+    toStringWithIds("DepthBoundedConf", nodeIds)
+  }
 
   // use def instead of val if caching requires too much space
   lazy val undirectedAdjacencyMap = this.undirect
-  //{
-  //  val out = adjacencyMap mapValues (_.foldLeft(Set.empty[V])((xs, e) => e._2 ++ xs))
-  //  out.foldLeft(out)((acc, p) => p._2.foldLeft(acc)((acc, x) => acc + ((x, acc.getOrElse(x, Set.empty[V]) + p._1))))
-  //}
 
   /*
   protected def propagate(ms: MorphState[P], i : Int, j : Int) = {
@@ -87,6 +83,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
   }
 
   protected def additionalCstr(mi: MorphInfo[P]): Iterable[Clause[(V,V)]] = {
+    //goal: whatever smaller (this) can do by unfolding, bigger can also do it ...
     val (bigger, candidatesF, candidatesB) = mi
     //(1) difference of depth (good for unit propagation)
     val depthCstr: Iterable[Clause[(V,V)]] = for(x <- vertices.toSeq; y <- candidatesF(x) if (x.depth > y.depth)) yield {
@@ -103,25 +100,6 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
       val d1 = y1.depth - x1.depth
       val d2 = y2.depth - x2.depth
 
-      //TODO this seems fixed ...
-
-      //goal: whatever smaller (this) can do by unfolding, bigger can also do it ...
-      //see test "subgraph 01"
-      //=> should we rather think in term of components ?
-
-      //if increase (d1 > 0), increase at least the same ?
-      //if decrease (d1 < 0), decrease at most the same ?
-      //that is not very symmetric ? or is it ?
-      //due to the flattening the amount of increase and decrease is not that meaningful ...
-      //Can it be as simple as preserving the signum ?
-
-      /*
-      if (math.signum(d1) == math.signum(d2)) {
-        Seq[Clause[(V,V)]]() //ok
-      } else {
-        Seq[Clause[(V,V)]](Seq(Neg(x1 -> x2), Neg(y1 -> y2))) //cannot be both true at the same time
-      }
-      */
       //assert that the difference is at least the same
       if ((d1 > 0 && d2 < d1) || (d1 < 0 && d2 > d1)) {
         Seq[Clause[(V,V)]](Seq(Neg(x1 -> x2), Neg(y1 -> y2))) //cannot be both true at the same time

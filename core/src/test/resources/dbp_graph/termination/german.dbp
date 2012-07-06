@@ -1,0 +1,54 @@
+//The german cache coherence protocol taken from:
+//  Amir Pnueli, Sitvanit Ruah, and Lenore D. Zuck
+//  Automatic Deductive Verification with Invisible Invariants
+//  TACAS, 2001.  
+
+init
+    (c,cli_inv)* -> (op,op)*
+    node (h, host)
+    
+//states of the clients:
+//1st type of suffix:
+//- _inv for invalid
+//- _shr for sharing
+//- _xcl for exclusive
+//2nd type of suffix:
+//- _p when a request is pending
+
+//states of the host:
+// ...
+
+//messages:
+//- req_sharing
+//- req_excl
+//- grt_sharing
+//- grt_excl
+//- invalidate
+//- ack
+
+
+transition "request sharing"
+pre
+    (c,cli_inv) -> (op,op)
+post
+    (c,cli_inv_p) -> (s,req_sharing)
+==>
+    c -> c
+<==
+
+transition "request excl"
+pre
+    (c,cli_inv) -> (op,op)
+post
+    (c,cli_inv_p) -> (x,req_excl)
+==>
+    c -> c
+<==
+
+transition " ??? "
+pre
+post
+==>
+<==
+no
+==>
