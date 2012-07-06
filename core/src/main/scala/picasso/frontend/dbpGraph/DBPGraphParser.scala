@@ -15,7 +15,7 @@ object DBPGraphParser extends StandardTokenParsers {
 
   private def nodeInGraph(node: DBCGraph#V, graph: DepthBoundedConf[DBCGraph]): DBCGraph#V = {
     val n = graph.vertices.find( n => n.state._1 == node.state._1 ).getOrElse(node)
-    assert(n.state._2 == node.state._2 && n.depth == node.depth)
+    assert(n.state._2 == node.state._2 && n.depth == node.depth, n + " != " + node)
     n
   }
   private def nodeInGraph(node: NodeId, graph: DepthBoundedConf[DBCGraph]): DBCGraph#V = {

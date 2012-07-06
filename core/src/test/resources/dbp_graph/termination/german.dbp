@@ -4,19 +4,26 @@
 //  TACAS, 2001.  
 
 init
-    (c,cli_inv)* -> (op,op)*
-    node (h, host)
+    (c,cli_inv)* -> (op,op)**
+    (h, host) -> (x, IS) [status]
     
 //states of the clients:
 //1st type of suffix:
 //- _inv for invalid
 //- _shr for sharing
-//- _xcl for exclusive
+//- _xcl for exclusive granted
 //2nd type of suffix:
 //- _p when a request is pending
 
 //states of the host:
-// ...
+// sharing list: keep edges to the sharers
+// current cli: an edge
+// current req is in the graph
+// waiting for ack: keep edges
+// _proc: processing
+// _inv: invalidating
+// _wait: wait for ack
+// IS/X: for inv or share / excl
 
 //messages:
 //- req_sharing
@@ -26,29 +33,242 @@ init
 //- invalidate
 //- ack
 
+//////////
+// Host //
+//////////
+
+transition "receive request"
+pre
+    node (h, host)
+    (c, _) -> (r, _) [req]
+post
+    (h, host_proc) -> (r, _) [curr]
+    (c, _) -> (r, _) [req]
+==>
+    h -> h
+<==
+    r -> r
+    c -> c
+
+transition "process share: need inv"
+pre
+    (h, host_proc) -> (r, req_sharing) [curr]
+    (h, host_proc) -> (s, X) [status]
+post
+    (h, host_inv) -> (r, req_sharing) [curr]
+    (h, host_inv) -> (s, X) [status]
+==>
+    h -> h
+    r -> r
+    s -> s
+<==
+
+transition "process share: can grant"
+pre
+    (h, host_proc) -> (r, req_sharing) [curr]
+    (h, host_proc) -> (s, IS) [status]
+    (c, _) -> (r, req_sharing) [req]
+post
+    (h, host) -> (s, IS) [status]
+    (h, host) -> (c, _) [sharer]
+    (c, _) -> (g, grt_sharing)
+==>
+    h -> h
+    s -> s
+<==
+    c -> c
+
+transition "process excl: need inv (1)"
+pre
+    (h, host_proc) -> (r, req_excl) [curr]
+    (h, host_proc) -> (s, X) [status]
+post
+    (h, host_inv) -> (r, req_excl) [curr]
+    (h, host_inv) -> (s, X) [status]
+==>
+    h -> h
+    r -> r
+    s -> s
+<==
+
+transition "process excl: need inv (2)"
+pre
+    (h, host_proc) -> (r, req_excl) [curr]
+    (h, host_proc) -> (s, IS) [status]
+    (h, host_proc) -> (c, _) [sharer]
+post
+    (h, host_inv) -> (r, req_excl) [curr]
+    (h, host_inv) -> (s, IS) [status]
+    (h, host_inv) -> (c, _) [sharer]
+==>
+    h -> h
+    r -> r
+    s -> s
+<==
+    c -> c
+
+transition "process excl: can grant"
+pre
+    (h, host_proc) -> (r, req_excl) [curr]
+    (h, host_proc) -> (s, IS) [status]
+    (c, _) -> (r, req_excl) [req]
+post
+    (h, host) -> (s, X) [status]
+    (h, host) -> (c, _) [sharer]
+    (c, _) -> (g, grt_excl)
+==>
+    h -> h
+    s -> s
+<==
+    c -> c
+no
+    (h, host_proc) -> (c, _) [sharer]
+==>
+    h -> h
+
+transition "send invalidate"
+pre
+    (h, host_inv) -> (c, _) [sharer]
+post
+    (h, host_inv) -> (c, _) [wait]
+    (c, _) -> (i, invalidate)
+==>
+    h -> h
+<==
+    c -> c
+
+transition "send invalidate done"
+pre
+    node (h, host_inv)
+post
+    node (h, host_wait)
+==>
+    h -> h
+<==
+no
+    (h, host_inv) -> (c, _) [sharer]
+==>
+    h -> h
+
+transition "receive ack (inv)"
+pre
+    (h, host_inv) -> (c, _) [wait]
+    (c, _) -> (a, ack)
+post
+    node (h, host_inv)
+    node (c, _)
+==>
+    h -> h
+<==
+    c -> c
+
+transition "receive ack (wait)"
+pre
+    (h, host_wait) -> (c, _) [wait]
+    (c, _) -> (a, ack)
+post
+    node (h, host_wait)
+    node (c, _)
+==>
+    h -> h
+<==
+    c -> c
+
+transition "receive ack done"
+pre
+    (h, host_wait) -> (s1, _) [status]
+post
+    (h, host_proc) -> (s2, IS) [status]
+==>
+    h -> h
+<==
+no
+    (h, host_wait) -> (c, _) [wait]
+==>
+    h -> h
+    
+////////////
+// Client //
+////////////
 
 transition "request sharing"
 pre
     (c,cli_inv) -> (op,op)
 post
-    (c,cli_inv_p) -> (s,req_sharing)
+    (c,cli_inv_p) -> (s,req_sharing) [req]
 ==>
     c -> c
 <==
 
-transition "request excl"
+transition "request excl from inv"
 pre
     (c,cli_inv) -> (op,op)
 post
-    (c,cli_inv_p) -> (x,req_excl)
+    (c,cli_inv_p) -> (x,req_excl) [req]
 ==>
     c -> c
 <==
 
-transition " ??? "
+transition "request excl from share"
 pre
+    (c,cli_shr) -> (op,op)
 post
+    (c,cli_shr_p) -> (x,req_excl)
 ==>
+    c -> c
 <==
-no
+
+transition "granted shared"
+pre
+    (c,cli_inv_p) -> (g, grt_sharing)
+post
+    node (c,cli_shr) 
 ==>
+    c -> c
+<==
+
+transition "granted excl"
+pre
+    (c,cli_inv_p) -> (g, grt_excl)
+post
+    node (c,cli_xcl) 
+==>
+    c -> c
+<==
+
+transition "invalidated from share pending"
+pre
+    (c,cli_shr_p) -> (i, invalidate)
+post
+    (c,cli_inv_p) -> (a, ack)
+==>
+    c -> c
+<==
+
+transition "invalidated from share"
+pre
+    (c,cli_shr) -> (i, invalidate)
+post
+    (c,cli_inv) -> (a, ack)
+==>
+    c -> c
+<==
+
+transition "invalidated from excl pending"
+pre
+    (c,cli_xcl_p) -> (i, invalidate)
+post
+    (c,cli_inv_p) -> (a, ack)
+==>
+    c -> c
+<==
+
+transition "invalidated from excl"
+pre
+    (c,cli_xcl) -> (i, invalidate)
+post
+    (c,cli_inv) -> (a, ack)
+==>
+    c -> c
+<==
+
