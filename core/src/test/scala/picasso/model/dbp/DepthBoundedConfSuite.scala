@@ -98,7 +98,7 @@ class DepthBoundedConfSuite extends FunSuite {
 
   }
 
-  test("folding") {
+  test("folding 00") {
     val conf0 = emp ++ (mkB --> a0) ++ ((mkB++) --> a0)
     val fold0 = conf0.fold
     val gold0 = emp ++ ((mkB++) --> a0)
@@ -126,6 +126,37 @@ class DepthBoundedConfSuite extends FunSuite {
     assert(fold3 isSubgraphOf gold3)
     assert(gold3 isSubgraphOf fold3)
   }
+  
+  test("getting confused about the meaning of the nesting depth") {
+    val conf0 = emp ++ (c2 --> a1) ++ (cc2 --> a1) ++ (c2 --> (mkB++)) ++ (cc2 --> (mkB++))
+    val fold0 = conf0.fold
+    val gold0 = emp ++ (c2 --> a1) ++ (c2 --> (mkB++))
+
+    //TODO this is a bad/tricky example: if we put mkB++ and a1 in the same cmpt then conf1 is not a subgraph of gold1
+    val conf1 = emp ++ (c2 --> a1) ++ (cc2 --> a1) ++ (c2 --> (mkB++)) ++ (cc2 --> mkB)
+    val fold1 = conf1.fold
+    val gold1 = emp ++ (c2 --> a1) ++ (c2 --> (mkB++))
+
+    val conf2 = emp ++ (c2 --> a1) ++ (cc2 --> a1) ++ (c2 --> mkB) ++ (cc2 --> mkB)
+    val fold2 = conf2.fold
+    val gold2 = conf2
+
+    //assert(conf1 isSubgraphOf conf0)
+    //assert(conf2 isSubgraphOf conf0)
+
+    assert(conf0 isSubgraphOf gold0)
+    assert(fold0 isSubgraphOf gold0)
+    assert(gold0 isSubgraphOf fold0)
+
+    assert(conf1 isSubgraphOf gold1)
+    assert(fold1 isSubgraphOf gold1)
+    assert(gold1 isSubgraphOf fold1)
+
+    assert(conf2 isSubgraphOf gold2)
+    assert(fold2 isSubgraphOf gold2)
+    assert(gold2 isSubgraphOf fold2)
+  }
+
 
   test("flattening 00") {
     val conf0 = emp + a0 + b1 + c2
@@ -222,6 +253,20 @@ class DepthBoundedConfSuite extends FunSuite {
     assert(! (small isSubgraphOf big) )
   }
 
+  def showCmpInfo(fn: String) {
+    import picasso.frontend.dbpGraph._
+    val graph = DBPGraphParser.parseGraph(getFileContent(fn)).get
+    println("graph: "+fn+"\n" + graph)
+    val cmp2 = graph.decomposeInComponents
+    println("decomposeInComponents:\n" + cmp2.mkString("    ","\n    ",""))
+    val cmp3 = graph.decomposeInDisjointComponents
+    println("decomposeInDisjointComponents:\n" + cmp3)
+    for ( v <- graph.vertices ) {
+      val cmp1 = graph.getComponentsPyramide(v)
+      println("getComponentsPyramide @ "+v+"\n" + cmp1.mkString("    ","\n    ",""))
+    }
+  }
+
   test("subgraph 01"){
     testNotSubgraphFromFiles("widen_error_1_part_1.graph", "widen_error_1_part_2.graph")
   }
@@ -235,5 +280,25 @@ class DepthBoundedConfSuite extends FunSuite {
     testNotSubgraphFromFiles("widen_error_3_part_1.graph", "widen_error_3_part_2.graph")
   }
 
+  test("subgraph 04"){
+    testNotSubgraphFromFiles("widen_error_4_part_1.graph", "widen_error_4_part_2.graph")
+  }
+  
+  test("subgraph 05"){
+    testNotSubgraphFromFiles("widen_error_5_part_1.graph", "widen_error_5_part_2.graph")
+  }
+
+  test("subgraph 06"){
+    testNotSubgraphFromFiles("widen_error_6_part_1.graph", "widen_error_6_part_2.graph")
+  }
+
+  test("subgraph 07"){
+    testNotSubgraphFromFiles("widen_error_7_part_1.graph", "widen_error_7_part_2.graph")
+  }
+
+//test("show components info"){
+//  showCmpInfo("widen_error_3_part_1.graph")
+//  showCmpInfo("widen_error_3_part_2.graph")
+//}
 
 }

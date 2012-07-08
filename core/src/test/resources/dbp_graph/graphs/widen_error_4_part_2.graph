@@ -1,0 +1,29 @@
+    (n_8, host_wait) -> (n_23, IS) [status]
+    (n_8, host_wait) -> (n_11, req_excl) [curr]
+    (n_8, host_wait) -> (n_25, cli_inv_p)* [wait]
+    (n_8, host_wait) -> (n_21, cli_shr_p)** [wait]
+    (n_8, host_wait) -> (n_22, cli_inv_p)** [wait]
+    (n_8, host_wait) -> (n_13, cli_shr)** [wait]
+    (n_8, host_wait) -> (n_9, cli_inv_p)* [wait]
+    (n_8, host_wait) -> (n_20, cli_inv)* [wait]
+    (n_9, cli_inv_p)* -> (n_24, op)**
+    (n_9, cli_inv_p)* -> (n_28, req_excl)*
+    (n_9, cli_inv_p)* -> (n_3, ack)*
+    (n_13, cli_shr)** -> (n_30, op)***
+    (n_13, cli_shr)** -> (n_17, invalidate)*
+    (n_15, cli_inv_p)* -> (n_7, op)**
+    (n_15, cli_inv_p)* -> (n_5, req_sharing)* [req]
+    (n_20, cli_inv)* -> (n_18, op)**
+    (n_20, cli_inv)* -> (n_2, ack)*
+    (n_21, cli_shr_p)** -> (n_16, op)***
+    (n_21, cli_shr_p)** -> (n_17, invalidate)*
+    (n_21, cli_shr_p)** -> (n_19, req_excl)**
+    (n_22, cli_inv_p)** -> (n_29, op)***
+    (n_22, cli_inv_p)** -> (n_10, grt_sharing)*
+    (n_22, cli_inv_p)** -> (n_12, invalidate)**
+    (n_25, cli_inv_p)* -> (n_6, op)**
+    (n_25, cli_inv_p)* -> (n_14, ack)**
+    (n_25, cli_inv_p)* -> (n_4, req_excl)* [req]
+    (n_26, cli_inv_p) -> (n_27, op)*
+    (n_26, cli_inv_p) -> (n_11, req_excl) [req]
+    node (n_1, grt_excl)*

@@ -148,12 +148,11 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
   def degree(v: V): Int = undirectedAdjacencyMap(v).size
 
   def getComponent(node: V): Set[V] = {
-    val undirected = undirectedAdjacencyMap
     val depth = node.depth
     //take all the nodes conntected with depth greater or equal, repeat until fixpoint.
     def process(acc: Set[V], frontier: Set[V]): Set[V] = frontier.headOption match {
       case Some(x) =>
-        val next = undirected(x).filter(v => v.depth >= depth && !acc(v))
+        val next = undirectedAdjacencyMap(x).filter(v => v.depth >= depth && !acc(v))
         process(acc ++ next, (frontier - x) ++ next)
       case None => acc
     }
@@ -162,12 +161,11 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
 
   /** getComponent + parents componements up to the top componement. */
   def getComponentsPyramide(node: V): Seq[Set[V]] = {
-    val undirected = undirectedAdjacencyMap
     val cmp1 = getComponent(node)
     def process(acc: List[Set[V]], current: Set[V]): List[Set[V]] = {
       //get one level down from the current cmp
       val lowest = current.map(_.depth).min
-      val next = current.flatMap(undirected(_)).find(n => n.depth == (lowest - 1))
+      val next = current.flatMap(undirectedAdjacencyMap(_)).find(n => n.depth == (lowest - 1))
       next match {
         case Some(v) => 
           val current1 = getComponent(v)
@@ -321,6 +319,8 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     //(4) recurse into the cmpts
     //    from step3, it is possible that some seeds have already been increased
     //(5) (maybe) flatten: should not be needed, but it should not hurt either
+
+    //TODO still not right ...
 
     val cmpGraph = decomposeInDisjointComponents
     //println("cmpGraph: " + cmpGraph)

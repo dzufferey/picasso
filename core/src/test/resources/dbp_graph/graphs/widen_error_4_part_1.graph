@@ -1,0 +1,30 @@
+    (n_10, host_wait) -> (n_29, IS) [status]
+    (n_10, host_wait) -> (n_15, req_excl) [curr]
+    (n_10, host_wait) -> (n_22, cli_shr_p)* [wait]
+    (n_10, host_wait) -> (n_26, cli_shr_p)* [wait]
+    (n_10, host_wait) -> (n_28, cli_inv_p)** [wait]
+    (n_10, host_wait) -> (n_25, cli_shr_p)** [wait]
+    (n_10, host_wait) -> (n_11, cli_shr)** [wait]
+    (n_11, cli_shr)** -> (n_17, op)***
+    (n_11, cli_shr)** -> (n_3, invalidate)*
+    (n_16, cli_inv_p)* -> (n_24, op)**
+    (n_16, cli_inv_p)* -> (n_1, req_excl)* [req]
+    (n_21, cli_inv)* -> (n_5, op)**
+    (n_22, cli_shr_p)* -> (n_4, op)**
+    (n_22, cli_shr_p)* -> (n_3, invalidate)*
+    (n_22, cli_shr_p)* -> (n_20, req_excl)*
+    (n_23, cli_inv_p)* -> (n_9, op)**
+    (n_23, cli_inv_p)* -> (n_8, req_sharing)* [req]
+    (n_25, cli_shr_p)** -> (n_19, op)***
+    (n_25, cli_shr_p)** -> (n_7, req_excl)**
+    (n_25, cli_shr_p)** -> (n_12, invalidate)*
+    (n_26, cli_shr_p)* -> (n_6, op)**
+    (n_26, cli_shr_p)* -> (n_3, invalidate)*
+    (n_26, cli_shr_p)* -> (n_27, req_excl)*
+    (n_28, cli_inv_p)** -> (n_32, op)***
+    (n_28, cli_inv_p)** -> (n_14, grt_sharing)*
+    (n_28, cli_inv_p)** -> (n_18, invalidate)**
+    (n_30, cli_inv_p) -> (n_31, op)*
+    (n_30, cli_inv_p) -> (n_15, req_excl) [req]
+    node (n_2, grt_excl)*
+    node (n_13, ack)*
