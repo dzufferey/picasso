@@ -27,7 +27,7 @@
 //  }
 
 init
-    node (op, op) //the number of operations
+    node (op, op)* //the number of operations
 //    (a1, a1) -> (x1, x)
     (a2, a2) -> (x2, x)
 
