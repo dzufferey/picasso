@@ -357,13 +357,14 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
     //assert(morph1.values.forall(_.depth == 0))
     assert(frame.forall{case (a,b) => a.depth == b.depth})
     assert(tr.lhs.vertices.forall(_.depth == 0))
-    assert(tr.rhs.vertices.forall(_.depth == 0))
+    //assert(tr.rhs.vertices.forall(_.depth == 0))
     val (pc1, map1) = getPC(from)
     val (pc2, map2) = getPC(to)
     val disappearing = from.vertices -- frame.keys
     val appearing = to.vertices -- frame.values
     assert(disappearing forall (_.depth == 0))
-    assert(appearing forall (_.depth == 0))
+    //assert(appearing forall (_.depth == 0))
+    if (appearing exists (_.depth > 0)) Logger("DBPTermination", LogWarning, "appearing with depth > 0")
     val stmts1 = for (n <- disappearing) yield {
        getCardinality(map1, n) match {
          case v @ Variable(_) => Affect(v, Constant(0))
@@ -373,7 +374,7 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
     }
     val stmts2 = for (n <- appearing) yield {
        getCardinality(map2, n) match {
-         case v @ Variable(_) => Affect(v, Constant(1))
+         case v @ Variable(_) => if (n.depth == 0) Affect(v, Constant(1)) else Assume(Leq(Constant(0), v))
          case Constant(c) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        }

@@ -27,6 +27,13 @@ object IO {
   
   def writeInFile(file: String, data: String): Unit = writeInFile(new File(file), data)
   
+  def writeInFile(file: String, data: BufferedWriter => Unit): Unit = {
+    val fileOut = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file)))
+    data(fileOut)
+    fileOut.flush
+    fileOut.close
+  }
+
   def writeInDocFile(file: File, data: Document, width: Int): Unit = {
     val fileOut = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file)))
     data.format(width, fileOut)

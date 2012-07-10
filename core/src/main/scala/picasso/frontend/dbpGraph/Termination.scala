@@ -38,7 +38,12 @@ class Termination(fileName: String, content: String) extends AnalysisCommon("Ter
         p
       }
 
-    runARMC(intProgram)
+    if (Config.dumpArmc == "") {
+      runARMC(intProgram)
+    } else {
+      Logger("Termination", LogInfo, "saving ARMC program in " + Config.dumpArmc)
+      IO.writeInFile(Config.dumpArmc, intProgram.printForARMC(_))
+    }
   }
 
 }
