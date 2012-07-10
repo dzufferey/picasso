@@ -1,0 +1,226 @@
+//Double compare single swap contained in "A practical Multi-Word Compare-and-Swap Operation"
+//
+// struct {
+//  a1: memory address 1
+//  a2: memory address 2
+//  o1: old value for a1
+//  o2: old value for a2
+//  n2: new value for a2
+// } descriptor
+// a1 is not changed by the RDCSS but it can change at any time.
+// 
+// algorithm is as follows:
+//
+//  word_t RDCSS(descriptor *d) {
+//    do {
+//      r = CAS(d->a2, d->o2, d)
+//      if (IsDescriptor(r)) Complete(r)
+//    } while (IsDescriptor(r))
+//    if (r == d->o2) Complete(d)
+//    return r
+//  }
+//
+//  void Complete(descriptor *d) {
+//    v = *(d->a1)
+//    if (v == d->o1) CAS(d->a2, d, d->n2)
+//    else CAS(d->a2, d, d->o2)
+//  }
+
+init
+    node (op, op)* //the number of operations
+//    (a1, a1) -> (x1, x)
+    (a2, a2) -> (x2, x)
+
+
+transition "init descriptor"
+pre
+    node (op, op)
+//    (a1, a1) -> (x1, x)
+    (a2, a2) -> (x2, x)
+post
+//    (a1, a1) -> (x1, x)
+    (a2, a2) -> (x2, x)
+    (p, pc1) -> (d, descr)
+//    (d, descr) -> (x1, x) [o1]
+    (d, descr) -> (x2, x) [o2]
+    (d, descr) -> (x3, x) [n2]
+==>
+//    a1 -> a1
+    a2 -> a2
+//    x1 -> x1
+    x2 -> x2
+<==
+
+
+//  word_t RDCSS(descriptor *d) {
+
+transition "r = CAS(d->a2, d->o2, d) (success)"
+pre
+    (a2, a2) -> (x2, x)
+    (p, pc1) -> (d, descr)
+    (d, descr) -> (x2, x) [o2]
+post
+    (a2, a2) -> (d, descr)
+    (p, pc2) -> (d, descr)
+    (p, pc2) -> (x2, x) [r]
+    (d, descr) -> (x2, x) [o2]
+==>
+    a2 -> a2
+    p -> p
+    d -> d
+    x2 -> x2
+<==
+
+transition "r = CAS(d->a2, d->o2, d) (fail)"
+pre
+    (a2, a2) -> (x2, _)
+    (p, pc1) -> (d, descr)
+    (d, descr) -> (x3, x) [o2]
+post
+    (a2, a2) -> (x2, _)
+    (p, pc2) -> (d, descr)
+    (p, pc2) -> (x2, _) [r]
+    (d, descr) -> (x3, x) [o2]
+==>
+    a2 -> a2
+    p -> p
+    d -> d
+    x3 -> x3
+<==
+    x2 -> x2
+
+transition "if (IsDescriptor(r)) Complete(r) (case true)"
+pre
+    (p, pc2) -> (d, descr) [r]
+post
+    (p, pc3) -> (d, descr) [r]
+    (p, pc3) -> (c, completing)
+==>
+    p -> p
+    d -> d
+<==
+
+transition "if (IsDescriptor(r)) Complete(r) (returning and go to beginning of loop)"
+pre
+    (p, pc3) -> (c, completed)
+    (p, pc3) -> (d, descr) [r]
+post
+    node (p, pc)
+    node (d, descr)
+==>
+    p -> p
+    d -> d
+<==
+
+transition "if (IsDescriptor(r)) Complete(r) (case false and exit the loop)"
+pre
+    (p, pc2) -> (x2, x) [r]
+post
+    (p, pc4) -> (x2, x) [r]
+==>
+    p -> p
+    x2 -> x2
+<==
+
+transition "if (r == d->o2) Complete(d) (case true)"
+pre
+    (p, pc4) -> (d, descr)
+    (p, pc4) -> (x2, x) [r]
+    (d, descr) -> (x2, x) [o2]
+post
+    (p, pc5) -> (d, descr)
+    (p, pc5) -> (x2, x) [r]
+    (d, descr) -> (x2, x) [o2]
+    (p, pc5) -> (c, completing)
+==>
+    p -> p
+    d -> d
+    x2 -> x2
+<==
+
+transition "if (r == d->o2) Complete(d) (case false and return)"
+pre
+    (p, pc4) -> (d, descr)
+    (p, pc4) -> (x2, x) [r]
+    (d, descr) -> (x3, x) [o2]
+post
+    (p, done) -> (x2, x)
+    (d, descr) -> (x3, x) [o2]
+==>
+    p -> p
+    d -> d
+    x2 -> x2
+    x3 -> x3
+<==
+
+transition "return r"
+pre
+    (p, pc5) -> (c, completed)
+    (p, pc5) -> (x2, x) [r]
+    (p, pc5) -> (d, descr)
+post
+    (p, done) -> (x2, x)
+    node (d, descr)
+==>
+    p -> p
+    d -> d
+    x2 -> x2
+<==
+
+
+//  void Complete(descriptor *d) {
+// since a1 can be changed at any time, the value of (*(d->a1) == d->o1) is picked nondeterministically
+
+transition "(*(d->a1) == d->o1) => CAS(d->a2, d, d->n2) success"
+pre
+    (p, _) -> (d, descr)
+    (p, _) -> (c, completing)
+    (a2, a2) -> (d, descr)
+    (d, descr) -> (x3, x) [n2]
+post
+    (a2, a2) -> (x3, x)
+    (d, descr) -> (x3, x) [n2]
+    (p, _) -> (d, descr)
+    (p, _) -> (c, completed)
+==>
+    d -> d
+    c -> c
+    a2 -> a2
+    x3 -> x3
+<==
+    p -> p
+
+transition "(*(d->a1) == d->o1) => CAS(d->a2, d, d->n2) fail" //also works for !=
+pre
+    (p, _) -> (d, descr)
+    (p, _) -> (c, completing)
+    (a2, a2) -> (d2, _)
+post
+    (p, _) -> (d, descr)
+    (p, _) -> (c, completed)
+    (a2, a2) -> (d2, _)
+==>
+    a2 -> a2
+    c -> c
+<==
+    d2 -> d2
+    p -> p
+
+transition "(*(d->a1) != d->o1) => CAS(d->a2, d, d->o2) success"
+pre
+    (p, _) -> (d, descr)
+    (p, _) -> (c, completing)
+    (a2, a2) -> (d, descr)
+    (d, descr) -> (x3, x) [o2]
+post
+    (a2, a2) -> (x3, x)
+    (d, descr) -> (x3, x) [o2]
+    (p, _) -> (d, descr)
+    (p, _) -> (c, completed)
+==>
+    d -> d
+    c -> c
+    a2 -> a2
+    x3 -> x3
+<==
+    p -> p
