@@ -27,7 +27,7 @@
 //  }
 
 init
-    node (op, op)* //the number of operations
+    node (op, op) //the number of operations
 //    (a1, a1) -> (x1, x)
     (a2, a2) -> (x2, x)
 
@@ -105,8 +105,7 @@ pre
     (p, pc3) -> (c, completed)
     (p, pc3) -> (d, descr) [r]
 post
-    node (p, pc)
-    node (d, descr)
+    (p, pc1) -> (d, descr)
 ==>
     p -> p
     d -> d
@@ -144,10 +143,11 @@ pre
     (p, pc4) -> (x2, x) [r]
     (d, descr) -> (x3, x) [o2]
 post
-    (p, done) -> (x2, x)
+    node (p, done)
+    node (x2, x)
     (d, descr) -> (x3, x) [o2]
 ==>
-    p -> p
+//    p -> p
     d -> d
     x2 -> x2
     x3 -> x3
@@ -159,10 +159,11 @@ pre
     (p, pc5) -> (x2, x) [r]
     (p, pc5) -> (d, descr)
 post
-    (p, done) -> (x2, x)
+    node (p, done)
+    node (x2, x)
     node (d, descr)
 ==>
-    p -> p
+//    p -> p
     d -> d
     x2 -> x2
 <==
@@ -202,6 +203,7 @@ post
 ==>
     a2 -> a2
     c -> c
+    d -> d
 <==
     d2 -> d2
     p -> p
