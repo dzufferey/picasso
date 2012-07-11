@@ -140,7 +140,7 @@ class Config {
   var cyclesBound = -1
   var dumpArmc = ""
   val termination1 = ("--termination", Arg.Unit(() => termination = true), "Compute the termination of the system.")
-  val termination2 = ("--useTree", Arg.Unit(() => useTree = true), "Termination analysis using the KM tree (default is to use only the cover).")
+  val termination2 = ("--useTree", Arg.Unit(() => useTree = true), "Termination analysis using the KM tree (default is to use only the cover) DEPRECATED.")
   val termination3 = ("--armc", Arg.String(str => armcCmd = str), "The command to call ARMC.")
   val termination4 = ("--noCC", Arg.Unit(() => noCC = true), "Do not generate counters for concrete nodes.")
   val termination5 = ("--moreTPreds", Arg.Unit(() => moreTPreds = true), "Generate (much) more transition predicates for ARMC.")

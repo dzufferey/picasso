@@ -28,31 +28,29 @@
 
 init
     node (op, op)* //the number of operations
-//    (a1, a1) -> (x1, x)
     (a2, a2) -> (x2, x)
 
 
 transition "init descriptor"
 pre
     node (op, op)
-//    (a1, a1) -> (x1, x)
     (a2, a2) -> (x2, x)
 post
-//    (a1, a1) -> (x1, x)
     (a2, a2) -> (x2, x)
     (p, pc1) -> (d, descr)
-//    (d, descr) -> (x1, x) [o1]
     (d, descr) -> (x2, x) [o2]
     (d, descr) -> (x3, x) [n2]
 ==>
-//    a1 -> a1
     a2 -> a2
-//    x1 -> x1
     x2 -> x2
 <==
 
 
 //  word_t RDCSS(descriptor *d) {
+
+//!! not depth bounded !!
+//the first loop can create unbounded descriptor/x-pc chaines through the r variable
+//can we avoid this by inlining the Complete into the main method ?
 
 transition "r = CAS(d->a2, d->o2, d) (success)"
 pre
@@ -95,6 +93,7 @@ pre
 post
     (p, pc3) -> (d, descr) [r]
     (p, pc3) -> (c, completing)
+    (c, completing) -> (d, descr)
 ==>
     p -> p
     d -> d
@@ -131,6 +130,7 @@ post
     (p, pc5) -> (x2, x) [r]
     (d, descr) -> (x2, x) [o2]
     (p, pc5) -> (c, completing)
+    (c, completing) -> (d, descr)
 ==>
     p -> p
     d -> d
@@ -174,31 +174,27 @@ post
 
 transition "(*(d->a1) == d->o1) => CAS(d->a2, d, d->n2) success"
 pre
-    (p, _) -> (d, descr)
-    (p, _) -> (c, completing)
+    (c, completing) -> (d, descr)
     (a2, a2) -> (d, descr)
     (d, descr) -> (x3, x) [n2]
 post
     (a2, a2) -> (x3, x)
     (d, descr) -> (x3, x) [n2]
-    (p, _) -> (d, descr)
-    (p, _) -> (c, completed)
+    node (c, completed)
 ==>
     d -> d
     c -> c
     a2 -> a2
     x3 -> x3
 <==
-    p -> p
 
 transition "(*(d->a1) == d->o1) => CAS(d->a2, d, d->n2) fail" //also works for !=
 pre
-    (p, _) -> (d, descr)
-    (p, _) -> (c, completing)
+    (c, completing) -> (d, descr)
     (a2, a2) -> (d2, _)
 post
-    (p, _) -> (d, descr)
-    (p, _) -> (c, completed)
+    node (d, descr)
+    node (c, completed)
     (a2, a2) -> (d2, _)
 ==>
     a2 -> a2
@@ -206,23 +202,19 @@ post
     d -> d
 <==
     d2 -> d2
-    p -> p
 
 transition "(*(d->a1) != d->o1) => CAS(d->a2, d, d->o2) success"
 pre
-    (p, _) -> (d, descr)
-    (p, _) -> (c, completing)
+    (c, completing) -> (d, descr)
     (a2, a2) -> (d, descr)
     (d, descr) -> (x3, x) [o2]
 post
     (a2, a2) -> (x3, x)
     (d, descr) -> (x3, x) [o2]
-    (p, _) -> (d, descr)
-    (p, _) -> (c, completed)
+    node (c, completed)
 ==>
     d -> d
     c -> c
     a2 -> a2
     x3 -> x3
 <==
-    p -> p
