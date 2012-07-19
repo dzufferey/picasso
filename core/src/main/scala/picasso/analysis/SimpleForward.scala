@@ -6,7 +6,7 @@ import scala.collection.mutable.HashMap
 import scala.collection.mutable.HashSet
 import scala.collection.Map
 
-trait SimpleForward {
+trait SimpleForward extends CoveringSet {
   self : WSTS with WADL =>
 
   /** Enummerates paths in a BFS way */
@@ -133,10 +133,10 @@ trait SimpleForward {
     forwardCoveringWithTrace(initState, targetState).isDefined
   }
 
-  def computeCover(initState: S): DownwardClosedSet[S] = {
+  def computeCover(initCover: DownwardClosedSet[S]): DownwardClosedSet[S] = {
     var accel: List[Accelerate[T]] = Nil
     val acceleration = paths
-    var cover = DownwardClosedSet(initState)
+    var cover = initCover
     var prevCover = DownwardClosedSet.empty[S]
     def oneStep(cover: DownwardClosedSet[S]) =  (cover /: transitions)( (acc,t) => acc ++ postCover(acc, Normal(List(t))))
     while (!(cover subsetOf prevCover)) {

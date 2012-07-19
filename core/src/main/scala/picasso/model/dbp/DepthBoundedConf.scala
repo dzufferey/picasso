@@ -91,6 +91,12 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
       val cl: Clause[(V,V)] = Seq(lit)
       cl
     }
+
+    //TODO not nesting difference but nesting gradient
+    //what seems bad about the current version is that is it not symmetric wrt the edge direction (condition in the if)
+    //it should rather be something like if one increase, the other should also increase, ...
+    //this part should be independent of the flattening (not true now)
+
     //(2) preserve nesting difference
     val deltaDepth: Iterable[Iterable[Clause[(V,V)]]] =
       for((x1, el, y1) <- edges;
@@ -107,8 +113,24 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
         Seq[Clause[(V,V)]]() //ok
       }
     }
+
+    //TODO depthInjective should be rephrased in term of components ?
+    /*
+    val smallCmpGraph = decomposeInDisjointComponents
+    val bigCmpGraph = bigger.decomposeInDisjointComponents
+    val smallNodeToCmp = smallCmpGraph.vertices.iterator.flatMap( cmp => cmp.map(v => (v, cmp)) ).toMap[V, Set[V]]
+    val bigNodeToCmp = bigCmpGraph.vertices.iterator.flatMap( cmp => cmp.map(v => (v, cmp)) ).toMap[V, Set[V]]
+
+    //if a node of the cmpt is mapped to the same cmpt, then the other nodes becomes injective ?
+    val depthInjective =
+      for (cmp1 <- smallCmpGraph.vertices;
+           x1 <- cmp1;
+           x2 <- candidatesF(x1) ) yield {
+        //TODO ..
+      }
+    */
+
     //(3) stuff within the same nesting
-    //TODO should this be rephrased in term of components ?
     val depthInjective: Iterable[Iterable[Clause[(V,V)]]] =
       //x1 to x2 => all connectedAtSameHeight to x2 becomes injective wrt all connectedAtSameHeight x2
       //injective => not more than one true ...
@@ -189,7 +211,8 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     process(vertices.toList.sortWith( (a, b) => a.depth > b.depth), Nil)
   }
   
-  def decomposeInDisjointComponents: DiGraph[GT.ULGT{type V = Set[P#V]}] = {
+  /* Edges from x to y iff y is part of x. */
+  lazy val decomposeInDisjointComponents: DiGraph[GT.ULGT{type V = Set[P#V]}] = {
     val cmps = decomposeInComponents
     val edges = cmps.flatMap( x => cmps.flatMap( y => if (x != y && (y subsetOf x) ) Some(x -> y) else None) )
     def trim(cmp: Set[V]): Set[V] = {
@@ -312,34 +335,51 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
   def fold(implicit wpo: WellPartialOrdering[P#State]): Self = foldWithWitness._1
 
   def widenWithWitness(newThreads: Set[V]): (Self, Morphism) = {
-    //(1) decompose into cmpts
-    //(2) go cmpts by cmpts
-    //(3) first is height 0, with seeds going from 0 to 1.
-    //    if a cmpt node of depth 1 is connected to a seed, the cmpt of that nodes needs to be increased
-    //(4) recurse into the cmpts
-    //    from step3, it is possible that some seeds have already been increased
-    //(5) (maybe) flatten: should not be needed, but it should not hurt either
 
-    //TODO still not right ...
-
+    //rather than hack one more time, I should first write cleanly what I should do.
+    //we get the cmp, some of them (nodes) needs to be pushed up (the newThreads).
+    //since we want to preserve (some of) the gradient (higher level cmpt should not be changed)
+    //cmpt of higher depth are pushed up transitively to avoid merging with the newly created one
+    
     val cmpGraph = decomposeInDisjointComponents
     //println("cmpGraph: " + cmpGraph)
     val processingOrder = cmpGraph.topologicalSort
-    
-    /*
-    val cmpGraphRTC = cmpGraph.reflexiveTransitiveClosure
-    val incrementCmp(cmp:Set[V], threadsInc: Map[V, Int]): Map[V, Int] = {
-      val allNodes = cmpGraphRTC(cmp).flatten
-      (threadsInc /: cmp)( (acc, n) => acc + (n, acc(n) + 1))
+
+    val nodeToCmp = cmpGraph.vertices.iterator.flatMap( cmp => cmp.map(v => (v, cmp)) ).toMap[V, Set[V]]
+
+    val cmpGraphRev = cmpGraph.reverse
+
+    val cmpToNonDisjointCmp = {
+      val g = cmpGraph.reflexiveTransitiveClosure
+      cmpGraph.vertices.iterator.map(v => v -> (Set[V]() /: g(v))(_ ++ _)).toMap
     }
-    */
+
+    def getCmpDownTo(node: V, depth: Int): Set[V] = {
+      def process(acc: Set[V], frontier: List[Set[V]]): Set[V] = frontier match {
+        case x :: xs =>
+          val succ = cmpGraphRev(x).filter(_.head.depth >= depth)
+          //println("x = " + x)
+          //println("succ = " + succ.mkString(", "))
+          val acc2 = (acc /: succ)(_ ++ cmpToNonDisjointCmp(_))
+          val frontier2 = (xs /: succ)( (acc, s) => s::acc )
+          process(acc2, frontier2)
+        case Nil => acc
+      }
+      val start = nodeToCmp(node)
+      val res = process(cmpToNonDisjointCmp(start), List(start))
+      //println("getCmpDownTo " + node + ", " + depth + " = " + res.mkString(", "))
+      res
+    }
     
     def processCmp(cmp: Set[V], toWiden: Set[V], threadsInc: Map[V, Int]): (Set[V], Map[V, Int]) = {
       val (inCmp, rest) = toWiden.partition(cmp contains _)
       //compute the list of replicated nodes that are affected by the nodes inCmp
       val curDepth = cmp.head.depth
       assert(cmp forall (_.depth == curDepth))
-      val affected = for (n1 <- inCmp; n2 <- undirectedAdjacencyMap(n1) if n2.depth == curDepth + 1; n3 <- getComponent(n2)) yield n3
+      val affected = for (n1 <- inCmp;
+                          n2 <- undirectedAdjacencyMap(n1) if n2.depth > curDepth;
+                          n3 <- getCmpDownTo(n2, curDepth + 1))
+                     yield n3 
       //println("cmp: " + cmp)
       //println("inCmp: " + inCmp)
       //println("affected: " + affected)
@@ -352,6 +392,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
       case (newThreads, threadsInc) => processCmp(cmp, newThreads, threadsInc)
     })
     assert(left.isEmpty)
+    //println("increment: " +increment.mkString(", "))
       
     val mapping: Morphism = increment.flatMap[(V,V), Map[V,V]]{ case (v, i) =>
       if (i == 0) {
@@ -384,68 +425,37 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
   //after removing some nodes (e.g. inhibitor), the depth of some nodes might be larger than needed.
   //The flattening will try to reduce the depths.
   def flatten: (Self, Morphism) = {
-    //look at nodes difference of depth between nodes.
-    //a node alone should be of depth 0 or 1
-    //a can be of depth i > 1 iff it is linked to a node of depth i-1.
+    val cmpGraph = decomposeInDisjointComponents
+    val processingOrder = cmpGraph.topologicalSort
+    val defaultDepthMap = Map[Set[V], Int]() withDefault (v => if (v.head.depth == 0) 0 else 1)
 
-    //how to compute the minimal depth:
-    //- get the nodes that are replicated
-    val (replicated, other) = vertices.partition(_.depth > 0)
-    //- create a set of constraints between nodes: eq
-    val eqEdges1 = replicated.toSeq.flatMap(v => this(v).toSeq.filter(_.depth == v.depth).map(v -> _))
-    val eqEdges2 = eqEdges1.map{case (a,b) => (b,a) }
-    val eqGraph = DiGraph[GT.ULGT{type V = P#V}](eqEdges1 ++ eqEdges2).addVertices(replicated)
-    
-    //- create a set of constraints between nodes: lt
-    val ltEdges = replicated.toSeq.flatMap(v => undirectedAdjacencyMap(v).toSeq.filter(_.depth > v.depth).map(v -> _))
-    val ltGraph = DiGraph[GT.ULGT{type V = P#V}](ltEdges).addVertices(replicated)
-
-    //- merge nodes that are equal
-    val sameComponents = eqGraph.SCC(true)
-    val mergeCmp = sameComponents.flatMap( cmp => cmp.map(_ -> cmp.head) ).toMap[V, V]
-    val ltGraphMerged = ltGraph morph mergeCmp
-    
-      
-    //- topological sort
-    val topSort = ltGraphMerged.topologicalSort
-    //- greedy: assign depth
-    val mergedDepths = (Map[V,Int]() /: topSort)( (acc, v) => {
-      val currentDepth = acc.getOrElse(v, 1)
-      val successors = ltGraphMerged(v) //have depth of at least currentDepth + 1
-      val successorsPlusDepth = successors.map(s => s -> math.max(currentDepth + 1, acc.getOrElse(s, 1)) )
-      acc ++ successorsPlusDepth + (v -> currentDepth)
+    val depthMap = (defaultDepthMap /: processingOrder)( (acc, cmp) => {
+      val curDepth = acc(cmp)
+      val acc2 = if (!acc.contains(cmp)) acc + (cmp -> curDepth) else acc
+      val succ = cmpGraph(cmp)
+      (acc2 /: succ)( (map, v) => map + (v -> math.max(curDepth + 1, map(v))) )
     })
-    //- expand to the whole SCC
-    val lowerDepth = mergeCmp.map[(V,Int), Map[V,Int]]{ case (v, repr) => v -> mergedDepths(repr) }
 
-    //val newDepths = lowerDepth
-    //val changingDepths = newDepths.filter{ case (a,i) => a.depth != i }
-    val morphism: Morphism = lowerDepth.map[(V,V), Map[V,V]]{ case (a, i) =>
-      val delta = a.depth - i
-      assert(delta >= 0)
-      val a2 = (a /: (0 until delta))( (a, _) => a--)
-      (a, a2)
+    val morphism: Morphism = depthMap.flatMap[(V,V), Map[V,V]]{ case (cmp, i) =>
+      for (n <- cmp) yield {
+        val delta = n.depth - i
+        assert(delta >= 0)
+        val n2 = (n /: (0 until delta))( (a, _) => a--)
+        (n, n2)
+      }
     }
-    assert(other.forall(v => !morphism.contains(v)))
-    val morphismFull = morphism ++ other.map(x => (x,x) )
-    (this morph morphism, morphismFull)
+    assert(vertices forall (morphism contains _))
+    (this morph morphism, morphism)
   }
 
   //if this methods returns true, then flattening is not required
   //purpose: detect where thing are going wrong (and fix the bugs) rather than flattening all the time
   def noUnneededNesting: Boolean = {
-    //a fixpoint algo where nodes can be maked as good or bad.
-    //a node is good if it has depth 0/1 or if it has a good neighbor of its depth +/- 1
-    val goodEdges1: Iterable[(V, Boolean, V)] = edges.map{ case (a, _, b) => (a, math.abs(a.depth - b.depth) <= 1, b) }
-    val goodEdges2 = goodEdges1.map{ case (a,b,c) => (c,b,a) }
-    val goodEdges = goodEdges1 ++ goodEdges2
-    val graph = EdgeLabeledDiGraph[GT.ELGT{type V = P#V; type EL = Boolean}](goodEdges).addVertices(vertices)
-    def post(a: Boolean, label: Boolean) = a && label
-    def join(a: Boolean, b: Boolean) = a || b
-    def cover(a: Boolean, b: Boolean) = !b || a
-    def default(v: V) = v.depth <= 1
-    val validNodes = graph.aiFixpoint[Boolean]( post, join, cover, default, true)
-    validNodes.forall(_._2)
+    val revCmpGraph = decomposeInDisjointComponents.reverse
+    revCmpGraph.vertices forall ( cmp => {
+      val depth = cmp.head.depth
+      depth <= 1 || revCmpGraph(cmp).exists(_.head.depth == depth - 1)
+    })
   }
 
 

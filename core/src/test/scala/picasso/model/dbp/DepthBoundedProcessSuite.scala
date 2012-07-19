@@ -212,7 +212,7 @@ class DepthBoundedProcessSuite extends FunSuite {
       val next = (pred ++ adding)
       cover = proc.widening(pred, next)
       cover = proc.widening(pred, cover)
-      Logger("TEST", LogNotice, "∇: from " + pred + " with " + next + " to " + cover)
+      Logger("TEST", LogInfo, "∇: from " + pred + " with " + next + " to " + cover)
     }
     Logger("TEST", LogNotice, "folded cover: " + cover.fold)
     assert(cover isSubgraphOf fullCover, "full cover: " + fullCover)
@@ -233,6 +233,8 @@ class DepthBoundedProcessSuite extends FunSuite {
     val expected = emp ++ (a1 --> b1)
     assert(conf0 isSubgraphOf wide, "conf0 not subgraph")
     assert(conf1 isSubgraphOf wide, "conf1 not subgraph")
+    assert(!(wide isSubgraphOf conf0), "wide is subgraph conf0")
+    assert(!(wide isSubgraphOf conf1), "wide is subgraph conf1")
     assert((expected isSubgraphOf wide) && (wide isSubgraphOf expected), "wide is not the expected result")
   }
 
@@ -244,6 +246,8 @@ class DepthBoundedProcessSuite extends FunSuite {
     val expected = emp ++ (a1 --> b2)
     assert(conf0 isSubgraphOf wide, "conf0 not subgraph")
     assert(conf1 isSubgraphOf wide, "conf1 not subgraph")
+    assert(!(wide isSubgraphOf conf0), "wide is subgraph conf0")
+    assert(!(wide isSubgraphOf conf1), "wide is subgraph conf1")
     assert((expected isSubgraphOf wide) && (wide isSubgraphOf expected), "wide is not the expected result")
   }
 
@@ -260,6 +264,8 @@ class DepthBoundedProcessSuite extends FunSuite {
 
     assert(conf0 isSubgraphOf wide1, "conf0 not subgraph")
     assert(conf1 isSubgraphOf wide1, "conf1 not subgraph")
+    assert(!(wide1 isSubgraphOf conf0), "wide1 is subgraph conf0")
+    assert(!(wide1 isSubgraphOf conf1), "wide1 is subgraph conf1")
     assert((expected1 isSubgraphOf wide1) && (wide1 isSubgraphOf expected1), "wide1 is not the expected result")
 
     val conf2 = emp + a1 + c0
@@ -273,10 +279,29 @@ class DepthBoundedProcessSuite extends FunSuite {
 
     assert(conf2 isSubgraphOf wide2, "conf2 not subgraph")
     assert(conf3 isSubgraphOf wide2, "conf3 not subgraph")
+    assert(!(wide2 isSubgraphOf conf2), "wide2 is subgraph conf2")
+    assert(!(wide2 isSubgraphOf conf3), "wide2 is subgraph conf3")
     assert((expected2 isSubgraphOf wide2) && (wide2 isSubgraphOf expected2), "wide2 is not the expected result")
 
   }
 
+  test("widening test 03") {
+    val proc = new DepthBoundedProcess[LocDBCT](Nil)
+    val conf0 = emp ++ (c2 --> a1) /*++ (cc2 --> a1)*/ ++ (c2 --> b1)
+    val conf1 = emp ++ (c2 --> a1) ++ (cc2 --> a1) ++ (c2 --> b1) ++ (cc2 --> b0)
+    val wide = proc.widening(conf0, conf1)
+    
+    assert(conf0 isSubgraphOf conf1)
+
+    //println("conf0:" + conf0)
+    //println("conf1:" + conf1)
+    //println("wide:" + wide)
+
+    assert(conf0 isSubgraphOf wide, "conf0 not subgraph")
+    assert(conf1 isSubgraphOf wide, "conf1 not subgraph")
+    assert(!(wide isSubgraphOf conf0), "wide is subgraph conf0")
+    assert(!(wide isSubgraphOf conf1), "wide is subgraph conf1")
+  }
 
 }
 

@@ -50,6 +50,23 @@ trait GraphAlgorithms[PB <: GT, P <: PB, G[P1 <: PB] <: GraphLike[PB, P1, G]] {
     val trace = shortestPath(x,y)
     Trace[VL,EL](labelOf(trace.start), trace.transitions.map( p => (p._1, labelOf(p._2))):_*)
   }
+  
+  /** Returns a topological sort of the graph, i.e. a node comes before its successors in the sort.
+   *  The graph needs too be acyclic. */
+  def topologicalSort: Seq[V] = {
+    import scala.collection.mutable.Queue
+    val q = Queue[V]()
+    var graph = this.reverse
+    while (graph.nbrVertices > 0) {
+      //Logger("graph", LogError, "topologicalSort: " + graph)
+      val ready = graph.vertices.filter( v => graph(v).isEmpty)
+      if (ready.isEmpty) Logger.logAndThrow("graph", LogError, "topologicalSort of a cyclic graph.")
+      graph = graph -- ready
+      q ++= ready
+    }
+    q.toSeq
+  }
+
 
   /** Compute an abstract interpretation fixpoint.
    * @param post the function that computes the post (action on an edge). post shoulde be monotonic.

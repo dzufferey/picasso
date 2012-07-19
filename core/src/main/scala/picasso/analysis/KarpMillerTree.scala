@@ -3,7 +3,7 @@ package picasso.analysis
 import picasso.math._
 import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger, Misc, Config}
 
-trait KarpMillerTree {
+trait KarpMillerTree extends CoveringSet {
   self : WSTS with WADL =>
   
   sealed abstract class KMTree {
@@ -211,10 +211,10 @@ trait KarpMillerTree {
 
   //TODO the termination of this algorithm is not guarranteed (but should be better in practice)
   //to get termination the restartThresold should be progressively increased
-  def buildTreeWithRestart(initState: S): (DownwardClosedSet[S], KMTree) = {
+  def buildTreeWithRestart(initCover: DownwardClosedSet[S]): (DownwardClosedSet[S], Seq[KMTree]) = {
     val startTime = java.lang.System.currentTimeMillis
-    val root = KMRoot(initState)
-    var cover = DownwardClosedSet.empty[S]
+    val roots = initCover.seq.toSeq.map(initState => KMRoot(initState))
+    var cover = initCover
     val coverMap = scala.collection.mutable.HashMap[S, KMTree]()
     val stack = scala.collection.mutable.Stack[KMTree]()
 
@@ -225,7 +225,7 @@ trait KarpMillerTree {
       if (cleanUpCounter > cleanUpThreshold) {
         cleanUpCounter = 0
         val unNeededKeys = coverMap.keys.filterNot(k => cover.basis.contains(k))
-        coverMap -- unNeededKeys
+        coverMap --= unNeededKeys
       }
     }
 
@@ -255,7 +255,7 @@ trait KarpMillerTree {
       }
     }
 
-    def buildFromRoot(root: KMRoot) {
+    def buildFromRoot(root: KMRoot, forceRoot: Boolean = false) {
       Logger("Analysis", LogDebug, "starting from " + root())
       assert(stack.isEmpty)
       stack.push(root)
@@ -269,10 +269,10 @@ trait KarpMillerTree {
           logIteration(root, current, cover)
           periodicCleanUp
           cover.elementCovering(current()) match {
-            case Some(elt) =>
+            case Some(elt) if forceRoot && current != root => //force taking transitions if it is the root
               val by = coverMap(elt)
               current.subsumed = Some(by)
-            case None =>
+            case _ =>
               cover = cover + current()
               coverMap += (current() -> current)
               val successors = oneStepPost(current).par
@@ -292,17 +292,23 @@ trait KarpMillerTree {
         }
       }
     }
-    buildFromRoot(root)
+    for (root <- roots) buildFromRoot(root, true)
     val endTime = java.lang.System.currentTimeMillis
-    Logger("Analysis", LogInfo, "KMTree computed in " + ((endTime - startTime)/1000F) + " sec (cover of size "+cover.size+", K-M tree of size " + root.size + ").")
-    Logger("Analysis", LogDebug, "KMTree is\n" + TreePrinter.print(root))
+    Logger("Analysis", LogInfo, "KMTree computed in " + ((endTime - startTime)/1000F) + " sec (cover of size "+cover.size+", K-M tree of size " + (0 /: roots)(_ + _.size) + ").")
+    Logger("Analysis", LogDebug, "KMTree are\n" + roots.map(TreePrinter.print(_).mkString("\n")))
     Logger("Analysis", LogInfo, "Checking fixed-point.")
     if (checkFixedPoint(cover)) {
       Logger("Analysis", LogInfo, "Fixed-point checked.")
     } else {
       Logger("Analysis", LogError, "Fixed-point checking failed.")
     }
-    (cover, root)
+    (cover, roots)
+  }
+  
+  def buildTreeWithRestart(initState: S): (DownwardClosedSet[S], KMTree) = {
+    val (cover, trees) = buildTreeWithRestart(DownwardClosedSet(initState))
+    assert(trees.size == 1)
+    (cover, trees.head)
   }
 
 
@@ -364,8 +370,8 @@ trait KarpMillerTree {
     buildTreeWithRestart(initState)
   }
   
-  def computeCover(initState: S) = {
-    val (cover, tree) = computeTree(initState)
+  def computeCover(initCover: DownwardClosedSet[S]) = {
+    val (cover, trees) = buildTreeWithRestart(initCover)
     //tree.extractCover
     cover
   }

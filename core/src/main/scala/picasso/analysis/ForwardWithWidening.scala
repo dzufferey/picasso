@@ -23,7 +23,7 @@ how to do it efficiently ?
       (2b) test if larger than something currently being explored. (WARNING early stop problem)
 
  */
-trait ForwardWithWidening {
+trait ForwardWithWidening extends CoveringSet {
   self : WSTS with WADL =>
 
   sealed abstract class Link
@@ -51,10 +51,11 @@ trait ForwardWithWidening {
   //TODO better to do the exploration in a DFS/BFS way ?
   //DFS should get faster to some acceleration but not sure about convergence (ascending fork ?)
 
-  def computeEverything(initState: S, isDone: S => Boolean): (DownwardClosedSet[S], EdgeLabeledDiGraph[CG], Option[TransfiniteTrace[S,T]]) = {
-    var graph = EdgeLabeledDiGraph.empty[CG] + initState
-    var cover = DownwardClosedSet(initState)
-    val workingList = scala.collection.mutable.Stack[(S,MinElements)]((initState -> UpwardClosedSet.empty[S]))
+  def computeEverything(initCover: DownwardClosedSet[S], isDone: S => Boolean): (DownwardClosedSet[S], EdgeLabeledDiGraph[CG], Option[TransfiniteTrace[S,T]]) = {
+    var graph = EdgeLabeledDiGraph.empty[CG].addVertices( initCover.basis.seq )
+    var cover = initCover
+    val workingList = scala.collection.mutable.Stack[(S,MinElements)]()
+    for (initState <- initCover.basis.seq) workingList.push(initState -> UpwardClosedSet.empty[S])
 
     //TODO when adding things to graph: pay attention that two isomorphic graphs are still two different objects.
     //TODO use views for better performance (if successors list becomes too big)
@@ -203,25 +204,27 @@ trait ForwardWithWidening {
         logIteration
         //if post generates something that covers the targetState then trace else recurse
         val covering = newOnes find { case (_,_,s) => isDone(s)}
-        val trace: Option[TransfiniteTrace[S,T]] = covering map { case (_,_,s) => getTrace(initState, s)}
+        val trace: Option[TransfiniteTrace[S,T]] = covering flatMap { case (_,_,s) =>
+            initCover.view.map(initState => try Some(getTrace(initState, s)) catch { case _ => None }).find(_.isDefined).get
+        }
         if (trace.isDefined) trace else process
       case None => None
     }
 
     //filter trivial case where the init state cover the targetState
     val trace =
-      if (isDone(initState)) Some(TransfiniteTrace.empty[S,T](cover))
+      if (initCover.exists(initState => isDone(initState))) Some(TransfiniteTrace.empty[S,T](cover))
       else process
     (cover, graph, trace)
   }
 
-  def computeCover(initState: S) = {
-    val (cover, _, _) = computeEverything(initState, ((_:S) => false))
+  def computeCover(initCover: DownwardClosedSet[S]) = {
+    val (cover, _, _) = computeEverything(initCover, ((_:S) => false))
     cover
   }
   
   def forwardCoveringWithTrace(initState: S, targetState: S): Option[TransfiniteTrace[S,T]] = {
-    val (_, _, trace) = computeEverything(initState, ordering.gteq(_, targetState))
+    val (_, _, trace) = computeEverything(DownwardClosedSet(initState), ordering.gteq(_, targetState))
     trace
   }
 

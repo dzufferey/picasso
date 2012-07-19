@@ -579,21 +579,6 @@ extends Traceable[P#V,P#EL] with GraphAlgorithms[PB, P, G] {
   (implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Boolean =
     subgraphIsomorphism(bigger)(lblOrd, ev0, ev1).isDefined
 
-  /** Returns a topological sort of the graph. */
-  def topologicalSort: Seq[V] = {
-    import scala.collection.mutable.Queue
-    val q = Queue[V]()
-    var graph = this.reverse
-    while (graph.nbrVertices > 0) {
-      //Logger("graph", LogError, "topologicalSort: " + graph)
-      val ready = graph.vertices.filter( v => graph(v).isEmpty)
-      if (ready.isEmpty) Logger.logAndThrow("graph", LogError, "topologicalSort of a cyclic graph.")
-      graph = graph -- ready
-      q ++= ready
-    }
-    q.toSeq
-  }
-
   def reverse: Self = {
     val revEdges: Iterable[(V, EL, V)] =
       for ( (n1,map) <- adjacencyMap;

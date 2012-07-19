@@ -48,13 +48,19 @@ class DepthBoundedProcess[P <: DBCT](trs: GenSeq[DepthBoundedTransition[P]])(imp
       val (w,m) = bigger widenWithWitness seed
       //println("YY seed: " + seed)
       //println("YY m: " + m)
-      //print(w.toGraphviz("w"))
-      if (ordering.gt(acc._1, w)) {
-        //println("XX keeping acc")
-        acc
-      } else {
-        //println("XX selecting w")
-        (w, m)
+      //print("acc: " + acc._1)
+      //print("w: " + w)
+      ordering.tryCompare(acc._1, w) match {
+        case Some(c) =>
+          if (c >= 0) {
+            //println("XX keeping acc")
+            acc
+          } else {
+            //println("XX selecting w")
+            (w, m)
+          }
+        case None =>
+          Logger.logAndThrow("DepthBoundedProcess", LogError, "widening returned incomparable graphs:\n" + acc._1 + "\n" + w)
       }
     })
     val (widened, folding) = widenedUnfolded.foldWithWitness
@@ -83,7 +89,7 @@ class DepthBoundedProcess[P <: DBCT](trs: GenSeq[DepthBoundedTransition[P]])(imp
   def wideningWithWitness(smaller: S, bigger: S): (S, WideningWitness[P]) = {
     val opt = tryAcceleratePairWithWitness(smaller, bigger)
     if (opt.isDefined) opt.get
-    else Logger.logAndThrow("Limits", LogError, "widening not defined for " + smaller + " and " + bigger)
+    else Logger.logAndThrow("DepthBoundedProcess", LogError, "widening not defined for " + smaller + " and " + bigger)
   }
 
   lazy val affinityMap: GenMap[(T,T), Int] = {

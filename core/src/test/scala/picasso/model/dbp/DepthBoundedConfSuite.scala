@@ -214,6 +214,22 @@ class DepthBoundedConfSuite extends FunSuite {
     //println("flat0:" + flat0)
     assert(flat0.noUnneededNesting)
   }
+  
+  test("flattening 03") {
+    //(n_1, C)*** -> (n_2, A)** [()]
+    //(n_1, C)*** -> (n_3, B)** [()]
+    //(n_5, C)**** -> (n_2, A)** [()]
+    //(n_5, C)**** -> (n_4, B)* [()]
+    val c4 = (c2++)++
+    val c5 = c4++
+    val conf0 = emp ++ (c4 --> a2) ++ (c4 --> b2) ++ (c5 --> a2) ++ (c5 --> b1)
+    val (flat0, _) = conf0.flatten
+    //println("conf0:" + conf0)
+    //println("flat0:" + flat0)
+    assert(flat0 isSubgraphOf conf0)
+    assert(conf0 isSubgraphOf flat0, conf0 + " not a subgraph of " + flat0)
+    assert(flat0.noUnneededNesting)
+  }
 
   test("subgraph 00") {
     val conf0 = emp + a1 + c0
