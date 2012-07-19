@@ -32,14 +32,11 @@ object TransitionsGraphFromCover {
     }
  
     def makeEdges(states: ParIterable[DepthBoundedConf[P]]): ParIterable[(DepthBoundedConf[P], TGEdges[P], DepthBoundedConf[P])] = {
-      val res1 = for ( s1 <- states;
-                       w <- oneStepPostWithWitness(s1) ) yield {
-        (s1, Transition(w), w.to)
-      }
-      val res2 = for ( s1 <- states;
-                       w <- oneStepPostWithWitness(s1);
+      val oneStep = for ( s1 <- states; w <- oneStepPostWithWitness(s1) ) yield w
+      val res1 = oneStep.map( w => (w.from, Transition(w), w.to) )
+      val res2 = for ( w <- oneStep;
                        s2 <- states if proc.ordering.lteq(w.to, s2);
-                       cov <- s1.morphisms(s2)(proc.stateOrdering) ) yield {
+                       cov <- w.to.morphisms(s2)(proc.stateOrdering) ) yield {
         (w.to, Covering[P](cov), s2)
       }
       res1 ++ res2
@@ -49,7 +46,7 @@ object TransitionsGraphFromCover {
     EdgeLabeledDiGraph[TG[P]](edges)
   }
 
-  def toGraphiz[P <: DBCT](graph: EdgeLabeledDiGraph[TG[P]]): Document = {
+  def toGraphviz[P <: DBCT](graph: EdgeLabeledDiGraph[TG[P]]): Document = {
 
     val namer = new Namer
     val confToMap = scala.collection.mutable.HashMap[DepthBoundedConf[P], (String, Map[P#V, String])]()
@@ -63,15 +60,48 @@ object TransitionsGraphFromCover {
 
     def transition(witness: TransitionWitness[P]): Document = {
       val (n1, m1) = confToMap(witness.from)
-      val (n2, m2) = confToMap(witness.to)
-      //TODO print the intermediate graph and the edges
-      sys.error("TODO")
+      var curConf = witness.from
+      var curName = n1
+      var curMap = m1
+
+      var docAcc: Document = empty
+
+      def edgesTo(conf: DepthBoundedConf[P], morph: Iterable[(P#V, P#V)], title: String) {
+        val graphDoc = printCluster(conf)
+        val (gName, gMap) = confToMap(conf)
+        val edges = for ( (a,b) <- morph.iterator ) yield text( curMap(a) + " -> " + gMap(b) + " [color=\"#0000aa\"];")
+        val all = (text(curName + " -> " + gName + " [label=\""+title+"\"];") /: edges)(_ :/: _)
+        docAcc = graphDoc :/: all :/: docAcc
+        curName = gName
+        curConf = conf
+        curMap = gMap
+      }
+
+      if (witness.unfolded != curConf) {
+        val unfoldingRev = witness.unfolding.map{ case (a,b) => (b,a) }
+        edgesTo(witness.unfolded, unfoldingRev, "unfolding")
+      }
+
+      if (witness.inhibited != curConf) {
+        edgesTo(witness.inhibited, witness.inhibitedFlattening, "inhibiting")
+      }
+
+      edgesTo(witness.unfoldedAfterPost, witness.post, "post")
+
+      if (witness.to != curConf) {
+        val (n2, m2) = confToMap(witness.to)
+        val edges = for ( (a,b) <- witness.folding.iterator ) yield text( curMap(a) + " -> " + m2(b) + " [color=\"#0000aa\"];")
+        val all = (text(curName + " -> " + n2 + " [label=\"folding\"];") /: edges)(_ :/: _)
+        docAcc = all :/: docAcc
+      }
+
+      docAcc
     }
 
     def cover(from: DepthBoundedConf[P], morph: Map[P#V, P#V], to: DepthBoundedConf[P]): Document = {
       val (n1, m1) = confToMap(from)
       val (n2, m2) = confToMap(to)
-      val edges = for ( (a,b) <- morph.toSeq ) yield text( m1(a) + " -> " + m2(b) + " [color=\"#0000aa\"];")
+      val edges = for ( (a,b) <- morph.iterator ) yield text( m1(a) + " -> " + m2(b) + " [color=\"#0000aa\"];")
       (text(n1 + " -> " + n2 + " [label=\"covering\"];") /: edges)(_ :/: _)
     }
 

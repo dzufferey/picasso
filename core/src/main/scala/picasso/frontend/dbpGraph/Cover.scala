@@ -3,7 +3,7 @@ package picasso.frontend.dbpGraph
 import picasso.utils._
 import picasso.utils.report._
 import picasso.model.dbp._
-import picasso.analysis.KarpMillerTree
+import picasso.analysis._
 
 class Cover(fileName: String, content: String) extends AnalysisCommon("Cover", fileName, content) {
 
@@ -16,7 +16,7 @@ class Cover(fileName: String, content: String) extends AnalysisCommon("Cover", f
      if (Config.KM_showTree) {
        val treeAsGV = process.TreePrinter.printGraphviz(tree , (t, id, pref) => t().toGraphvizFull(id, "subgraph", "", pref)._1 )
        Logger("dbpGraph", LogInfo, "tree:\n" + treeAsGV )
-       report.add( new GenericItem( "KM Tree", treeAsGV,Misc.graphvizToSvgFdp(treeAsGV) ))
+       report.add( new GenericItem( "KM Tree", treeAsGV, Misc.graphvizToSvgFdp(treeAsGV) ))
      }
      
      Logger("dbpGraph", LogNotice, "cover:\n" + cover)
@@ -29,6 +29,12 @@ class Cover(fileName: String, content: String) extends AnalysisCommon("Cover", f
        ))
      }
      report.add(coverReport)
+
+     if (Config.TGCover) {
+       val tg = TransitionsGraphFromCover(process, cover)
+       val tgAsGV = Misc.docToString(TransitionsGraphFromCover.toGraphviz(tg))
+       report.add( new GenericItem( "Transitions graph from cover", tgAsGV, Misc.graphvizToSvgFdp(tgAsGV) ))
+     }
 
   }
 

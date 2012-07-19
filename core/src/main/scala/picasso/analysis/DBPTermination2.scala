@@ -14,6 +14,7 @@ trait DBPTermination2[P <: DBCT] extends DBPTerminationCommon[P] {
   //from the cover -> take the one step successors -> find out the back edges for each sucessors
   //initialisation: to any element of the cover with "any" counter value
 
+  //TODO use TransitionsGraphFromCover
 
   protected def oneStepPostWithWitness(current: S): ParIterable[TransitionWitness[P]] = {
     val possible = transitions.filter(_ isDefinedAt current).par

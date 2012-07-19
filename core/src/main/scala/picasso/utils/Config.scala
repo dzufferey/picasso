@@ -131,6 +131,10 @@ class Config {
   val tree1 = ("-t", Arg.Unit(() => KM_showTree = true), "output the Karp-Miller tree (when applicable) as part of the report.")
   val tree2 = ("--full", Arg.Unit(() => KM_fullTree = true), "keep all the successors in the Karp-Miller tree.")
 
+  //transition on the cover
+  var TGCover = false
+  val tg = ("--TG", Arg.Unit(() => TGCover = true), "print a graph of the transitions applied to the covering set.")
+
   //about the termination analysis
   var termination = false
   var useTree = false
@@ -152,7 +156,7 @@ class Config {
   val options = List(
     verbose, quiet, hide,
     reportQuick, reportFull,
-    tree1, tree2,
+    tree1, tree2, tg,
     termination1, termination2, termination3,
     termination4, termination5, termination6,
     termination7
