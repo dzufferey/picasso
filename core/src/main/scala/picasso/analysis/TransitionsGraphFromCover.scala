@@ -52,10 +52,14 @@ object TransitionsGraphFromCover {
     val confToMap = scala.collection.mutable.HashMap[DepthBoundedConf[P], (String, Map[P#V, String])]()
 
     def printCluster(conf: DepthBoundedConf[P]/*, title: String*/): Document = {
-      val name = Namer("conf_")
-      val (doc, map) = conf.toGraphvizFull("cluster_"+name, "subgraph", "label = "+ Misc.quote(name)+";", name)
-      confToMap += (conf -> ("cluster_"+name, map))
-      doc
+      if (confToMap contains conf) {
+        empty
+      } else {
+        val name = Namer("conf_")
+        val (doc, map) = conf.toGraphvizFull("cluster_"+name, "subgraph", "label = "+ Misc.quote(name)+";", name + "_")
+        confToMap += (conf -> ("cluster_"+name, map))
+        doc
+      }
     }
 
     def transition(witness: TransitionWitness[P]): Document = {
@@ -70,7 +74,8 @@ object TransitionsGraphFromCover {
         val graphDoc = printCluster(conf)
         val (gName, gMap) = confToMap(conf)
         val edges = for ( (a,b) <- morph.iterator ) yield text( curMap(a) + " -> " + gMap(b) + " [color=\"#0000aa\"];")
-        val all = (text(curName + " -> " + gName + " [label=\""+title+"\"];") /: edges)(_ :/: _)
+        val clusterToCluster: Document = text(Misc.quoteIfFancy(curName) + " -> " + Misc.quoteIfFancy(gName) + " [label=\""+title+"\"];")
+        val all = (clusterToCluster /: edges)(_ :/: _)
         docAcc = graphDoc :/: all :/: docAcc
         curName = gName
         curConf = conf
@@ -91,7 +96,8 @@ object TransitionsGraphFromCover {
       if (witness.to != curConf) {
         val (n2, m2) = confToMap(witness.to)
         val edges = for ( (a,b) <- witness.folding.iterator ) yield text( curMap(a) + " -> " + m2(b) + " [color=\"#0000aa\"];")
-        val all = (text(curName + " -> " + n2 + " [label=\"folding\"];") /: edges)(_ :/: _)
+        val clusterToCluster: Document = text(Misc.quoteIfFancy(curName) + " -> " + Misc.quoteIfFancy(n2) + " [label=\"folding\"];")
+        val all = (clusterToCluster /: edges)(_ :/: _)
         docAcc = all :/: docAcc
       }
 
@@ -102,7 +108,7 @@ object TransitionsGraphFromCover {
       val (n1, m1) = confToMap(from)
       val (n2, m2) = confToMap(to)
       val edges = for ( (a,b) <- morph.iterator ) yield text( m1(a) + " -> " + m2(b) + " [color=\"#0000aa\"];")
-      (text(n1 + " -> " + n2 + " [label=\"covering\"];") /: edges)(_ :/: _)
+      (text(Misc.quoteIfFancy(n1) + " -> " + Misc.quoteIfFancy(n2) + " [label=\"covering\"];") /: edges)(_ :/: _)
     }
 
     //first part print all the conf in the graph (edges might add more confs, but their are not visible from outside)
