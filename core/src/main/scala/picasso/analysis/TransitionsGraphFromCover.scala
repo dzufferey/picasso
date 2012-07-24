@@ -3,7 +3,6 @@ package picasso.analysis
 import picasso.utils._
 import picasso.model.dbp._
 import picasso.graph._
-import picasso.model.integer._
 import picasso.math._
 import scala.collection.parallel.{ParIterable, ParSeq}
 import scala.text.Document
@@ -121,15 +120,6 @@ object TransitionsGraphFromCover {
     
     "digraph TG {" :: nest(4, confs :/: trs) :/: text("}")
   }
-
-  /* TODO language extraction from the transition graph (should go innto its own file)
-   * assume transition name / comment are of the from  "methodName(thisType)[: newObj] [, comment]"
-   * methods that do not have this shape are transient methods (from wich the result should be integrated in the first correctly named predecessor).
-   *
-   * 1st step: identifies the equivalence classes (object node with the predicates)
-   * 2nd step: go along the edges (and morphing) while tracking the equivalence classes of this and the other objects
-   * 3rd step: structure the output ...
-   */
 
 }
 
