@@ -99,6 +99,12 @@ class Logger {
     sys.error(content)
   }
 
+  def assert(cond: => Boolean, relatedTo: String, content: => String) {
+    if (!cond) {
+      logAndThrow(relatedTo, LogError, content)
+    }
+  }
+
 }
 
 object Logger extends Logger {

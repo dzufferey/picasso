@@ -33,7 +33,7 @@ class Trace[A,B](val start: A, val transitions: List[(B,A)]) extends Iterable[(B
 
   def reverse = new Trace(stop, triples.reverse map ( t => (t._2, t._1)))
 
-  def split(at: Set[A]): List[Trace[A,B]] = {
+  def split(at: A => Boolean): List[Trace[A,B]] = {
     var acc: List[Trace[A,B]] = Nil
     var current = this
     while (!current.transitions.isEmpty) {
@@ -51,7 +51,7 @@ class Trace[A,B](val start: A, val transitions: List[(B,A)]) extends Iterable[(B
     acc.reverse
   }
 
-  def split(at: A): List[Trace[A,B]] = split(Set(at))
+  def split(at: A): List[Trace[A,B]] = split(_ == at)
 
   override def toString = start + transitions.map( p => (p._1 + " => "+p._2)).mkString(" => ", " => ", "")
 

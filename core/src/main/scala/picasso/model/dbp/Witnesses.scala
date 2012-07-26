@@ -62,6 +62,76 @@ class TransitionWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
     "\nto: " + to
   }
 
+  /** Complete the morphisms that are partial (no frame, only frame, ...). */
+  def complete {
+    // unfolding (no frame)
+    unfolding = addFrame(unfolded, unfolding, from)
+    // inhibitedFlattening (should already be complete)
+    // post (only the frame + wildcard nodes)
+    post = completePost(inhibited, post, unfoldedAfterPost)
+    // folding (no frame)
+    folding = addFrame(unfoldedAfterPost, folding, to)
+  }
+
+  protected def addFrame(src: DepthBoundedConf[P], map: Morphism, trg: DepthBoundedConf[P]): Morphism = {
+    val frame = src.vertices -- map.keys
+    Logger.assert(
+      frame.forall(trg contains _),
+      "DBP",
+      "addFrame: node disappearing\n" + src + "\nframe: " + frame.mkString(", ") + "\n" + trg
+    )
+    (map /: frame)( (acc, f) => acc + (f -> f) )
+  }
+
+  protected def completePost(src: DepthBoundedConf[P], map: Morphism, trg: DepthBoundedConf[P]): Morphism = {
+    val notFrameSrc = src.vertices -- map.keys
+    val notFrameTrg = trg.vertices -- map.values
+    //TODO map from notFrameSrc to transition.lhs
+    //TODO map from notFrameTrg to transition.rhs
+    //TODO the two mapping above might not be unique, but must agree.
+    //TODO use hk (forward) complete the map, the hr part (backward) should already be there
+    sys.error("TODO")
+  }
+
+  def reversedUnfolding: Map[P#V, Seq[P#V]] = {
+    val frame = unfolded.vertices -- unfolding.keys
+    assert(frame forall (from contains _) )
+    val revMorph2 = unfolding ++ frame.map(x => (x,x))
+    revMorph2.toSeq.map{ case (a,b) => (b,a) }.groupBy( _._1 ).mapValues( _ map (_._2) )
+  }
+  
+  def isUnfoldingTrivial = {
+    if (from == unfolded) {
+      assert(unfolding.isEmpty)
+      true
+    } else {
+      false
+    }
+  }
+
+  def isInhibitingTrivial = {
+    if (unfolded == inhibited) {
+      assert(inhibitedNodes.isEmpty && inhibitedFlattening.isEmpty)
+      true
+    } else {
+      false
+    }
+  }
+
+  def isPostTrivial = {
+    assert(inhibited != unfoldedAfterPost)
+    false
+  }
+
+  def isFoldingTrivial = {
+    if (unfoldedAfterPost == to) {
+      assert(folding.isEmpty || folding.forall{ case (a,b) => a == b})
+      true
+    } else {
+      false
+    }
+  }
+
 }
 
 class WideningWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])

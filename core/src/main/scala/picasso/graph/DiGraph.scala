@@ -553,7 +553,6 @@ extends Traceable[P#V,P#EL] with GraphAlgorithms[PB, P, G] {
   }
   */
 
-  //TODO should return an iterator ?
   def morphisms[Q <: PB](bigger: G[Q], injective: Q#V => Boolean, comp: MorphInfo[Q] => Iterable[Clause[(P#V,Q#V)]])
   (implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Iterator[Map[V,Q#V]] = 
     (lazyMorphismsBySat(bigger, injective, comp)(lblOrd, ev0, ev1))

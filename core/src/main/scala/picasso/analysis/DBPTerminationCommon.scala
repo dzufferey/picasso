@@ -255,13 +255,11 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
     new Transition(pc1, pc2, guardForConcreteNode(from), stmts, "inhibiting")
   }
 
-  // the reverse of folding ...
-  //revMorph is a mapping from the node of 'to' to the node of 'from'
   //TODO when unfolding a component, do we need to keep some more information (i.e. unfold the same as or at least as much as ...)
-  protected def unfolding(from: S, revMorph: Map[P#V,P#V], to: S): Transition = {
+  protected def unfolding(from: S, backwardUnFolding: Map[P#V, Seq[P#V]], to: S): Transition = {
     Logger("DBPTermination", LogDebug, "unfolding transition from " + from +
                                        " to " + to +
-                                       " with " + revMorph +
+                                       " with " + backwardUnFolding +
                                        "\nfrom.vertices: " + from.vertices +
                                        "\nto.vertices: " + to.vertices)
     // Way to encode the unfolding
@@ -272,12 +270,7 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
     val (pc1, map1) = getPC(from)
     val (pc2, map2) = getPC(to)
 
-    //reverse the unfolding
-    val frame = to.vertices -- revMorph.keys
-    assert(frame forall (from contains _) )
-    val revMorph2 = revMorph ++ frame.map(x => (x,x))
-    val backwardUnFolding: Map[P#V, Seq[P#V]] = revMorph2.toSeq.map{ case (a,b) => (b,a) }.groupBy( _._1 ).mapValues( _ map (_._2) )
-    assert(to.vertices forall (revMorph2 contains _))
+    assert({val range = backwardUnFolding.values.flatten.toSet; to.vertices forall (range contains _)})
     assert(from.vertices forall (backwardUnFolding contains _))
 
     val stmts1 = for ( (node, lst) <- backwardUnFolding ) yield {
@@ -431,22 +424,27 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
     new Transition(pc0, pc1, Literal(true), stmts, "initialize")
   }
 
-  protected def isUnfoldingTrivial(from: S, revMorph: Map[P#V,P#V], to: S) = {
-    if (from == to) {
-      assert(revMorph.isEmpty)
-      true
-    } else {
-      false
-    }
+  protected def isReplicationTrivial(from: S, smaller: S, replicating: Map[P#V, P#V], to: S) = {
+    assert(from != to)
+    false
   }
-  protected def isInhibitingTrivial(from: S,  inhibited: Set[P#V], flatten: Map[P#V,P#V], to: S) = {
-    if (from == to) {
-      assert(inhibited.isEmpty && flatten.isEmpty)
-      true
-    } else {
-      false
-    }
+
+  protected def transitionForWitness1(witness: TransitionWitness[P]): Seq[Transition] = {
+    val t1 =
+      if (witness.isUnfoldingTrivial) None
+      else Some(unfolding(witness.from, witness.reversedUnfolding, witness.unfolded))
+    val t2 =
+      if (witness.isInhibitingTrivial) None
+      else Some(inhibiting(witness.unfolded, witness.inhibitedNodes, witness.inhibitedFlattening, witness.inhibited))
+    val t3 =
+      if (witness.isPostTrivial) None
+      else Some(morphing(witness.inhibited, witness.post, witness.transition, witness.unfoldedAfterPost))
+    val t4 =
+      if (witness.isFoldingTrivial) None
+      else Some(folding(witness.unfoldedAfterPost, witness.folding, witness.to))
+    Seq(t1, t2, t3, t4).flatten
   }
+  
   protected def isFoldingTrivial(from: S, folding: Map[P#V,P#V], to: S) = {
     if (from == to) {
       assert(folding.isEmpty || folding.forall{ case (a,b) => a == b})
@@ -455,31 +453,6 @@ trait DBPTerminationCommon[P <: DBCT] extends KarpMillerTree {
       false
     }
   }
-  protected def isMorphingTrivial(from: S, frame: Map[P#V, P#V], tr: T, to: S) = {
-    assert(from != to)
-    false
-  }
-  protected def isReplicationTrivial(from: S, smaller: S, replicating: Map[P#V, P#V], to: S) = {
-    assert(from != to)
-    false
-  }
-
-  protected def transitionForWitness1(witness: TransitionWitness[P]): Seq[Transition] = {
-    val t1 =
-      if (isUnfoldingTrivial(witness.from, witness.unfolding, witness.unfolded)) None
-      else Some(unfolding(witness.from, witness.unfolding, witness.unfolded))
-    val t2 =
-      if (isInhibitingTrivial(witness.unfolded, witness.inhibitedNodes, witness.inhibitedFlattening, witness.inhibited)) None
-      else Some(inhibiting(witness.unfolded, witness.inhibitedNodes, witness.inhibitedFlattening, witness.inhibited))
-    val t3 =
-      if (isMorphingTrivial(witness.inhibited, witness.post, witness.transition, witness.unfoldedAfterPost)) None
-      else Some(morphing(witness.inhibited, witness.post, witness.transition, witness.unfoldedAfterPost))
-    val t4 =
-      if (isFoldingTrivial(witness.unfoldedAfterPost, witness.folding, witness.to)) None
-      else Some(folding(witness.unfoldedAfterPost, witness.folding, witness.to))
-    Seq(t1, t2, t3, t4).flatten
-  }
-  
   protected def transitionForWitness2(witness: WideningWitness[P]): Seq[Transition] = {
     val t1 =
       if (isReplicationTrivial(witness.bigger, witness.smaller, witness.replicated, witness.unfoldedResult)) Seq[Transition]()
