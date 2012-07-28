@@ -132,6 +132,14 @@ class TransitionWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
     }
   }
 
+  /** returns the nodes that are matched by the LHR. */
+  def modifiedPre: Set[P#V] = sys.error("TODO")
+  
+  /** returns the nodes that are matched by the RHS. */
+  def modifiedPost: Set[P#V] = sys.error("TODO")
+
+  def modified: (Set[P#V], Set[P#V]) = (modifiedPre, modifiedPost)
+
 }
 
 class WideningWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])

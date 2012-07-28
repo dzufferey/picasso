@@ -101,7 +101,7 @@ class InterfactExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
     (typeOf(node), objsWithField, unaryValues, binaryValues)
   }
 
-  protected def extractDPV(graph: DepthBoundedConf[P], node: P#V): DPV = {
+  protected def extractDPV(graph: DP, node: P#V): DPV = {
     val keep = graph(node) + node
     val restricted = graph filterNodes keep
     //flatten to keep a single object.
@@ -182,7 +182,7 @@ class InterfactExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
     case Covering(mapping) => simpleTracking(curr, mapping)
   }
   
-  protected def follows(from: DepthBoundedConf[P], trs: Seq[TGEdges[P]], to: DepthBoundedConf[P]): (Map[DPV, Set[DPV]], Iterable[DPV]) = {
+  protected def follows(from: DP, trs: Seq[TGEdges[P]], to: DP): (Map[DPV, Set[DPV]], Iterable[DPV]) = {
     //step 1: identify the objects in from
     val objsNode: Set[P#V] = from.vertices.filter(isObj)
     val iter: Iterator[(P#V, Set[P#V])] = objsNode.iterator.map(n => (n, Set(n)))
@@ -199,7 +199,7 @@ class InterfactExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
   }
 
   /** decompose the transition graph into simple path going from cover location to cover location */
-  protected def makePaths: Seq[(DepthBoundedConf[P], Seq[TGEdges[P]], DepthBoundedConf[P])] = {
+  protected def makePaths: Seq[(DP, Seq[TGEdges[P]], DP)] = {
     //the simple version
     val paths = tg.simplePaths
     Logger.assert(paths.forall(p => cover.contains(p.start) && cover.contains(p.stop)),
@@ -210,8 +210,75 @@ class InterfactExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
     paths3.force
   }
 
-  protected def pathToMethodCall(path: (DepthBoundedConf[P], Seq[TGEdges[P]], DepthBoundedConf[P])): MethodCall = {
-    sys.error("TODO")
+  /** methodName(thisType)[: newObj] [, comment]
+   *  returns (thisType, methodName, [newObj])
+   */
+  protected def parseName(str: String): Option[(String,String,Option[String])] = {
+    val woComment =
+      if (str.indexOf(",") == -1) str
+      else str.substring(0, str.indexOf(","))
+    try {
+      val lparen = woComment.indexOf("(")
+      val rparen = woComment.indexOf(")")
+      val methodName = woComment.substring(0, lparen)
+      val tpe = woComment.substring(lparen + 1, rparen)
+      val rest = woComment.substring(rparen + 1)
+      val created =
+        if (rest contains ":") Some(rest.substring(rest.indexOf(":") + 1).trim)
+        else None
+      Some((tpe, methodName, created))
+    } catch {
+      case e: java.lang.StringIndexOutOfBoundsException =>
+        None
+    }
+  }
+
+  protected def pathToMethodCall(path: (DP, Seq[TGEdges[P]], DP)): MethodCall = {
+    //MethodCall = (Obj, String, Map[Obj, Set[Obj]], Iterable[Obj])
+    //(1) parse the comment from the transition to get the method name and the type/id of the caller
+    val (obj, method, createdTpe) = path._2.head match {
+      case Transition(witness) =>
+        parseName(witness.transition.id) match {
+          case Some((tpe, call, created)) =>
+            val candidates = witness.modifiedPre.filter(n => typeOf(n) == tpe)
+            if (candidates.isEmpty) {
+              Logger("InterfactExtraction", LogWarning, "pathToMethodCall: no candidates")
+              (("unknown", Map.empty, Map.empty, Map.empty): Obj, "---", None)
+            } else {
+              if (candidates.size > 1) {
+                Logger( "InterfactExtraction",
+                        LogWarning,
+                        "pathToMethodCall: more than one candidate for \""+witness.transition.id+"\": " + candidates.mkString(", ")
+                      )
+              }
+              val cnd = candidates.head
+              val dpv = findClassOf(path._1, cnd)
+              (eqClassesMap(dpv), call, created)
+            }
+          case None =>
+            Logger("InterfactExtraction", LogWarning, "pathToMethodCall: cannot parse \""+witness.transition.id+"\"")
+            (("unknown", Map.empty, Map.empty, Map.empty): Obj, "---", None)
+        }
+      case _ => Logger.logAndThrow("InterfactExtraction", LogError, "pathToMethodCall: expected Transition")
+    }
+
+    //(2) follows
+    val (becomes, news) = follows(path._1, path._2, path._3)
+    if (createdTpe.size != news.size) {
+      Logger("InterfactExtraction", LogWarning, "pathToMethodCall: wrong number of created objects ?!")
+    }
+    //(3) put things together
+    val becomesObj = becomes.map{ case (k,vs) => (eqClassesMap(k), vs map eqClassesMap) }
+    val newsObj = news map eqClassesMap
+    (obj, method, becomesObj, newsObj)
+  }
+
+  def interface: Interface = {
+    val edges: Iterable[(DP, MethodCall, DP)] = makePaths.map(path => (path._1, pathToMethodCall(path), path._3) )
+    val nodes = cover.basis.seq
+    val names = nodes.map( c => (c, Namer("cover")) ).toMap
+    val edgesWithStr = edges.map{ case (a,b,c) => (names(a), b, names(c)) }
+    EdgeLabeledDiGraph[IGT](edgesWithStr).addVertices(nodes map names)
   }
 
 }
