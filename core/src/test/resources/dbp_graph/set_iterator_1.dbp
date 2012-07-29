@@ -1,5 +1,5 @@
 init
-  node (s, Safe)
+  node (s, safe)
   (set, Set) -> (emp, empty)
   (set, Set) -> (syn, sync)
   (set, Set) -> (nsyn, not_sync)
@@ -8,9 +8,9 @@ init
 /*
 transition "newSet(): Set"
 pre
-  node (s, Safe)
+  node (s, safe)
 post
-  node (s, Safe)
+  node (s, safe)
   (set, Set) -> (emp, empty)
   (set, Set) -> (syn, sync)
   (set, Set) -> (nsyn, not_sync)
@@ -23,12 +23,12 @@ post
 
 transition "newIter(Set): Iter, on emp"
 pre
-  node (s, Safe)
+  node (s, safe)
   (set, Set) -> (emp, empty)
   (set, Set) -> (syn, sync)
   (set, Set) -> (nmov, not_mover)
 post
-  node (s, Safe)
+  node (s, safe)
   (set, Set) -> (emp, empty)
   (set, Set) -> (syn, sync)
   (set, Set) -> (nmov, not_mover)
@@ -46,12 +46,12 @@ post
 
 transition "newIter(Set): Iter, on notemp"
 pre
-  node (s, Safe)
+  node (s, safe)
   (set, Set) -> (emp, not_empty)
   (set, Set) -> (syn, sync)
   (set, Set) -> (mov, mover)
 post
-  node (s, Safe)
+  node (s, safe)
   (set, Set) -> (emp, not_empty)
   (set, Set) -> (syn, sync)
   (set, Set) -> (mov, mover)
@@ -68,12 +68,12 @@ post
 
 transition "add(Set), on emp"
 pre
-  node (s, Safe)
+  node (s, safe)
   (set, Set) -> (emp, empty)
   (set, Set) -> (syn, sync)
   (set, Set) -> (nsyn, not_sync)
 post
-  node (s, Safe)
+  node (s, safe)
   (set, SetAddLoop) -> (emp, not_empty)
   (set, SetAddLoop) -> (syn1, sync)
   (set, SetAddLoop) -> (nsyn, not_sync)
@@ -86,12 +86,12 @@ post
 
 transition "add(Set), on notemp"
 pre
-  node (s, Safe)
+  node (s, safe)
   (set, Set) -> (emp, not_empty)
   (set, Set) -> (syn, sync)
   (set, Set) -> (nsyn, not_sync)
 post
-  node (s, Safe)
+  node (s, safe)
   (set, SetAddLoop) -> (emp, not_empty)
   (set, SetAddLoop) -> (syn1, sync)
   (set, SetAddLoop) -> (nsyn, not_sync)
@@ -104,12 +104,12 @@ post
 
 transition "add loop"
 pre
-  node (s, Safe)
+  node (s, safe)
   (set, SetAddLoop) -> (nmov, not_mover)
   (set, SetAddLoop) -> (mov, mover)
   (i, Iter) -> (nmov, not_mover)
 post
-  node (s, Safe)
+  node (s, safe)
   (set, SetAddLoop) -> (nmov, not_mover)
   (set, SetAddLoop) -> (mov, mover)
   (i, Iter) -> (mov, mover)
@@ -123,10 +123,10 @@ post
 
 transition "add loop exit"
 pre
-  node (s, Safe)
+  node (s, safe)
   node (set, SetAddLoop)
 post
-  node (s, Safe)
+  node (s, safe)
   node (set, Set)
 ==>
   s -> s
@@ -136,14 +136,14 @@ post
 
 transition "next(Iter), stay mover"
 pre
-  node (s, Safe)
+  node (s, safe)
   (set, Set) -> (syn, sync)
   (set, Set) -> (mov, mover)
   (i, Iter) -> (syn, sync)	
   (i, Iter) -> (set, Set)
   (i, Iter) -> (mov, mover)
 post
-  node (s, Safe)
+  node (s, safe)
   (set, Set) -> (syn, sync)
   (set, Set) -> (mov, mover)
   (i, Iter) -> (set, Set)
@@ -160,7 +160,7 @@ post
 
 transition "next(Iter), become notmover"
 pre
-  node (s, Safe)
+  node (s, safe)
   (set, Set) -> (syn, sync)
   (set, Set) -> (mov, mover)
   (set, Set) -> (nmov, not_mover)
@@ -168,7 +168,7 @@ pre
   (i, Iter) -> (set, Set)
   (i, Iter) -> (mov, mover)
 post
-  node (s, Safe)
+  node (s, safe)
   (set, Set) -> (syn, sync)
   (set, Set) -> (mov, mover)
   (set, Set) -> (nmov, not_mover)
@@ -188,14 +188,14 @@ post
 
 transition "remove(Iter), stay notemp"
 pre
-  node (s, Safe)
+  node (s, safe)
   (set, Set) -> (emp, not_empty)
   (set, Set) -> (syn, sync)
   (set, Set) -> (nsyn, not_sync)
   (i, Iter) -> (set, Set)
   (i, Iter) -> (syn, sync)
 post
-  node (s, Safe)
+  node (s, safe)
   (set, SetRemoveLoop) -> (emp, not_empty)
   (set, SetRemoveLoop) -> (syn1, sync)
   (set, SetRemoveLoop) -> (nsyn, not_sync)
@@ -210,14 +210,14 @@ post
 
 transition "remove(Iter), become emp"
 pre
-  node (s, Safe)
+  node (s, safe)
   (set, Set) -> (emp, not_empty)
   (set, Set) -> (syn, sync)
   (set, Set) -> (nsyn, not_sync)
   (i, Iter) -> (set, Set)
   (i, Iter) -> (syn, sync)
 post
-  node (s, Safe)
+  node (s, safe)
   (set, SetRemoveLoop) -> (emp, empty)
   (set, SetRemoveLoop) -> (syn1, sync)
   (set, SetRemoveLoop) -> (nsyn, not_sync)
@@ -232,12 +232,12 @@ post
 
 transition "remove loop"
 pre
-  node (s, Safe)
+  node (s, safe)
   (set, SetRemoveLoop) -> (nmov, not_mover)
   (set, SetRemoveLoop) -> (mov, mover)
   (i, Iter) -> (mov, mover)
 post
-  node (s, Safe)
+  node (s, safe)
   (set, SetRemoveLoop) -> (nmov, not_mover)
   (set, SetRemoveLoop) -> (mov, mover)
   (i, Iter) -> (nmov, not_mover)
@@ -251,10 +251,10 @@ post
 
 transition "remove loop exit"
 pre
-  node (s, Safe)
+  node (s, safe)
   node (set, SetRemoveLoop)
 post
-  node (s, Safe)
+  node (s, safe)
   node (set, Set)
 ==>
   s -> s
@@ -266,7 +266,7 @@ post
 
 transition "next(Iter), error "
 pre
-  node (s, Safe)
+  node (s, safe)
   (set, Set) -> (nsync, not_sync)
   (i, Iter) -> (nsync, not_sync)
   (i, Iter) -> (set, Set)
@@ -283,7 +283,7 @@ post
 
 transition "remove(Iter), error"
 pre
-  node (s, Safe)
+  node (s, safe)
   (set, Set) -> (nsync, not_sync)
   (i, Iter) -> (nsync, not_sync)
   (i, Iter) -> (set, Set)

@@ -106,6 +106,12 @@ object Arg {
 /** A default configuration class */
 class Config {
   
+  private var options = List[Arg.Def]()
+
+  def newOption(opt: Arg.Key, fct: Arg.Spec, doc: Arg.Doc) {
+    options = (opt, fct, doc) :: options
+  }
+  
   var input: List[String] = Nil
   /** process arguments that do not belong to an option (i.e. the input files). */
   def default(arg: String) {
@@ -113,27 +119,30 @@ class Config {
   }
   
   //verbosity
-  val verbose = ("-v", Arg.Unit(() => Logger.moreVerbose), "increase the verbosity level.")
-  val quiet   = ("-q", Arg.Unit(() => Logger.lessVerbose), "decrease the verbosity level.")
-  val hide    = ("--hide", Arg.String( str => Logger.disallow(str)), "hide the output with given prefix")
+  newOption("-v", Arg.Unit(() => Logger.moreVerbose), "increase the verbosity level.")
+  newOption("-q", Arg.Unit(() => Logger.lessVerbose), "decrease the verbosity level.")
+  newOption("--hide", Arg.String( str => Logger.disallow(str)), "hide the output with given prefix")
 
   //general reporting option
   var report = false
   var reportOutput: Option[String] = None
 
-  val reportQuick = ("-r", Arg.Unit(() => report = true), "output a report (with a default name).")
-  val reportFull = ("--report", Arg.String(str => { report = true; reportOutput = Some(str) } ), "output a report with given name.")
+  newOption("-r", Arg.Unit(() => report = true), "output a report (with a default name).")
+  newOption("--report", Arg.String(str => { report = true; reportOutput = Some(str) } ), "output a report with given name.")
 
   //about the KM tree analysis
   var KM_showTree = false
   var KM_fullTree = false
 
-  val tree1 = ("-t", Arg.Unit(() => KM_showTree = true), "output the Karp-Miller tree (when applicable) as part of the report.")
-  val tree2 = ("--full", Arg.Unit(() => KM_fullTree = true), "keep all the successors in the Karp-Miller tree.")
+  newOption("-t", Arg.Unit(() => KM_showTree = true), "output the Karp-Miller tree (when applicable) as part of the report.")
+  newOption("--full", Arg.Unit(() => KM_fullTree = true), "keep all the successors in the Karp-Miller tree.")
 
   //transition on the cover
   var TGCover = false
-  val tg = ("--TG", Arg.Unit(() => TGCover = true), "print a graph of the transitions applied to the covering set.")
+  var interfaceExtraction = false
+
+  newOption("--TG", Arg.Unit(() => TGCover = true), "print a graph of the transitions applied to the covering set.")
+  newOption("--interface", Arg.Unit(() => interfaceExtraction = true), "extract an interface. (many assumptions about the input ...)")
 
   //about the termination analysis
   var termination = false
@@ -143,24 +152,16 @@ class Config {
   var moreTPreds = false
   var cyclesBound = -1
   var dumpArmc = ""
-  val termination1 = ("--termination", Arg.Unit(() => termination = true), "Compute the termination of the system.")
-  val termination2 = ("--useTree", Arg.Unit(() => useTree = true), "Termination analysis using the KM tree (default is to use only the cover) DEPRECATED.")
-  val termination3 = ("--armc", Arg.String(str => armcCmd = str), "The command to call ARMC.")
-  val termination4 = ("--noCC", Arg.Unit(() => noCC = true), "Do not generate counters for concrete nodes.")
-  val termination5 = ("--moreTPreds", Arg.Unit(() => moreTPreds = true), "Generate (much) more transition predicates for ARMC.")
-  val termination6 = ("--cyclesBound", Arg.Int(i => cyclesBound = i), "bound for the number of cycles to consider when generating the transition predicates")
-  val termination7 = ("--dump", Arg.String(str => dumpArmc = str), "save the ARMC file in the given location rather than run ARMC.")
+
+  newOption("--termination", Arg.Unit(() => termination = true), "Compute the termination of the system.")
+  newOption("--useTree", Arg.Unit(() => useTree = true), "Termination analysis using the KM tree (default is to use only the cover) DEPRECATED.")
+  newOption("--armc", Arg.String(str => armcCmd = str), "The command to call ARMC.")
+  newOption("--noCC", Arg.Unit(() => noCC = true), "Do not generate counters for concrete nodes.")
+  newOption("--moreTPreds", Arg.Unit(() => moreTPreds = true), "Generate (much) more transition predicates for ARMC.")
+  newOption("--cyclesBound", Arg.Int(i => cyclesBound = i), "bound for the number of cycles to consider when generating the transition predicates")
+  newOption("--dump", Arg.String(str => dumpArmc = str), "save the ARMC file in the given location rather than run ARMC.")
 
   val usage = "..."
-
-  val options = List(
-    verbose, quiet, hide,
-    reportQuick, reportFull,
-    tree1, tree2, tg,
-    termination1, termination2, termination3,
-    termination4, termination5, termination6,
-    termination7
-  )
 
   def apply(args: Seq[String]) {
     Arg.process(options, default, usage)(args)

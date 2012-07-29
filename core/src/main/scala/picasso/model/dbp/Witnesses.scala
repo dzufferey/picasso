@@ -67,8 +67,8 @@ class TransitionWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
     // unfolding (no frame)
     unfolding = addFrame(unfolded, unfolding, from)
     // inhibitedFlattening (should already be complete)
-    // post (only the frame + wildcard nodes)
-    post = completePost(inhibited, post, unfoldedAfterPost)
+    // post
+    //The post should already be complete. TODO how to make sure this is the case ?
     // folding (no frame)
     folding = addFrame(unfoldedAfterPost, folding, to)
   }
@@ -81,16 +81,6 @@ class TransitionWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
       "addFrame: node disappearing\n" + src + "\nframe: " + frame.mkString(", ") + "\n" + trg
     )
     (map /: frame)( (acc, f) => acc + (f -> f) )
-  }
-
-  protected def completePost(src: DepthBoundedConf[P], map: Morphism, trg: DepthBoundedConf[P]): Morphism = {
-    val notFrameSrc = src.vertices -- map.keys
-    val notFrameTrg = trg.vertices -- map.values
-    //TODO map from notFrameSrc to transition.lhs
-    //TODO map from notFrameTrg to transition.rhs
-    //TODO the two mapping above might not be unique, but must agree.
-    //TODO use hk (forward) complete the map, the hr part (backward) should already be there
-    sys.error("TODO")
   }
 
   def reversedUnfolding: Map[P#V, Seq[P#V]] = {
@@ -132,11 +122,21 @@ class TransitionWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
     }
   }
 
+  protected def postChanging: Morphism = post.filter{ case (a,b) => a != b } //TODO not sure about the wildcards
+
   /** returns the nodes that are matched by the LHR. */
-  def modifiedPre: Set[P#V] = sys.error("TODO")
+  def modifiedPre: Set[P#V] = {
+    val before = postChanging.keySet
+    val revInh = inhibitedFlattening.map[(P#V,P#V), Morphism]{ case (a,b) => (b,a) }
+    val beforeInhibit = before.map(n => revInh.getOrElse(n,n) )
+    beforeInhibit.map(n => unfolding.getOrElse(n,n))
+  }
   
   /** returns the nodes that are matched by the RHS. */
-  def modifiedPost: Set[P#V] = sys.error("TODO")
+  def modifiedPost: Set[P#V] = {
+    val after = postChanging.values.toSet
+    after.map(n => folding.getOrElse(n,n))
+  }
 
   def modified: (Set[P#V], Set[P#V]) = (modifiedPre, modifiedPost)
 

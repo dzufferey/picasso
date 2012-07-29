@@ -14,7 +14,7 @@ class Cover(fileName: String, content: String) extends AnalysisCommon("Cover", f
      val (cover, tree) = process.computeTree(init)
      
      if (Config.KM_showTree) {
-       val treeAsGV = process.TreePrinter.printGraphviz(tree , (t, id, pref) => t().toGraphvizFull(id, "subgraph", "", pref)._1 )
+       val treeAsGV = process.TreePrinter.printGraphviz(tree, (t, id, pref) => t().toGraphvizFull(id, "subgraph", "", pref)._1 )
        Logger("dbpGraph", LogInfo, "tree:\n" + treeAsGV )
        report.add( new GenericItem( "KM Tree", treeAsGV, Misc.graphvizToSvgFdp(treeAsGV) ))
      }
@@ -34,6 +34,19 @@ class Cover(fileName: String, content: String) extends AnalysisCommon("Cover", f
        val tg = TransitionsGraphFromCover(process, cover)
        val tgAsGV = Misc.docToString(TransitionsGraphFromCover.toGraphviz(tg))
        report.add( new GenericItem( "Transitions graph from cover", tgAsGV, Misc.graphvizToSvgFdp(tgAsGV) ))
+     }
+
+     if (Config.interfaceExtraction) {
+       val iExtractor = new InterfactExtraction(process, cover)
+       val interface = iExtractor.interface
+       val (dict, gv) = InterfactExtraction.interfaceToGV(interface)
+       val iAsGV = Misc.docToString(gv)
+       val lst = new List("Equivalence classes and Interface:")
+       for ( (obj, label) <- dict ) {
+         lst.add(new Text(label, InterfactExtraction.objToString(obj)))
+       }
+       lst.add( new GenericItem( "Interface", iAsGV, Misc.graphvizToSvgDot(iAsGV) ))
+       report.add(lst)
      }
 
   }

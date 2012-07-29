@@ -15,7 +15,7 @@ object InterfactExtraction {
   //obj: class name, neighborhood (to what it is connected), unary predicates, binary predicates
   type Obj = (ObjType, Map[Field, Iterable[ObjType]], UnaryPredicates, BinaryPredicates)
 
-  //TODO types for the transitions and the language
+  //types for the transitions and the language
 
   /** What happens each time a method is called.
    *  Obj: the caller
@@ -28,6 +28,48 @@ object InterfactExtraction {
   type IGT = GT.ELGT{type V = String; type EL = MethodCall}
 
   type Interface = EdgeLabeledDiGraph[IGT]
+
+  def objToString(obj: Obj): String = {
+    val (tpe, ptsTo, unary, binary) = obj
+    val flatBinary = for ( (p, fb) <- binary; (f,b) <- fb) yield (p,f,b)
+    tpe +
+    ptsTo.view.map{case (f, t) => f + " -> " + t}.mkString("(",", ",")") +
+    unary.mkString("[",",","]") +
+    flatBinary.mkString("{",",","}")
+  }
+
+  protected def callToStringAux(call: MethodCall, objPrint: Obj => String): String = {
+    val (obj, method, becomes, created) = call
+    val flatBecomes = for ( (o1, set) <- becomes; o2 <- set) yield (o1,o2)
+    objPrint(obj) + "." + method +
+    flatBecomes.view.map{ case (o1,o2) => objPrint(o1) + " -> " + objPrint(o2) }.mkString("(",", ",")") +
+    created.mkString(", ")
+  }
+  
+  def callToString(call: MethodCall): String = {
+    callToStringAux(call, objToString)
+  }
+  
+  def callToStringShort(dict: Map[Obj, String], call: MethodCall): String = {
+    callToStringAux(call, dict)
+  }
+
+  def interfaceToGV(interface: Interface): (Map[Obj, String], scala.text.Document) = {
+    val objs = (Set[Obj]() /: interface.edges)( (acc, call) => {
+      val (_, (obj,_,becomes,created), _) = call
+      acc + obj ++ becomes.keys ++ becomes.values.flatten ++ created
+    })
+    val dict = objs.zipWithIndex.map{ case (o, idx) => (o, "eq_cl_"+idx) }.toMap
+    val gv = interface.toGraphvizExplicit(
+        "interface",
+        "digraph",
+        scala.text.Document.empty,
+        "interface",
+        (node => List("label" -> Misc.quoteIfFancy(node))),
+        (edge => List("label" -> Misc.quoteIfFancy(callToStringShort(dict, edge))))
+      )._1
+    (dict, gv)
+  }
 
 }
 
