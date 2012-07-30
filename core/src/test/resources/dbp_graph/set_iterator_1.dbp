@@ -149,7 +149,6 @@ post
   (i, Iter) -> (set, Set)
   (i, Iter) -> (mov, mover)
   (i, Iter) -> (syn, sync)
-  node (syn, sync)
 ==>
   s -> s
   i -> i
@@ -175,7 +174,6 @@ post
   (i, Iter) -> (set, Set)
   (i, Iter) -> (nmov, not_mover)
   (i, Iter) -> (syn, sync)
-  node (syn, sync)
 ==>
   s -> s
   i -> i
@@ -203,6 +201,7 @@ post
   (i, Iter) -> (syn1, sync)
 ==>
   s -> s
+  i -> i
   set -> set
   syn -> nsyn
   nsyn -> nsyn
@@ -225,6 +224,7 @@ post
   (i, Iter) -> (syn1, sync)
 ==>
   s -> s
+  i -> i
   set -> set
   syn -> nsyn
   nsyn -> nsyn

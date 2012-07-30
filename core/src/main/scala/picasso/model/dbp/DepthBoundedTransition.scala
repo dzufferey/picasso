@@ -98,7 +98,6 @@ extends Transition[DepthBoundedConf[P]]
         val (post, folding) = postUnfolded.foldWithWitness
         //print("post: " + post)
 
-
         //the morphism for the post is f_hr_g1 restricted to the frame + g1_hk_f inverted ?
         val postMorphism0 = (frame.vertices.toSeq.map{ case x => (x,f_hr_g1.getOrElse(x,x)) }: Iterable[(P#V,P#V)] ).toMap
         val postMorphism1 = g1_hk_f.flatMap[(P#V,P#V), Morphism]{ case (a,b) => if (a != b) Some(b -> b) else None}
@@ -118,6 +117,16 @@ extends Transition[DepthBoundedConf[P]]
           assert(conf1.contains(k), "transition " + id + ": " + k + " not in " + conf1.vertices)
           assert(postUnfolded.contains(v), "transition " + id + ": " + v + " not in " + postUnfolded.vertices)
         }
+        //TODO not sure everything is there ?!?
+        /*
+        val notInDomain = conf1.vertices -- postMorphism.keys
+        assert( notInDomain.size == removed.size,
+                "transition " + id + ": postMorphism, node not in the domain, expected " + removed.size + " found " + notInDomain.mkString(", "))
+        val notInRange = postUnfolded.vertices -- postMorphism.values
+        val added = rhs.vertices -- hk.keys -- hr.values
+        assert( notInRange.size == added.size,
+                "transition " + id + ": postMorphism, node not in the range, expected " + added.size + " found " + notInRange.mkString(", "))
+        */
 
         val witness = new TransitionWitness
         witness.transition = this

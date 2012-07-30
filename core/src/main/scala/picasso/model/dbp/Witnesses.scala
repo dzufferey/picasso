@@ -92,7 +92,7 @@ class TransitionWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
   
   def isUnfoldingTrivial = {
     if (from == unfolded) {
-      assert(unfolding.isEmpty)
+      assert(unfolding.forall{ case (a,b) => a == b})
       true
     } else {
       false
@@ -101,7 +101,7 @@ class TransitionWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
 
   def isInhibitingTrivial = {
     if (unfolded == inhibited) {
-      assert(inhibitedNodes.isEmpty && inhibitedFlattening.isEmpty)
+      assert(inhibitedNodes.isEmpty && inhibitedFlattening.forall{ case (a,b) => a == b})
       true
     } else {
       false
@@ -115,7 +115,7 @@ class TransitionWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
 
   def isFoldingTrivial = {
     if (unfoldedAfterPost == to) {
-      assert(folding.isEmpty || folding.forall{ case (a,b) => a == b})
+      assert(folding.forall{ case (a,b) => a == b})
       true
     } else {
       false
@@ -126,6 +126,9 @@ class TransitionWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
 
   /** returns the nodes that are matched by the LHR. */
   def modifiedPre: Set[P#V] = {
+    println("unfolded = " + unfolded)
+    println("post = " + post.mkString(", "))
+    println("postChanging = " + postChanging.mkString(", "))
     val before = postChanging.keySet
     val revInh = inhibitedFlattening.map[(P#V,P#V), Morphism]{ case (a,b) => (b,a) }
     val beforeInhibit = before.map(n => revInh.getOrElse(n,n) )
@@ -139,6 +142,45 @@ class TransitionWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
   }
 
   def modified: (Set[P#V], Set[P#V]) = (modifiedPre, modifiedPost)
+
+  protected def checkMorph( name: String,
+                            a: DepthBoundedConf[P],
+                            m: Morphism,
+                            b: DepthBoundedConf[P]) {
+    Logger.assert(
+      m.keySet subsetOf a.vertices,
+      "DBP", name + ".keys is not correct")
+    Logger.assert(
+      m.values forall b.vertices,
+      "DBP", name + ".values is not correct")
+  }
+
+  def checkMorphisms {
+    //  from: Conf
+    //  unfolding: Morphism
+    checkMorph("unfolding", unfolded, unfolding, from)
+    //  reversedUnfolding: Map[P#V, Seq[P#V]]
+    Logger.assert(
+      reversedUnfolding.keySet subsetOf from.vertices,
+      "DBP", "reversedUnfolding.keys is not correct")
+    Logger.assert(
+      reversedUnfolding.values.forall(_ forall unfolded.vertices),
+      "DBP", "reversedUnfolding.values is not correct")
+    //  unfolded: DepthBoundedConf[P]
+    //  inhibitedNodes: Set[P#V]
+    Logger.assert(
+      inhibitedNodes subsetOf unfolded.vertices,
+      "DBP", "inhibitedNodes is not correct")
+    //  inhibitedFlattening: Morphism
+    checkMorph("inhibitedFlattening", unfolded, inhibitedFlattening, inhibited)
+    //  inhibited: DepthBoundedConf[P]
+    //  post: Morphism
+    checkMorph("post", inhibited, post, unfoldedAfterPost)
+    //  unfoldedAfterPost: Conf
+    //  folding: Morphism
+    checkMorph("folding", unfoldedAfterPost, folding, to)
+    //  to: Conf
+  }
 
 }
 

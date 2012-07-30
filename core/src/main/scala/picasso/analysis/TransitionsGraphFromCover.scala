@@ -33,9 +33,12 @@ object TransitionsGraphFromCover {
     def makeEdges(states: ParIterable[DepthBoundedConf[P]]): ParIterable[(DepthBoundedConf[P], TGEdges[P], DepthBoundedConf[P])] = {
       val oneStep = for ( s1 <- states; w <- oneStepPostWithWitness(s1) ) yield w
       val res1 = oneStep.map( w => (w.from, Transition(w), w.to) )
+      //keep only a single covering edge (no need for more because of monotonicity)
       val res2 = for ( w <- oneStep;
-                       s2 <- states if proc.ordering.lteq(w.to, s2);
-                       cov <- w.to.morphisms(s2)(proc.stateOrdering) ) yield {
+                       s2 <- states.find(s2 => proc.ordering.lteq(w.to, s2))) yield {
+        val cov = w.to.morphism(s2)(proc.stateOrdering).get
+        //assert(cov.keySet subsetOf w.to.vertices, "cov.keySet")
+        //assert(cov.values forall s2.vertices, "cov.values")
         (w.to, Covering[P](cov), s2)
       }
       res1 ++ res2
@@ -55,7 +58,7 @@ object TransitionsGraphFromCover {
         empty
       } else {
         val name = Namer("conf_")
-        val (doc, map) = conf.toGraphvizFull("cluster_"+name, "subgraph", "label = "+ Misc.quote(name)+";", name + "_")
+        val (doc, map) = conf.toGraphvizFull("cluster_"+name, "subgraph", "label = "+ Misc.quote(name) +";", name + "_")
         confToMap += (conf -> ("cluster_"+name, map))
         doc
       }
@@ -120,6 +123,20 @@ object TransitionsGraphFromCover {
     
     "digraph TG {" :: nest(4, confs :/: trs) :/: text("}")
   }
+
+  def structureToGraphviz[P <: DBCT](cover: DownwardClosedSet[DepthBoundedConf[P]], graph: EdgeLabeledDiGraph[TG[P]]): Document = {
+    graph.toGraphvizExplicit(
+      "TG_struct", "digraph", empty, "",
+      (node => {
+        val shape = if (cover.basis contains node) ("shape", "doublecircle") else ("shape", "circle")
+        List("label" -> "\"\"", shape)
+      }),
+      { case Transition(_) => List("label" -> "transition")
+        case Covering(_) => List("label" -> "covering")
+      }
+    )._1
+  }
+
 
 }
 
