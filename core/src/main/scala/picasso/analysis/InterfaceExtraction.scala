@@ -65,8 +65,8 @@ object InterfactExtraction {
         "digraph",
         scala.text.Document.empty,
         "interface",
-        (node => List("label" -> Misc.quoteIfFancy(node))),
-        (edge => List("label" -> Misc.quoteIfFancy(callToStringShort(dict, edge))))
+        (node => List("label" -> Misc.quote(node))),
+        (edge => List("label" -> Misc.quote(callToStringShort(dict, edge))))
       )._1
     (dict, gv)
   }
@@ -111,6 +111,8 @@ class InterfactExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
     if (nme startsWith "not_") (nme.substring(4), true)
     else (nme, false)
   }
+
+  protected def isError(conf: DP) = conf.vertices.exists(v => typeOf(v).endsWith("Error"))
 
   protected def eqClassToObj(cl: DPV): Obj = {
     //TODO the code for this method is really bad.
@@ -158,7 +160,7 @@ class InterfactExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
     if (height > 0) {
       val withLower = restricted.vertices.map(v => (v, (v /: (0 until math.max(0, v.depth - height)))( (v,_) => v-- ) ) )
       val morphing = withLower.toMap[P#V,P#V]
-      (morphing(node), restricted morph morphing) //TODO key not found: picasso.model.dbp.Thread@52c00025-(Iter,1)
+      (morphing(node), restricted morph morphing)
     } else {
       (node, restricted)
     }
@@ -210,7 +212,7 @@ class InterfactExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
 
   protected def simpleTracking(curr: (Map[P#V, Set[P#V]], List[P#V]), mapping: Map[P#V,P#V]) = {
     val (goesTo, news) = curr
-    val goesToPrime = goesTo.map[(P#V, Set[P#V]), Map[P#V, Set[P#V]]]{case (k,v) => (k, v map mapping)} //TODO key not found: picasso.model.dbp.Thread@79b4748-(Iter,0)
+    val goesToPrime = goesTo.map[(P#V, Set[P#V]), Map[P#V, Set[P#V]]]{case (k,v) => (k, v map mapping)}
     val newsPrime = news map mapping
     (goesToPrime, newsPrime)
   }
@@ -359,7 +361,7 @@ class InterfactExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
     }
     val edges: Iterable[(DP, MethodCall, DP)] = makePaths.map(path => (path._1, pathToMethodCall(path), path._3) )
     val nodes = cover.basis.seq
-    val names = nodes.map( c => (c, Namer("cover")) ).toMap
+    val names = nodes.map( c => (c, if (isError(c)) Namer("error") else Namer("cover")) ).toMap
     val edgesWithStr = edges.map{ case (a,b,c) => (names(a), b, names(c)) }
     EdgeLabeledDiGraph[IGT](edgesWithStr).addVertices(nodes map names)
   }

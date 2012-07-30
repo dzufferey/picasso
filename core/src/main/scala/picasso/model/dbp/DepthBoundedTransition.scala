@@ -99,17 +99,19 @@ extends Transition[DepthBoundedConf[P]]
         //print("post: " + post)
 
         //the morphism for the post is f_hr_g1 restricted to the frame + g1_hk_f inverted ?
-        val postMorphism0 = (frame.vertices.toSeq.map{ case x => (x,f_hr_g1.getOrElse(x,x)) }: Iterable[(P#V,P#V)] ).toMap
+        val postMorphism0 = (conf1 -- removed).vertices.iterator.map{ case x => (x,f_hr_g1.getOrElse(x,x)) }.toMap[P#V, P#V]
         val postMorphism1 = g1_hk_f.flatMap[(P#V,P#V), Morphism]{ case (a,b) => if (a != b) Some(b -> b) else None}
         
+        //Logger("dbp", LogWarning, "conf1: " + conf1)
         //Logger("dbp", LogWarning, "removed: " + removed)
         //Logger("dbp", LogWarning, "lhs.morph(g1): " + lhs.morph(g1))
         //Logger("dbp", LogWarning, "conf1 -- lhs.morph(g1): " + (conf1 -- lhs.morph(g1)))
         //Logger("dbp", LogWarning, "frame: " + frame)
         //Logger("dbp", LogWarning, "(frame morph f_hr_g1): " + (frame morph f_hr_g1))
         //Logger("dbp", LogWarning, "(rhsClone morph g1_hk_f): " + (rhsClone morph g1_hk_f))
-        //Logger("dbp", LogWarning, "postMorphism0: " + postMorphism0)
-        //Logger("dbp", LogWarning, "postMorphism1: " + postMorphism1)
+        //Logger("dbp", LogWarning, "postUnfolded: " + postUnfolded)
+        //Logger("dbp", LogWarning, "postMorphism0: " + postMorphism0)//.map{ case (k,v) => k.label + " -> " + v.label }.mkString(", "))
+        //Logger("dbp", LogWarning, "postMorphism1: " + postMorphism1.map{ case (k,v) => k.label + " -> " + v.label }.mkString(", "))
         //Logger("dbp", LogWarning, "g1_hk_f: " + g1_hk_f)
         
         val postMorphism = postMorphism0 ++ postMorphism1
@@ -117,8 +119,6 @@ extends Transition[DepthBoundedConf[P]]
           assert(conf1.contains(k), "transition " + id + ": " + k + " not in " + conf1.vertices)
           assert(postUnfolded.contains(v), "transition " + id + ": " + v + " not in " + postUnfolded.vertices)
         }
-        //TODO not sure everything is there ?!?
-        /*
         val notInDomain = conf1.vertices -- postMorphism.keys
         assert( notInDomain.size == removed.size,
                 "transition " + id + ": postMorphism, node not in the domain, expected " + removed.size + " found " + notInDomain.mkString(", "))
@@ -126,7 +126,6 @@ extends Transition[DepthBoundedConf[P]]
         val added = rhs.vertices -- hk.keys -- hr.values
         assert( notInRange.size == added.size,
                 "transition " + id + ": postMorphism, node not in the range, expected " + added.size + " found " + notInRange.mkString(", "))
-        */
 
         val witness = new TransitionWitness
         witness.transition = this

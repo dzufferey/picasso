@@ -126,9 +126,9 @@ class TransitionWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
 
   /** returns the nodes that are matched by the LHR. */
   def modifiedPre: Set[P#V] = {
-    println("unfolded = " + unfolded)
-    println("post = " + post.mkString(", "))
-    println("postChanging = " + postChanging.mkString(", "))
+    //println("unfolded = " + unfolded)
+    //println("post = " + post.mkString(", "))
+    //println("postChanging = " + postChanging.mkString(", "))
     val before = postChanging.keySet
     val revInh = inhibitedFlattening.map[(P#V,P#V), Morphism]{ case (a,b) => (b,a) }
     val beforeInhibit = before.map(n => revInh.getOrElse(n,n) )
