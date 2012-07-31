@@ -37,13 +37,13 @@ class Cover(fileName: String, content: String) extends AnalysisCommon("Cover", f
      }
 
      if (Config.interfaceExtraction) {
-       val iExtractor = new InterfactExtraction(process, cover)
+       val iExtractor = new InterfaceExtraction(process, cover)
        val interface = iExtractor.interface
-       val (dict, gv) = InterfactExtraction.interfaceToGV(interface)
+       val (dict, gv) = InterfaceExtraction.interfaceToGV(interface)
        val iAsGV = Misc.docToString(gv)
        val lst = new List("Equivalence classes and Interface:")
        for ( (obj, label) <- dict ) {
-         lst.add(new Text(label, InterfactExtraction.objToString(obj)))
+         lst.add(new Text(label, InterfaceExtraction.objToString(obj)))
        }
        lst.add( new GenericItem( "Interface", iAsGV, Misc.graphvizToSvgDot(iAsGV) ))
        report.add(lst)
