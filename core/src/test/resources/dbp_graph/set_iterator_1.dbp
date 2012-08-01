@@ -5,6 +5,7 @@ init
   (set, Set) -> (nsyn, not_sync)
   (set, Set) -> (mov, mover)
   (set, Set) -> (nmov, not_mover)
+
 /*
 transition "newSet(): Set"
 pre
@@ -73,7 +74,7 @@ pre
   (set, Set) -> (syn, sync)
   (set, Set) -> (nsyn, not_sync)
 post
-  node (s, transientAddLoop)
+  (s, transientAddLoop) -> (set, Set)
   (set, Set) -> (emp, not_empty)
   (set, Set) -> (syn1, sync)
   (set, Set) -> (nsyn, not_sync)
@@ -91,7 +92,7 @@ pre
   (set, Set) -> (syn, sync)
   (set, Set) -> (nsyn, not_sync)
 post
-  node (s, transientAddLoop)
+  (s, transientAddLoop) -> (set, Set)
   (set, Set) -> (emp, not_empty)
   (set, Set) -> (syn1, sync)
   (set, Set) -> (nsyn, not_sync)
@@ -104,12 +105,12 @@ post
 
 transition "add loop"
 pre
-  node (s, transientAddLoop)
+  (s, transientAddLoop) -> (set, Set)
   (set, Set) -> (nmov, not_mover)
   (set, Set) -> (mov, mover)
   (i, Iter) -> (nmov, not_mover)
 post
-  node (s, transientAddLoop)
+  (s, transientAddLoop) -> (set, Set)
   (set, Set) -> (nmov, not_mover)
   (set, Set) -> (mov, mover)
   (i, Iter) -> (mov, mover)
@@ -123,11 +124,13 @@ post
 
 transition "add loop exit"
 pre
-  node (s, transientAddLoop)
+  (s, transientAddLoop) -> (set, Set)
 post
   node (s, safe)
+  node (set, Set)
 ==>
   s -> s
+  set -> set
 <==
 
 
@@ -190,7 +193,7 @@ pre
   (i, Iter) -> (set, Set)
   (i, Iter) -> (syn, sync)
 post
-  node (s, transientRemoveLoop)
+  (s, transientRemoveLoop) -> (set, Set)
   (set, Set) -> (emp, not_empty)
   (set, Set) -> (syn1, sync)
   (set, Set) -> (nsyn, not_sync)
@@ -213,7 +216,7 @@ pre
   (i, Iter) -> (set, Set)
   (i, Iter) -> (syn, sync)
 post
-  node (s, transientRemoveLoop)
+  (s, transientRemoveLoop) -> (set, Set)
   (set, Set) -> (emp, empty)
   (set, Set) -> (syn1, sync)
   (set, Set) -> (nsyn, not_sync)
@@ -229,12 +232,12 @@ post
 
 transition "remove loop"
 pre
-  node (s, transientRemoveLoop)
+  (s, transientRemoveLoop) -> (set, Set)
   (set, Set) -> (nmov, not_mover)
   (set, Set) -> (mov, mover)
   (i, Iter) -> (mov, mover)
 post
-  node (s, transientRemoveLoop)
+  (s, transientRemoveLoop) -> (set, Set)
   (set, Set) -> (nmov, not_mover)
   (set, Set) -> (mov, mover)
   (i, Iter) -> (nmov, not_mover)
@@ -248,11 +251,13 @@ post
 
 transition "remove loop exit"
 pre
-  node (s, transientRemoveLoop)
+  (s, transientRemoveLoop) -> (set, Set)
 post
   node (s, safe)
+  node (set, Set)
 ==>
   s -> s
+  set -> set
 <==
 
 

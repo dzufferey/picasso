@@ -59,7 +59,7 @@ object InterfaceExtraction {
     val flatBecomes = for ( (o1, set) <- becomes; (m,o2) <- set) yield (m,o1,o2)
     objPrint(obj) + "." + method +
     flatBecomes.view.map{ case (m,o1,o2) => multiplicityToString(m) + " " + objPrint(o1) + " -> " + objPrint(o2) }.mkString("(",", ",")") +
-    created.mkString(", ")
+    created.map(objPrint).mkString(", ")
   }
   
   def callToString(call: MethodCall): String = {
@@ -75,7 +75,7 @@ object InterfaceExtraction {
       val (_, (obj,_,becomes,created), _) = call
       acc + obj ++ becomes.keys ++ becomes.values.flatMap(_.map(_._2)) ++ created
     })
-    val dict = objs.zipWithIndex.map{ case (o, idx) => (o, "eq_cl_"+idx) }.toMap
+    val dict = objs.zipWithIndex.map{ case (o, idx) => (o, "cl_"+idx) }.toMap
     val gv = interface.toGraphvizExplicit(
         "interface",
         "digraph",
@@ -124,8 +124,8 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
 
   protected def predValue(p: P#V): (String, Boolean) = {
     val nme = typeOf(p)
-    if (nme startsWith "not_") (nme.substring(4), true)
-    else (nme, false)
+    if (nme startsWith "not_") (nme.substring(4), false)
+    else (nme, true)
   }
 
   protected def isError(conf: DP) = {
@@ -289,9 +289,11 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
           Logger.logAndThrow("InterfaceExtraction", LogError, "TODO tracking of inhibitors")
         }
       //post
-      val curr4 =
+      val newNew = (witness.unfoldedAfterPost.vertices -- witness.post.values).filter(isObj)
+      val (changed, newTracked) =
         if (witness.isPostTrivial) curr3
         else simpleTracking(curr3, witness.post)
+      val curr4 = (changed, newTracked ++ newNew)
       //folding
       val curr5 =
         if (witness.isFoldingTrivial) curr4
@@ -367,7 +369,7 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
         Logger("InterfaceExtraction", LogInfo, "making edge for: " + witness.transition.id)
         parseName(witness.transition.id) match {
           case Some((tpe, call, created)) =>
-            println("looking for candidate of type " + tpe + " in " + witness.modifiedPre.map(typeOf).mkString(", "))
+            //println("looking for candidate of type " + tpe + " in " + witness.modifiedPre.map(typeOf).mkString(", "))
             val candidates = witness.modifiedPre.filter(n => typeOf(n) == tpe)
             if (candidates.isEmpty) {
               Logger("InterfaceExtraction", LogWarning, "pathToMethodCall: no candidates")
@@ -400,14 +402,10 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
     //(3) put things together
     val becomesObj = becomes.map{ case (k,vs) => (eqClassesMap(k), vs map { case (m, cl) => (m, eqClassesMap(cl)) } ) }
     val newsObj = news map eqClassesMap
-    (obj, method, becomesObj, newsObj)
+    (obj, method, simplify(becomesObj), newsObj)
   }
 
-  //post-processing to remove the transient states
-  //TODO this part is ugly, needs some refactoring
-  protected def removeTransientLoops(it: Interface): Interface = {
-    def transient(s: String) = s.startsWith("transient")
-
+  protected def simplify(b: Become): Become = {
     def simplify1(collec: Iterable[(Multiplicity, Obj)]): Iterable[(Multiplicity, Obj)] = {
       val (many, single) = collec.partition{ case (m, _) => m == Rest || m == Part }
       val byObj = many.groupBy(_._2)
@@ -416,8 +414,14 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
       }
       single ++ many2
     }
+    b.map{ case (a,b) => (a, simplify1(b))}
+  }
 
-    def simplify(b: Become): Become = b.map{ case (a,b) => (a, simplify1(b))}
+
+  //post-processing to remove the transient states
+  //TODO this part is ugly, needs some refactoring
+  protected def removeTransientLoops(it: Interface): Interface = {
+    def transient(s: String) = s.startsWith("transient")
 
     def compose(a: Become, b: Become): Become = {
       def mult(m1: Multiplicity, m2: Multiplicity) = m1 match {
@@ -462,14 +466,13 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
           Seq(new Trace[String, MethodCall](current, Nil))
         } else {
           val seen2 = seen + current
-          val selfLoop = it.edgesBetween(current,current)
-          assert(selfLoop.size == 1)
-          for ((label, nexts) <- it.outEdges(current);
+          val after = for ((label, nexts) <- it.outEdges(current);
                next <- nexts if !seen2(next);
-               suffix <- recurse(next, seen2);
-               loop <- selfLoop) yield {
-            suffix.prepend(current, label).prepend(current, loop)
+               suffix <- recurse(next, seen2) ) yield {
+            suffix.prepend(current, label)
           }
+          val selfLoop = it.edgesBetween(current,current)
+          after.map(trc => (trc /: selfLoop)( (acc, loop) => acc.prepend(current, loop) ) )
         }
       }
       val suffixes = recurse(t, Set[String]())

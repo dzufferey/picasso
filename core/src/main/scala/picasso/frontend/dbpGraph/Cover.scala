@@ -45,7 +45,8 @@ class Cover(fileName: String, content: String) extends AnalysisCommon("Cover", f
        for ( (obj, label) <- dict ) {
          lst.add(new Text(label, InterfaceExtraction.objToString(obj)))
        }
-       lst.add( new GenericItem( "Interface", iAsGV, Misc.graphvizToSvgDot(iAsGV) ))
+       //lst.add( new GenericItem( "Interface", iAsGV, Misc.graphvizToSvgDot(iAsGV) ))
+       lst.add( new PreformattedText( "Interface", iAsGV))
        report.add(lst)
      }
 
