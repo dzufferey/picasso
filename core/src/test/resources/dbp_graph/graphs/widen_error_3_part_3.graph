@@ -1,0 +1,15 @@
+    (c1, c3) -> (x1, x) [old]
+    (c2, c3) -> (x1, x) [old]
+    (c3, c3) -> (x1, x) [old]
+    
+    (c1, c3) -> (op1, op) [cur]
+    (c2, c3) -> (op1, op) [cur]
+    (c3, c3) -> (op2, op) [cur]
+
+    (c4, c3) -> (x2, x) [old]
+    (c5, c3) -> (x2, x) [old]
+    (c6, c3) -> (x2, x) [old]
+    
+    (c4, c3) -> (op1, op) [cur]
+    (c5, c3) -> (op2, op) [cur]
+    (c6, c3) -> (op2, op) [cur]

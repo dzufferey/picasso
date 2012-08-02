@@ -141,8 +141,8 @@ class DepthBoundedConfSuite extends FunSuite {
     val fold2 = conf2.fold
     val gold2 = conf2
 
-    //assert(conf1 isSubgraphOf conf0)
-    //assert(conf2 isSubgraphOf conf0)
+    assert(conf1 isSubgraphOf conf0)
+    assert(conf2 isSubgraphOf conf0)
 
     assert(conf0 isSubgraphOf gold0)
     assert(fold0 isSubgraphOf gold0)
@@ -258,16 +258,23 @@ class DepthBoundedConfSuite extends FunSuite {
     assert(conf3 isSubgraphOf conf3)
   }
 
-  def testNotSubgraphFromFiles(smallF: String, bigF: String){
+  def testSubgraphFromFiles(expected: Boolean, smallF: String, bigF: String){
     import picasso.frontend.dbpGraph._
     val small = DBPGraphParser.parseGraph(getFileContent(smallF)).get
     val big   = DBPGraphParser.parseGraph(getFileContent(bigF)).get
     //println("small:\n" + small.toGraphviz("DBC"))
     //println("big:\n" + big.toGraphviz("DBC"))
-    val ms = small morphisms big
-    assert(ms.isEmpty)
-    assert(! (small isSubgraphOf big) )
+    //val ms = small morphisms big
+    //assert(ms.isEmpty)
+    assert(expected == (small isSubgraphOf big))
   }
+  
+  def testSubgraphFromFiles(smallF: String, bigF: String) {
+    testSubgraphFromFiles(true, smallF, bigF)
+  }
+  
+  def testNotSubgraphFromFiles(smallF: String, bigF: String) =
+    testSubgraphFromFiles(false, smallF, bigF)
 
   def showCmpInfo(fn: String) {
     import picasso.frontend.dbpGraph._
@@ -293,7 +300,9 @@ class DepthBoundedConfSuite extends FunSuite {
   }
 
   test("subgraph 03"){
-    testNotSubgraphFromFiles("widen_error_3_part_1.graph", "widen_error_3_part_2.graph")
+    testNotSubgraphFromFiles("widen_error_3_part_1.graph", "widen_error_3_part_2.graph") //TODO check whether that part is actually Not
+    testSubgraphFromFiles("widen_error_3_part_3.graph", "widen_error_3_part_1.graph")
+    testSubgraphFromFiles("widen_error_3_part_3.graph", "widen_error_3_part_2.graph")
   }
 
   test("subgraph 04"){

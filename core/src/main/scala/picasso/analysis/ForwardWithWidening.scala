@@ -52,6 +52,7 @@ trait ForwardWithWidening extends CoveringSet {
   //DFS should get faster to some acceleration but not sure about convergence (ascending fork ?)
 
   def computeEverything(initCover: DownwardClosedSet[S], isDone: S => Boolean): (DownwardClosedSet[S], EdgeLabeledDiGraph[CG], Option[TransfiniteTrace[S,T]]) = {
+    Logger("Analysis", LogWarning, "ForwardWithWidening is currently not working (code is in a poor state and needs to be rewritten). Please use another algorithm.")
     var graph = EdgeLabeledDiGraph.empty[CG].addVertices( initCover.basis.seq )
     var cover = initCover
     val workingList = scala.collection.mutable.Stack[(S,MinElements)]()

@@ -97,7 +97,24 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     //it should rather be something like if one increase, the other should also increase, ...
     //this part should be independent of the flattening (not true now)
 
-    //(2) preserve nesting difference
+    //(2) preserve nesting gradient to preserve the fact that a link is either:
+    // one-to-one, one-to-many, many-to-one.
+    val deltaDepth: Iterable[Iterable[Clause[(V,V)]]] =
+      for((x1, el, y1) <- edges;
+          (x2:V) <- candidatesF(x1);
+          (y2:V) <- candidatesF(y1)
+         ) yield {
+        val d1 = y1.depth - x1.depth
+        val d2 = y2.depth - x2.depth
+     
+        //assert that the difference is at least the same
+        if ((d1 > 0 && d2 <= 0) || (d1 < 0 && d2 >= 0)) {
+          Seq[Clause[(V,V)]](Seq(Neg(x1 -> x2), Neg(y1 -> y2))) //cannot be both true at the same time
+        } else {
+          Seq[Clause[(V,V)]]() //ok
+        }
+      }
+    /* OLD version of deltaDepth
     val deltaDepth: Iterable[Iterable[Clause[(V,V)]]] =
       for((x1, el, y1) <- edges;
           (x2:V) <- candidatesF(x1) if (x1.depth <= x2.depth);
@@ -113,6 +130,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
         Seq[Clause[(V,V)]]() //ok
       }
     }
+    */
 
     //TODO depthInjective should be rephrased in term of components ?
     /*
