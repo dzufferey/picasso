@@ -373,7 +373,7 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
             val candidates = witness.modifiedPre.filter(n => typeOf(n) == tpe)
             if (candidates.isEmpty) {
               Logger("InterfaceExtraction", LogWarning, "pathToMethodCall: no candidates")
-              (("unknown", Map.empty, Map.empty, Map.empty): Obj, "---", None)
+              (("unknown", Map.empty, Map.empty, Map.empty): Obj, call, created)
             } else {
               if (candidates.size > 1) {
                 Logger( "InterfaceExtraction",

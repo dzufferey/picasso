@@ -1,0 +1,196 @@
+//example from
+//  Deriving Object Typestates in the Presence of Inter-Object References
+//  by Mangala Gowri Nanda, Christian Grothoff, and Satish Chandra
+//  in OOPSLA 05
+
+/*
+class A {
+  C f;
+  void run() {
+    if (f != null) f.run();
+  }
+  void done() {
+    if (f != null) f.dispose();
+  }
+  void set(C i) {
+    if (f != null) f.dispose();
+    f = i;
+  }
+}
+
+class C {
+  boolean disposed;
+  void run() {
+    if (disposed) throw new Error();
+  }
+  void dispose() {
+    if (disposed) throw new Error();
+    disposed = true;
+  }
+}
+*/
+
+init
+  node (s, safe)
+  (a, A) -> (n, Null) [f]
+
+transition "newC(): C"
+pre
+  node (s, safe)
+post
+  node (s, safe)
+  (c, C) -> (d, not_disposed)
+==>
+  s -> s
+<==
+
+transition "run(A), null"
+pre
+  node (s, safe)
+  (a, A) -> (n, Null) [f]
+post
+  node (s, safe)
+  (a, A) -> (n, Null) [f]
+==>
+  s -> s
+  a -> a
+  n -> n
+<==
+
+transition "run(A), not null & not disposed"
+pre
+  node (s, safe)
+  (a, A) -> (c, C) [f]
+  (c, C) -> (d, not_disposed)
+post
+  node (s, safe)
+  (a, A) -> (c, C) [f]
+  (c, C) -> (d, not_disposed)
+==>
+  s -> s
+  a -> a
+  c -> c
+  d -> d
+<==
+
+transition "run(A), not null & disposed"
+pre
+  node (s, safe)
+  (a, A) -> (c, C) [f]
+  (c, C) -> (d, disposed)
+post
+  (a, A) -> (c, CError) [f]
+  (c, CError) -> (d, disposed)
+==>
+  a -> a
+  c -> c
+  d -> d
+<==
+
+transition "done(A), null"
+pre
+  node (s, safe)
+  (a, A) -> (n, Null) [f]
+post
+  node (s, safe)
+  (a, A) -> (n, Null) [f]
+==>
+  s -> s
+  a -> a
+  n -> n
+<==
+
+transition "done(A), not null & not disposed"
+pre
+  node (s, safe)
+  (a, A) -> (c, C) [f]
+  (c, C) -> (d, not_disposed)
+post
+  node (s, safe)
+  (a, A) -> (c, C) [f]
+  (c, C) -> (d, disposed)
+==>
+  s -> s
+  a -> a
+  c -> c
+  d -> d
+<==
+
+transition "done(A), not null & disposed"
+pre
+  node (s, safe)
+  (a, A) -> (c, C) [f]
+  (c, C) -> (d, disposed)
+post
+  (a, A) -> (c, CError) [f]
+  (c, CError) -> (d, disposed)
+==>
+  a -> a
+  c -> c
+  d -> d
+<==
+
+transition "set(A), null"
+pre
+  node (s, safe)
+  (a, A) -> (n, Null) [f]
+  node (c, C)
+post
+  node (s, safe)
+  (a, A) -> (c, C) [f]
+  node (n, Null)
+==>
+  s -> s
+  a -> a
+  n -> n
+  c -> c
+<==
+
+transition "set(A), not null & not disposed & not aliased"
+pre
+  node (s, safe)
+  (a, A) -> (c, C) [f]
+  (c, C) -> (d, not_disposed)
+  node (c2, C)
+post
+  node (s, safe)
+  (a, A) -> (c2, C) [f]
+  (c, C) -> (d, disposed)
+==>
+  s -> s
+  a -> a
+  c -> c
+  c2 -> c2
+  d -> d
+<==
+
+transition "set(A), not null & not disposed & aliased"
+pre
+  node (s, safe)
+  (a, A) -> (c, C) [f]
+  (c, C) -> (d, not_disposed)
+post
+  node (s, safe)
+  (a, A) -> (c, C) [f]
+  (c, C) -> (d, disposed)
+==>
+  s -> s
+  a -> a
+  c -> c
+  d -> d
+<==
+
+transition "set(A), not null & disposed"
+pre
+  node (s, safe)
+  (a, A) -> (c, C) [f]
+  (c, C) -> (d, disposed)
+post
+  (a, A) -> (c, CError) [f]
+  (c, CError) -> (d, disposed)
+==>
+  a -> a
+  c -> c
+  d -> d
+<==
+
