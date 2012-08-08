@@ -8,6 +8,14 @@ import TransitionsGraphFromCover._
 
 object InterfaceExtraction {
 
+  //TODO we need to put more information in the interface:
+  //we must show how the Obj are connected
+  //in the single set example it is easy since all the iterator points to the same set,
+  //but in a more general setting we need to show a bit more.
+  //The information is already in the transition graph, we just need to display it.
+  //The most intuitive is to show a connected graph of obj: remove the pred nodes
+  //from the config and keep only the connected component.
+
   type ObjType = String
   type Field = String
   type UnaryPredicates = Map[String, Boolean]
@@ -153,6 +161,12 @@ object InterfaceExtraction2 {
   
   type IGT3 = GT.ELGT{type V = G; type EL = MethodCall2}
   type Interface2 = EdgeLabeledDiGraph[IGT3]
+
+  //pretty print the Interface
+  def interfaceToGV(interface: Interface): (Map[Obj, String], scala.text.Document) = {
+    //TODO
+    sys.error("TODO")
+  }
 
 }
 
@@ -531,16 +545,81 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
     val t1T2News = t1News map t1ToT2
     //and compose with t2 
     val resChanges = compose(t1T2Changes, t2Changes)
-    val resNews = sys.error("TODO") //TODO
+    val resNews = t1News.flatMap( n => t2Changes(t1ToT2(n)).map(_._2) )
     ((t1From, t1Caller, t1Method, resChanges, resNews, t2To), t1Src, t2Dest)
   }
 
-  protected def removeTransientLoops(trace: Trace[DP, MethodCallWithMaps]): MethodCallWithMaps = {
-    //TODO accelerate when needed and fold over the trace
-    sys.error("TODO")
+  protected def accelerateIfNeeded(start: DP, call: MethodCallWithMaps, end: DP): MethodCallWithMaps = {
+    if (start == end) {
+      val ((from, caller, method, changes, news, to), src, dest) = call
+      Logger.assert(news.isEmpty, "InterfaceExtraction", "TODO new object and acceleration")
+      ((from, caller, method, loopAcceleration(changes), news, to), src, dest)
+    } else {
+      call
+    }
+  }
+
+  protected def compactPath(trace: Trace[DP, MethodCallWithMaps]): (DP, MethodCallWithMaps, DP) = {
+    //accelerate when needed and fold over the trace
+    Logger.assert(trace.length >= 1, "InterfaceExtraction", "trace is empty")
+    val (fstCall, middle) = trace.head
+    val call = accelerateIfNeeded(trace.start, fstCall, middle)
+    val (finalCall, _) = ((call, middle) /: trace.tail)( (acc, step) => {
+      val aCall = accelerateIfNeeded(acc._2, step._1, step._2)
+      (composeTransition(acc._1, acc._2, step._1), step._2)
+    })
+    val (start, end) = trace.extremities
+    (start, finalCall, end)
   }
 
   //TODO build the new interfaces.
+  def interface2: InterfaceExtraction2.Interface2 = {
+    Logger("InterfaceExtraction", LogNotice, "Extracting interface ...")
+    if (Logger("InterfaceExtraction", LogDebug)) {
+      val structure = TransitionsGraphFromCover.structureToGraphviz(cover, tg)
+      Logger("InterfaceExtraction", LogDebug, Misc.docToString(structure))
+    }
+
+    val edges: Iterable[(DP, MethodCallWithMaps, DP)] = makePaths.map(path => (path._1, pathToMethodCall2(path), path._3) )
+    val withTransient = EdgeLabeledDiGraph[GT.ELGT{type V = DP; type EL = MethodCallWithMaps}](edges).addVertices(cover.basis.seq)
+    val transientStates = withTransient.vertices.filter(isTransient)
+    val revWithTransient = withTransient.reverse
+
+    //includes the self loops
+    def mkTransientPath(t: DP): Iterable[Trace[DP, MethodCallWithMaps]] = {
+      val prefixes = for( (preLabel, preDest) <- revWithTransient.outEdges(t);
+                          pre <- preDest if !isTransient(pre))
+                     yield (pre, preLabel)
+      def recurse(current: DP, seen: Set[DP]): Iterable[Trace[DP,MethodCallWithMaps]] = {
+        if (!isTransient(current)) {
+          Seq(new Trace[DP, MethodCallWithMaps](current, Nil))
+        } else {
+          val seen2 = seen + current
+          val after = for ((label, nexts) <- withTransient.outEdges(current);
+               next <- nexts if !seen2(next);
+               suffix <- recurse(next, seen2) ) yield {
+            suffix.prepend(current, label)
+          }
+          val selfLoop = withTransient.edgesBetween(current,current)
+          after.map(trc => (trc /: selfLoop)( (acc, loop) => acc.prepend(current, loop) ) )
+        }
+      }
+      val suffixes = recurse(t, Set[DP]())
+      prefixes.flatMap{ case (start, call) => suffixes.map(_.prepend(start, call)) }
+    }
+
+    val pathsSummarized = transientStates.iterator.flatMap( mkTransientPath ).map( compactPath )
+
+    val withoutTransient = withTransient -- transientStates ++ pathsSummarized.toTraversable
+
+    val interface = withoutTransient.morphFull[InterfaceExtraction2.IGT3](
+        (conf => removePreds(conf)._1),
+        (el => el._1),
+        (x => x)
+      )
+
+    interface
+  }
 
   //post-processing to remove the transient states
   //TODO this part is ugly, needs some refactoring

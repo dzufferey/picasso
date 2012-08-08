@@ -32,7 +32,17 @@ class C {
 
 init
   node (s, safe)
+
+transition "newA(): A"
+pre
+  node (s, safe)
+post
+  node (s, safe)
   (a, A) -> (n, Null) [f]
+==>
+  s -> s
+<==
+
 
 transition "newC(): C"
 pre
