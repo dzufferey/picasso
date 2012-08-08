@@ -663,8 +663,8 @@ extends GraphLike[GT,P,LabeledDiGraph](edges, label) {
 object LabeledDiGraph extends GraphFactory[GT, LabeledDiGraph] {
   import Labeled._
   def apply[P <: GT](edges: Map[P#V,Map[P#EL,Set[P#V]]], label: P#V => P#VL) = new LabeledDiGraph(edges, label)
+  def apply[P <: GT](es: Iterable[(P#V,P#EL,P#V)], label: P#V => P#VL) = new LabeledDiGraph(listToMap(es), label)
   /*def apply[A, B, C](label: A => B) = new LabeledDiGraph[A,B,C](Map.empty[A,Map[C,Set[A]]], label)
-  def apply[A, B, C](es: Iterable[(A,C,A)], label: A => B) = new LabeledDiGraph[A,B,C](listToMap(es), label)
   def apply[A, B, C](nodes: Iterable[A], es: Iterable[(A,C,A)], label: A => B) = new LabeledDiGraph[A,B,C](listToMap(nodes, es), label)
   */
 }
