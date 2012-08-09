@@ -1,0 +1,284 @@
+init
+  node (s, safe)
+  (con, Con) -> (actc, activeCon)
+  (con, Con) -> (acts, activeStmt)
+  (con, Con) -> (nacts, not_activeStmt)
+  (con, Con) -> (open, open)
+  (con, Con) -> (nopen, not_open)
+  (con, Con) -> (hr, has_result)
+  (con, Con) -> (nr, not_has_result)
+
+/*
+transition "newSet(): Set"
+pre
+  node (s, safe)
+post
+  node (s, safe)
+  (set, Set) -> (emp, empty)
+  (set, Set) -> (syn, sync)
+  (set, Set) -> (nsyn, not_sync)
+  (set, Set) -> (mov, mover)
+  (set, Set) -> (nmov, not_mover)
+==>
+  s -> s
+<==
+*/
+
+transition "newStmnt(Con): Stmnt, on active"
+pre
+  node (s, safe)
+  (con, Con) -> (actc, activeCon)
+  (con, Con) -> (acts, activeStmt)
+  (con, Con) -> (nr, not_has_result)
+post
+  node (s, safe)
+  (con, Con) -> (actc, activeCon)
+  (con, Con) -> (acts, activeStmt)
+  (st, Stmt) -> (acts, activeStmt)
+  (st, Stmt) -> (con, Con)
+  (con, Con) -> (nr, not_has_result)
+  (st, Stmt) -> (nr, not_has_result)
+==>
+  actc -> actc
+  s -> s
+  con -> con
+  acts -> acts
+  nr -> nr
+<==
+
+
+transition "newStmnt(Con): Stmnt, on not_active"
+pre
+  node (s, safe)
+  (con, Con) -> (nactc, not_activeCon)
+post
+  (con, ConError) -> (nactc, not_activeCon)
+==>
+  con -> con
+  nactc -> nactc
+<==
+
+transition "execute(Stmnt): Result, on active, no result"
+pre
+  node (s, safe)
+  (st, Stmt) -> (con, Con)
+  (st, Stmt) -> (acts, activeStmt)
+  (con, Con) -> (open, open)
+  (con, Con) -> (acts, activeStmt)
+  (con, Con) -> (hr, has_result)
+  (st, Stmt) -> (nr, not_has_result)
+post
+  node (s, safe)
+  node (nr, not_has_result)
+  (st, Stmt) -> (con, Con)
+  (st, Stmt) -> (acts, activeStmt)
+  (con, Con) -> (open, open)
+  (con, Con) -> (acts, activeStmt)
+  (con, Con) -> (hr, has_result)
+  (r, Result) -> (open, open)
+  (r, Result) -> (st, Stmt)
+  (st, Stmt) -> (r, Result)
+  (st, Stmt) -> (hr, has_result)
+==>
+  s -> s
+  con -> con
+  acts -> acts
+  st -> st
+  open -> open
+  hr -> hr
+  nr -> nr
+<==
+
+transition "execute(Stmnt): Result, on active, has result"
+pre
+  node (s, safe)
+  (st, Stmt) -> (con, Con)
+  (st, Stmt) -> (acts, activeStmt)
+  (con, Con) -> (open, open)
+  (con, Con) -> (acts, activeStmt)
+  (con, Con) -> (nopen, not_open)
+  (st, Stmt) -> (hr, has_result)
+  (st, Stmt) -> (r, Result)
+  (r, Result) -> (open, open)
+  (r, Result) -> (st, Stmt)
+post
+  node (s, safe)
+  (st, Stmt) -> (con, Con)
+  (st, Stmt) -> (acts, activeStmt)
+  (con, Con) -> (open, open)
+  (con, Con) -> (acts, activeStmt)
+  (con, Con) -> (nopen, not_open)
+  (r, Result) -> (st, Stmt)
+  (r, Result) -> (nopen, not_open)
+  (r1, Result) -> (open, open)
+  (r1, Result) -> (st, Stmt)
+  (st, Stmt) -> (r1, Result)
+  (st, Stmt) -> (hr, has_result)
+==>
+  s -> s
+  con -> con
+  acts -> acts
+  st -> st
+  open -> open
+  nopen -> nopen
+  r -> r
+  hr -> hr
+<==
+
+transition "closeResult(Result), active, has result"
+pre
+  node (s, safe)
+  (r, Result) -> (open, open)
+  (r, Result) -> (st, Stmt)
+  (con, Con) -> (nopen, not_open)
+  (con, Con) -> (open, open)
+  (con, Con) -> (nr, not_has_result)
+  (st, Stmt) -> (r, Result)
+  (st, Stmt) -> (hr, has_result)
+  (st, Stmt) -> (con, Con)
+post
+  node (s, safe)
+  node (hr, has_result)
+  (r, Result) -> (nopen, not_open)
+  (r, Result) -> (st, Stmt)
+  (con, Con) -> (nopen, not_open)
+  (con, Con) -> (open, open)
+  (con, Con) -> (nr, not_has_result)
+  (st, Stmt) -> (nr, not_has_result)
+  (st, Stmt) -> (con, Con)
+==>
+  s -> s
+  con -> con
+  nopen -> nopen
+  open -> open
+  st -> st
+  r -> r
+  hr -> hr
+  nr -> nr
+<==
+
+
+transition "closeStmnt(Stmnt), active, has result"
+pre
+  node (s, safe)
+  (r, Result) -> (open, open)
+  (r, Result) -> (st, Stmt)
+  (con, Con) -> (nopen, not_open)
+  (con, Con) -> (open, open)
+  (con, Con) -> (hr, has_result)
+  (con, Con) -> (nr, not_has_result)
+  (con, Con) -> (nacts, not_activeStmt)
+  (st, Stmt) -> (acts, activeStmt)
+  (st, Stmt) -> (r, Result)
+  (st, Stmt) -> (hr, has_result)
+  (st, Stmt) -> (con, Con)
+post
+  node (s, safe)
+  node (acts, activeStmt)
+  node (hr, has_result)
+  (r, Result) -> (nopen, not_open)
+  (r, Result) -> (st, Stmt)
+  (con, Con) -> (nopen, not_open)
+  (con, Con) -> (open, open)
+  (con, Con) -> (hr, has_result)
+  (con, Con) -> (nr, not_has_result)
+  (con, Con) -> (nacts, not_activeStmt)
+  (st, Stmt) -> (nacts, not_activeStmt)
+  (st, Stmt) -> (nr, not_has_result)
+  (st, Stmt) -> (con, Con)
+  (st, Stmt) -> (r, Result)
+==>
+  s -> s
+  con -> con
+  nopen -> nopen
+  open -> open
+  acts -> acts
+  nacts -> nacts
+  st -> st
+  r -> r
+  nr -> nr
+  hr -> hr
+<==
+
+transition "closeStmnt(Stmnt), active, has no result"
+pre
+  node (s, safe)
+  (con, Con) -> (nopen, not_open)
+  (con, Con) -> (open, open)
+  (con, Con) -> (nr, not_has_result)
+  (con, Con) -> (nacts, not_activeStmt)
+  (st, Stmt) -> (acts, activeStmt)
+  (st, Stmt) -> (nr, not_has_result)
+  (st, Stmt) -> (con, Con)
+post
+  node (s, safe)
+  node (acts, activeStmt)
+  (con, Con) -> (nopen, not_open)
+  (con, Con) -> (nr, not_has_result)
+  (con, Con) -> (open, open)
+  (con, Con) -> (nacts, not_activeStmt)
+  (st, Stmt) -> (nacts, not_activeStmt)
+  (st, Stmt) -> (nr, not_has_result)
+  (st, Stmt) -> (con, Con)
+==>
+  s -> s
+  con -> con
+  nopen -> nopen
+  open -> open
+  acts -> acts
+  nacts -> nacts
+  st -> st
+  nr -> nr
+<==
+
+transition "closeCon(Con), active"
+pre
+  node (s, safe)
+  (con, Con) -> (actc, activeCon)
+  (con, Con) -> (nopen, not_open)
+  (con, Con) -> (open, open)
+  (con, Con) -> (nr, not_has_result)
+  (con, Con) -> (hr, has_result)
+  (con, Con) -> (nacts, not_activeStmt)
+  (con, Con) -> (acts, activeStmt)
+post
+  node (s, safe)
+  (con, Con) -> (nactc, not_activeCon)
+  (con, Con) -> (nopen, not_open)
+  (con, Con) -> (open, open)
+  (con, Con) -> (nacts, not_activeStmt)
+  (con, Con) -> (acts, activeStmt)
+  (con, Con) -> (hr, has_result)
+  (con, Con) -> (nr, not_has_result)
+==>
+  s -> s
+  con -> con
+  nopen -> nopen
+  open -> nopen
+  acts -> nacts
+  nacts -> nacts
+  hr -> nr
+  nr -> nr
+<==
+
+transition "accessResult(Result), not open"
+pre
+  node (s, safe)
+  (r, Result) -> (nopen, not_open)
+post
+  (r, ResultErr) -> (nopen, not_open)
+==>
+  r -> r
+  nopen -> nopen
+<==
+
+transition "execute(Stmnt): Result, not active"
+pre
+  node (s, safe)
+  (st, Stmt) -> (nacts, not_activeStmt)
+post
+  (st, StmtErr) -> (nacts, not_activeStmt)
+==>
+  st -> st
+  nacts -> nacts
+<==

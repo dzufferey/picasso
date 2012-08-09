@@ -296,8 +296,9 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
     val allPreds = graph(node).filter(isPred)
     val revG = graph.reverse
     val preds = allPreds.filter(p => {
-      val out = revG(p)
-      out.size == 1 || (out.size > 1 && neighbors.exists(out))
+      //val out = revG(p)
+      //out.size == 1 || (out.size > 1 && neighbors.exists(out))
+      true
     })
     //for the binary preds, keep only the pred if the other guy is a neighbor
     val keep = neighbors ++ preds + node
