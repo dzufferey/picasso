@@ -86,6 +86,9 @@ object InterfaceExtraction {
       } else if (dests.size == 2) {
         Logger.assert(dests exists { case (m, v) => eq(v, src) && m == Rest }, "InterfaceExtraction", "frame not in dests: " + dests)
         Logger.assert(dests exists { case (m, v) => m == One && !eq(v, src) }, "InterfaceExtraction", "dest not in dests: " + dests)
+        //val res =  dests.map{ case (m, v) => if (eq(v, src)) (m,v) else (Part, v) }
+        //println(dests.mkString(", "))
+	//println(res.mkString(", "))
         (src, dests.map{ case (m, v) => if (eq(v, src)) (m,v) else (Part, v) })
       } else {
         Logger.logAndThrow("InterfaceExtraction", LogError, "expected loop with single dest + frame: " + dests)
@@ -551,7 +554,7 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
   }
   
   protected def composeTransition(t1: MethodCallWithMaps, middle: DP, t2: MethodCallWithMaps): MethodCallWithMaps = {
-    println("composeTransition ...")
+    //println("composeTransition ...")
     val ((t1From, t1Caller, t1Method, t1Changes, t1News, t1To), t1Src, t1Dest) = t1
     //checkChangesDomains("composeTransition.t1", t1From, t1Changes, t1To)
     //Logger.assert(t1Src.values.forall(t1From contains _), "InterfaceExtraction", "pathToMethodCall.t1Src")
@@ -564,11 +567,18 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
     val t1DestInverse = t1Dest.map[(EqClass,P#V), Map[EqClass, P#V]]{ case (a,b) => (b,a) }
     //Logger.assert(t1DestInverse.keys.forall(t1To contains _), "InterfaceExtraction", "pathToMethodCall.t1DestInverse")
     def t1ToT2(x: EqClass) = t2Src(t1DestInverse(x))
+    //val t2SrcInverse = t2Src.map[(EqClass,P#V), Map[EqClass, P#V]]{ case (a,b) => (b,a) }
+    //val t2ToT1(x: EqClass) = t2Dest(t2SrcInverse(x))
     //and compose with t2 
     val resChanges = t1Changes.map{ case (a, bs) => (a, bs.flatMap{ case (m, b) =>
         t2Changes(t1ToT2(b)).map{ case (m2, b2) => (composeMultiplicities(m, m2), b2) }
       })
     }
+    //assert(t2Changes.keys.forall(k => t1Changes.values.exists(_.exists(c => t1ToT2(c._2) == k))))
+    //val t1Range = t1Changes.values.flatMap(_.map(_._2)).toSet.map(t1ToT2)
+    //val newChanges = t2Changes.filterNot(t1Range)
+    //val resChangesPart2 =  newChanges.map{ case (a, bs) => (t1DstToSrc(a), bs) }
+    //val resChanges =
     val resNews = t1News.flatMap( n => t2Changes(t1ToT2(n)).map(_._2) )
     checkChangesDomains("composeTransition.resChanges", t1From, resChanges, t2To)
     Logger.assert(resNews.forall(t2To contains _), "InterfaceExtraction", "composeTransition: news not in graph")
@@ -595,10 +605,25 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
     val call = accelerateIfNeeded(trace.start, fstCall, middle)
     val (finalCall, _) = ((call, middle) /: trace.tail)( (acc, step) => {
       val aCall = accelerateIfNeeded(acc._2, step._1, step._2)
-      (composeTransition(acc._1, acc._2, step._1), step._2)
+      (composeTransition(acc._1, acc._2, aCall), step._2)
     })
     val (start, end) = trace.extremities
     (start, finalCall, end)
+  }
+
+  def pruneCall(call: MethodCall): MethodCall = {
+    val (src, caller, method, changes, news, dst) = call
+    val changes2 = changes.filterNot{ case (a,bs) => 
+      if (a != caller && bs.size == 1) {
+        val (m, b) = bs.head
+        (m == Rest && b.obj == a.obj)
+      } else false
+    }
+    val src2 = src.filterNodes(n => n == caller || changes2.keySet(n))
+    val changesRange = changes2.values.flatMap(_.map(_._2)).toSet
+    val newsSet = news.toSet
+    val dst2 = dst.filterNodes(n => newsSet(n) || changesRange(n) )
+   (src2, caller, method, changes2, news, dst2)
   }
 
   def interface: Interface = {
@@ -645,7 +670,7 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
 
     val interface = withoutTransient.morphFull[IGT2](
         dict,
-        (el => el._1),
+        (el => pruneCall(el._1)),
         (x => x)
       )
 
