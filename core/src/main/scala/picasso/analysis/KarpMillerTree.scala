@@ -295,7 +295,7 @@ trait KarpMillerTree extends CoveringSet {
     for (root <- roots) buildFromRoot(root, true)
     val endTime = java.lang.System.currentTimeMillis
     Logger("Analysis", LogInfo, "KMTree computed in " + ((endTime - startTime)/1000F) + " sec (cover of size "+cover.size+", K-M tree of size " + (0 /: roots)(_ + _.size) + ").")
-    Logger("Analysis", LogDebug, "KMTree are\n" + roots.map(TreePrinter.print(_).mkString("\n")))
+    Logger("Analysis", LogDebug, "KMTree are\n" + roots.map(TreePrinter.print(_)).mkString("\n"))
     Logger("Analysis", LogInfo, "Checking fixed-point.")
     if (checkFixedPoint(cover)) {
       Logger("Analysis", LogInfo, "Fixed-point checked.")
