@@ -24,7 +24,7 @@ post
 <==
 */
 
-transition "newStmnt(Con): Stmnt, on active"
+transition "newStmt(Con): Stmt, on active"
 pre
   node (s, safe)
   (con, Con) -> (actc, activeCon)
@@ -47,7 +47,7 @@ post
 <==
 
 
-transition "newStmnt(Con): Stmnt, on not_active"
+transition "newStmt(Con): Stmt, on not_active"
 pre
   node (s, safe)
   (con, Con) -> (nactc, not_activeCon)
@@ -58,7 +58,7 @@ post
   nactc -> nactc
 <==
 
-transition "execute(Stmnt): Result, on active, no result"
+transition "execute(Stmt): Result, on active, no result"
 pre
   node (s, safe)
   (st, Stmt) -> (con, Con)
@@ -89,7 +89,7 @@ post
   nr -> nr
 <==
 
-transition "execute(Stmnt): Result, on active, has result"
+transition "execute(Stmt): Result, on active, has result"
 pre
   node (s, safe)
   (st, Stmt) -> (con, Con)
@@ -158,7 +158,7 @@ post
 <==
 
 
-transition "closeStmnt(Stmnt), active, has result"
+transition "closeStmt(Stmt), active, has result"
 pre
   node (s, safe)
   (r, Result) -> (open, open)
@@ -200,7 +200,7 @@ post
   hr -> hr
 <==
 
-transition "closeStmnt(Stmnt), active, has no result"
+transition "closeStmt(Stmt), active, has no result"
 pre
   node (s, safe)
   (con, Con) -> (nopen, not_open)
@@ -272,7 +272,7 @@ post
   nopen -> nopen
 <==
 
-transition "execute(Stmnt): Result, not active"
+transition "execute(Stmt): Result, not active"
 pre
   node (s, safe)
   (st, Stmt) -> (nacts, not_activeStmt)
