@@ -139,14 +139,15 @@ class Config {
 
   //transition on the cover
   var TGCover = false
+  var TGFull = false
   var interfaceExtraction = false
 
   newOption("--TG", Arg.Unit(() => TGCover = true), "print a graph of the transitions applied to the covering set.")
+  newOption("--fullTG", Arg.Unit(() => TGFull = true), "keep all the covering edges when making the transition graph.")
   newOption("--interface", Arg.Unit(() => interfaceExtraction = true), "extract an interface. (many assumptions about the input ...)")
 
   //about the termination analysis
   var termination = false
-  var useTree = false
   var armcCmd = "armc"
   var noCC = false
   var moreTPreds = false
@@ -154,7 +155,6 @@ class Config {
   var dumpArmc = ""
 
   newOption("--termination", Arg.Unit(() => termination = true), "Compute the termination of the system.")
-  newOption("--useTree", Arg.Unit(() => useTree = true), "Termination analysis using the KM tree (default is to use only the cover) DEPRECATED.")
   newOption("--armc", Arg.String(str => armcCmd = str), "The command to call ARMC.")
   newOption("--noCC", Arg.Unit(() => noCC = true), "Do not generate counters for concrete nodes.")
   newOption("--moreTPreds", Arg.Unit(() => moreTPreds = true), "Generate (much) more transition predicates for ARMC.")

@@ -27,16 +27,11 @@ class Termination(fileName: String, content: String) extends AnalysisCommon("Ter
   protected def analysis[P <: picasso.model.dbp.DBCT](_process: DepthBoundedProcess[P], init: DepthBoundedConf[P], target: Option[DepthBoundedConf[P]]): Unit = {
     assert(target.isEmpty, "Termination analysis does not expect a target state")
 
-    val intProgram =
-      if (Config.useTree) {
-        val process = new DepthBoundedProcess( _process) with DBPTermination[P]
-        val (_, p) = process.termination(init)
-        p
-      } else {
-        val process = new DepthBoundedProcess( _process) with DBPTermination2[P]
-        val (_, _, p) = process.termination(init)
-        p
-      }
+    val intProgram = {
+      val process = new DepthBoundedProcess( _process) with DBPTermination2[P]
+      val (_, _, p) = process.termination(init)
+      p
+    }
 
     if (Config.dumpArmc == "") {
       runARMC(intProgram)
