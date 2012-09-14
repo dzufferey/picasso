@@ -1,4 +1,4 @@
-package picasso.frontend.dbpGraph
+package picasso.frontend
 
 import picasso.utils._
 import picasso.utils.report._
@@ -6,7 +6,12 @@ import picasso.model.dbp._
 import picasso.model.integer.Program
 import picasso.analysis._
 
-class Termination(fileName: String, content: String) extends AnalysisCommon("Termination", fileName, content) {
+class Termination[P <: picasso.model.dbp.DBCT](
+    fileName: String,
+    content: String,
+    parse: String => Option[(DepthBoundedProcess[P], DepthBoundedConf[P], Option[DepthBoundedConf[P]])]
+  ) extends AnalysisCommon[P]("Termination", fileName, content, parse)
+{
 
   protected def runARMC(prog: Program) {
     val (code, file, err) = SysCmd(Array("mktemp"))
@@ -24,7 +29,7 @@ class Termination(fileName: String, content: String) extends AnalysisCommon("Ter
     }
   }
 
-  protected def analysis[P <: picasso.model.dbp.DBCT](_process: DepthBoundedProcess[P], init: DepthBoundedConf[P], target: Option[DepthBoundedConf[P]]): Unit = {
+  protected def analysis(_process: DepthBoundedProcess[P], init: DepthBoundedConf[P], target: Option[DepthBoundedConf[P]]): Unit = {
     assert(target.isEmpty, "Termination analysis does not expect a target state")
 
     val intProgram = {

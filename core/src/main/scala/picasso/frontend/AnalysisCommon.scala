@@ -1,16 +1,21 @@
-package picasso.frontend.dbpGraph
+package picasso.frontend
 
 import picasso.utils._
 import picasso.utils.report._
 import picasso.model.dbp._
 import picasso.analysis.KarpMillerTree
 
-abstract class AnalysisCommon(what: String, fileName: String, content: String) {
+abstract class AnalysisCommon[P <: picasso.model.dbp.DBCT](
+    what: String,
+    fileName: String,
+    content: String,
+    parse: String => Option[(DepthBoundedProcess[P], DepthBoundedConf[P], Option[DepthBoundedConf[P]])])
+{
 
   protected var done = false
   protected val report = new Report("Computing "+what+" of " + fileName)
 
-  protected def addProcessToReport[P <: picasso.model.dbp.DBCT](process: DepthBoundedProcess[P], init: DepthBoundedConf[P]) {
+  protected def addProcessToReport(process: DepthBoundedProcess[P], init: DepthBoundedConf[P]) {
     val initial = new GenericItem(
                     "Initial Configuration",
                     init.toGraphviz("Init"),
@@ -30,17 +35,16 @@ abstract class AnalysisCommon(what: String, fileName: String, content: String) {
     report.add(lst)
   }
 
-  protected def analysis[P <: picasso.model.dbp.DBCT](process: DepthBoundedProcess[P], init: DepthBoundedConf[P], target: Option[DepthBoundedConf[P]]): Unit
+  protected def analysis(process: DepthBoundedProcess[P], init: DepthBoundedConf[P], target: Option[DepthBoundedConf[P]]): Unit
 
   def analyse: Report = {
     if (done) {
       report
     } else {
-      DBPGraphParser(content) match {
-        case Some((init, trs, target)) =>
+      parse(content) match {
+        case Some((process, init, target)) =>
           report.add(new PreformattedText("Input", content))
      
-          val process = new DepthBoundedProcess(trs)
           Logger("dbpGraph", LogInfo, process.toString) 
           //Logger("dbpGraph", LogInfo, Misc.docToString(process.toGraphviz("DBPGraph")) )
           addProcessToReport(process, init)

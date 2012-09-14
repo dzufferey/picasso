@@ -79,11 +79,12 @@ object DBPGraphParser extends StandardTokenParsers {
     }
   }
 
-  def apply(str: String): Option[(DepthBoundedConf[DBCGraph], List[DepthBoundedTransition[DBCGraph]], Option[DepthBoundedConf[DBCGraph]])] = {
+  def apply(str: String): Option[(DepthBoundedProcess[DBCGraph], DepthBoundedConf[DBCGraph], Option[DepthBoundedConf[DBCGraph]])] = {
     val tokens = new lexical.Scanner(str)
     val result = phrase(system)(tokens)
     if (result.successful) {
-      Some(result.get)
+      val (init, trs, target) = result.get
+      Some((new DepthBoundedProcess(trs), init, target))
     } else {
       Logger("DBPGraphParser", LogError, "parsing error: " + result.toString)
       None
