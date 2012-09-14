@@ -7,7 +7,7 @@ import picasso.math.DownwardClosedSet
 import picasso.model.integer._
 import scala.collection.parallel.{ParIterable, ParSeq}
 
-trait DBPTermination2[P <: DBCT] extends KarpMillerTree {
+trait DBPTermination[P <: DBCT] extends KarpMillerTree {
   self: DepthBoundedProcess[P] =>
 
   //what are the states: configuration, not KMTree

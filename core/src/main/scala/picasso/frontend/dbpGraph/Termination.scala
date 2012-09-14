@@ -28,7 +28,7 @@ class Termination(fileName: String, content: String) extends AnalysisCommon("Ter
     assert(target.isEmpty, "Termination analysis does not expect a target state")
 
     val intProgram = {
-      val process = new DepthBoundedProcess( _process) with DBPTermination2[P]
+      val process = new DepthBoundedProcess( _process) with DBPTermination[P]
       val (_, _, p) = process.termination(init)
       p
     }
