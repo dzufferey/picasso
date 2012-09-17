@@ -593,7 +593,7 @@ object ProgramHeuristics {
       toRemove = sinks(p2)
       Logger("DBPTermination", LogInfo, "sinks: " + toRemove.mkString(", "))
       p2 = new Program(p2.initialPC, p2.transitions map (t => TransitionHeuristics.removeSinks(t, toRemove)))
-      Logger("integer.Program", LogInfo, "without sinks:")
+      Logger("integer.Program", LogDebug, "without sinks:")
       Logger("integer.Program", LogDebug, writer => p2.printForQARMC(writer) )
     } while (!toRemove.isEmpty)
     p2
