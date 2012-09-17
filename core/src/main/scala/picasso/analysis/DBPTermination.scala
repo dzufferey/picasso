@@ -250,6 +250,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        }
     }
+    //TODO make sure we catch everyone ...
     val guard = (guardForConcreteNode(from) /: lowerBounds)(And(_,_))
     val stmts = (stmts1.flatten ++ stmts2 ++ variance1 ++ variance2).toSeq
     new Transition(pc1, pc2, guard, stmts, "unfolding")
@@ -387,7 +388,12 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
       //4 -> prune assume
       //5 -> loop ?
       //TODO assert that the variables at both ends are the same
-      //println("before = " + trs.size + ", after = " + trsNew.size)
+      Logger("DBPTermination", LogDebug,
+             "Simplifying path:" +
+             "\n=================\n" +
+             trs.mkString("\n") +
+             "\n-----------------\n" +
+             trsNew.mkString("\n"))
       trsNew
     } else {
       trs
@@ -399,10 +405,39 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
 
   protected def makeTransitions(tg: EdgeLabeledDiGraph[TransitionsGraphFromCover.TG[P]]): ParIterable[Transition] = {
     import TransitionsGraphFromCover._
-    tg.edges.par.flatMap{
-      case (a, Transition(b), c) => simplifyPath( transitionForWitness(b) )
-      case (a, Covering(b), c) => Some(covering(a, b, c))
-    }
+    //TODO the edges should go by pairs: transition + covering
+    //the simplification might be more efficient if the first pass simplify both.
+    //TODO some check to be sure the graph has the right form ?
+    tg.vertices.toSeq.par.flatMap( v1 => {
+      tg.outEdges(v1).flatMap{
+        case (Transition(witness), succs) =>
+          succs.toSeq.flatMap(v2 => {
+            val out = tg.outEdges(v2)
+            if (out.size == 1) {
+              out.head match {
+                case (Covering(m), targets) => 
+                  Logger.assert(targets.size == 1, "DBPTermination", "Expected single successor: " + targets)
+                  simplifyPath( transitionForWitness(witness) :+ covering(v2, m, targets.head))
+                case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Covering, found: " + other)
+              }
+            } else {
+              val p1 = simplifyPath(transitionForWitness(witness))
+              val p2s = out.map{
+                case (Covering(m), targets) => 
+                  Logger.assert(targets.size == 1, "DBPTermination", "Expected single successor: " + targets)
+                  covering(v2, m, targets.head)
+                case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Covering, found: " + other)
+              }
+              p2s ++ p1
+            }
+          })
+        case _ => None
+      }
+    })
+    //tg.edges.par.flatMap{
+    //  case (a, Transition(b), c) => simplifyPath( transitionForWitness(b) )
+    //  case (a, Covering(b), c) => Some(covering(a, b, c))
+    //}
   }
 
   def makeIntegerProgram(cover: DownwardClosedSet[S]): Program = {

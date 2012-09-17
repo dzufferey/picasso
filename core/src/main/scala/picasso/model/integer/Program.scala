@@ -84,7 +84,7 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     Logger("integer.Program", LogDebug, writer => p8.printForQARMC(writer) )
     Logger("integer.Program", LogInfo, "reorganizing variables.")
     val p9 = p8.reflow
-    Logger("integer.Program", LogDebug, writer => p8.printForQARMC(writer) )
+    Logger("integer.Program", LogDebug, writer => p9.printForQARMC(writer) )
     p9
   }
 
@@ -322,9 +322,16 @@ class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.Tran
     val pcToSubst: Map[String, Map[Variable, Variable]] = pcs.map( pc => {
       pc -> variables.map( v => (v, Variable("X_" + minClr(sccCollapse.getOrElse((pc, v),(pc, v)))) ) ).toMap
     }).toMap
+    Logger("integer.Program", LogDebug, "reflow substitution: " + pcToSubst.mkString(", "))
 
     //for each transition apply the pre and post alpha
-    val trs2 = trs.map( t => t.alphaPre(pcToSubst(t.sourcePC)).alphaPost(pcToSubst(t.targetPC)) )
+    val trs2 = trs.map( t => {
+      val frame = variables -- t.allVariables
+      val frameStmt = for(v <- frame.iterator) yield Affect(v, v)
+      val tWithFrame = new Transition(t.sourcePC, t.targetPC, t.guard, t.updates ++ frameStmt, t.comment)
+      val tSubst = tWithFrame.alphaPre(pcToSubst(t.sourcePC)).alphaPost(pcToSubst(t.targetPC))
+      tSubst.leaner
+    })
     val p2 = new Program(initPC, trs2)
     if (p2.variables.size <= variables.size) {
       p2
@@ -586,6 +593,8 @@ object ProgramHeuristics {
       toRemove = sinks(p2)
       Logger("DBPTermination", LogInfo, "sinks: " + toRemove.mkString(", "))
       p2 = new Program(p2.initialPC, p2.transitions map (t => TransitionHeuristics.removeSinks(t, toRemove)))
+      Logger("integer.Program", LogInfo, "without sinks:")
+      Logger("integer.Program", LogDebug, writer => p2.printForQARMC(writer) )
     } while (!toRemove.isEmpty)
     p2
   }

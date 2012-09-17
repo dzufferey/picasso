@@ -5,6 +5,9 @@ import picasso.frontend.basic.typer._
 
 object Main {
 
+  //TODO adapt to the new report + runner infrastructure.
+  //the problem is the Analysis/DBPWrapper/DefDBP -> dig out the type if DBP
+
   def main(args: Array[String]) {
     Config(args.toList) //process the cmdline args
     val report = Config.input match {
