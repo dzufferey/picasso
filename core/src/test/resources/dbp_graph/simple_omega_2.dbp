@@ -1,14 +1,12 @@
 init
-  (e, env) -> (s, server) [S]
+  node (s, server)
 
 transition "new client" 
 pre
-  (e, env) -> (s, server) [S]
+  node (s, server)
 post
-  (e, env) -> (s, server) [S]
   (c, client) -> (s, server) [S]
 ==>
-  e -> e
   s -> s
 <==
 
@@ -38,9 +36,9 @@ post
 
 transition "receive reply" 
 pre
-  (r, reply) -> (c, _) [C]
+  (r, reply) -> (c, client) [C]
 post
-  node (c, _)
+  node (c, client)
 ==>
-<==
   c -> c
+<==

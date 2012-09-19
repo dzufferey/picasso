@@ -53,7 +53,7 @@ object Printer {
     if (noDollars startsWith "_") "v" + noDollars
     else noDollars
   }
-  protected def asVar(v: Variable): String = asVar(v.name)
+  def asVar(v: Variable): String = asVar(v.name)
 
   protected def cstDecl(what: String, vars: Iterable[Variable])(implicit writer: BufferedWriter) {
     writer.write("\\"+what+" {")
@@ -96,7 +96,11 @@ object Printer {
       printFormula(args(1), priority2)
     } else {
       Logger.assert(!args.isEmpty, "princess", "wrong arity for " + fct + ": " + args)
-      sys.error("TODO")
+      for (a <- args.init) {
+        printFormula(a, priority2)
+        writer.write(" " + sym + " ")
+      }
+      printFormula(args.last, priority2)
     }
     if (priority2 <= priority1) writer.write(" )")
   }

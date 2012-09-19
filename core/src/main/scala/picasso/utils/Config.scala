@@ -149,6 +149,7 @@ class Config {
   //about the termination analysis
   var termination = false
   var armcCmd = "armc"
+  var princessCmd = "princess"
   var noCC = false
   var moreTPreds = false
   var cyclesBound = -1
@@ -156,6 +157,7 @@ class Config {
 
   newOption("--termination", Arg.Unit(() => termination = true), "Compute the termination of the system.")
   newOption("--armc", Arg.String(str => armcCmd = str), "The command to call ARMC.")
+  newOption("--princess", Arg.String(str => princessCmd = str), "The command to call princess.")
   newOption("--noCC", Arg.Unit(() => noCC = true), "Do not generate counters for concrete nodes.")
   newOption("--moreTPreds", Arg.Unit(() => moreTPreds = true), "Generate (much) more transition predicates for ARMC.")
   newOption("--cyclesBound", Arg.Int(i => cyclesBound = i), "bound for the number of cycles to consider when generating the transition predicates")
