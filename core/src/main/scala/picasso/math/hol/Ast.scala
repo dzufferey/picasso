@@ -30,6 +30,7 @@ case class Literal[T](value: T) extends Formula {
 
 }
 
+//Actually more like a Constant, not a Variable
 case class Variable(name: String) extends Formula {
 
   override def toString = name
@@ -47,6 +48,65 @@ case class Application(fct: Formula, args: List[Formula]) extends Formula {
   lazy val boundVariables: Set[Variable] = Set[Variable]()
 
 }
+
+sealed abstract class InterpretedFct(symbol: String) extends Formula {
+  val freeVariables: Set[Variable] = Set[Variable]()
+  val boundVariables: Set[Variable] = Set[Variable]()
+  override def setType(t: Type): this.type = {
+    assert(t == tpe, "type of " + symbol + " (InterpretedFct) cannot be changed")
+    this
+  }
+}
+
+case object Not extends InterpretedFct("~") {
+  tpe = Bool ~> Bool
+}
+
+case object And extends InterpretedFct("&") {
+  tpe = Bool ~> Bool ~> Bool
+}
+case object Or extends InterpretedFct("|") {
+  tpe = Bool ~> Bool ~> Bool
+}
+case object Implies extends InterpretedFct("->") {
+  tpe = Bool ~> Bool ~> Bool
+}
+
+case object Eq extends InterpretedFct("=") {
+  tpe = Int ~> Int ~> Bool
+  //tpe = TypeVariable("A") ~> TypeVariable("A") ~> Bool
+}
+case object Neq extends InterpretedFct("~=") {
+  tpe = Int ~> Int ~> Bool
+  //tpe = TypeVariable("A") ~> TypeVariable("A") ~> Bool
+}
+
+case object Plus extends InterpretedFct("+") {
+  tpe = Int ~> Int ~> Int
+}
+case object Minus extends InterpretedFct("-") {
+  tpe = Int ~> Int ~> Int
+}
+case object Times extends InterpretedFct("*") {
+  tpe = Int ~> Int ~> Int
+}
+case object Divides extends InterpretedFct("/") {
+  tpe = Int ~> Int ~> Int
+}
+
+case object Leq extends InterpretedFct("<=") {
+  tpe = Int ~> Int ~> Bool
+}
+case object Geq extends InterpretedFct(">=") {
+  tpe = Int ~> Int ~> Bool
+}
+case object Lt extends InterpretedFct("<") {
+  tpe = Int ~> Int ~> Bool
+}
+case object Gt extends InterpretedFct(">") {
+  tpe = Int ~> Int ~> Bool
+}
+
 
 sealed abstract class BindingType
 

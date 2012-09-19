@@ -3,6 +3,7 @@ package picasso.model.integer
 import scala.collection.GenSeq
 import picasso.graph._
 import picasso.utils._
+import picasso.utils.tools.armc._
 
 /** Integer Program.
  *  Integer program are use during the termination proof of DBP.

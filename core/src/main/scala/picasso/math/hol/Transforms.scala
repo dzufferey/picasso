@@ -59,6 +59,7 @@ abstract class Traverser {
     case Binding(_, vs, f) =>
       vs foreach traverse
       traverse(f)
+    case i: InterpretedFct =>
   }
 
 }
@@ -68,6 +69,7 @@ abstract class Transformer {
   def transform(f: Formula): Formula = f match {
     case l @ Literal(_) => l
     case v @ Variable(_) => v
+    case i: InterpretedFct => i
     case f @ Application(fct, args) =>
       val fct2 = transform(fct)
       val args2 = args map transform
