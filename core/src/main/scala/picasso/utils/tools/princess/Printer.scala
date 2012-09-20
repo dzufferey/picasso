@@ -114,6 +114,11 @@ object Printer {
     case other => Logger.logAndThrow("princess", LogError, "don't know what to do with " + other)
   }
   
+  def apply(implicit writer: BufferedWriter, f: Formula) {
+    printFormula(f)
+    writer.newLine
+  }
+
   def apply(implicit writer: BufferedWriter, universalConstants: Set[Variable], existentialConstants: Set[Variable], f: Formula) {
     univCst(universalConstants)
     writer.newLine
