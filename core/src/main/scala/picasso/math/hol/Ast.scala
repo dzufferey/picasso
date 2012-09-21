@@ -17,6 +17,8 @@ sealed abstract class Formula {
     this
   }
 
+  def alpha(map: Map[Variable, Variable]): Formula
+
   val freeVariables: Set[Variable]
   val boundVariables: Set[Variable]
 }
@@ -25,6 +27,7 @@ case class Literal[T](value: T) extends Formula {
 
   override def toString = value.toString
 
+  def alpha(map: Map[Variable, Variable]) = this
   lazy val freeVariables: Set[Variable] = Set[Variable]()
   lazy val boundVariables: Set[Variable] = Set[Variable]()
 
@@ -35,6 +38,7 @@ case class Variable(name: String) extends Formula {
 
   override def toString = name
 
+  def alpha(map: Map[Variable, Variable]) = map.getOrElse(this, this)
   lazy val freeVariables: Set[Variable] = Set[Variable](this)
   lazy val boundVariables: Set[Variable] = Set[Variable]()
 
@@ -44,12 +48,14 @@ case class Application(fct: Formula, args: List[Formula]) extends Formula {
 
   override def toString = fct.toString + args.mkString("(",", ",")")
 
+  def alpha(map: Map[Variable, Variable]) = Application(fct, args.map(_.alpha(map)))
   lazy val freeVariables: Set[Variable] = Set[Variable]()
   lazy val boundVariables: Set[Variable] = Set[Variable]()
 
 }
 
 sealed abstract class InterpretedFct(symbol: String) extends Formula {
+  def alpha(map: Map[Variable, Variable]) = this
   val freeVariables: Set[Variable] = Set[Variable]()
   val boundVariables: Set[Variable] = Set[Variable]()
   override def setType(t: Type): this.type = {
@@ -114,6 +120,7 @@ case class Binding(binding: BindingType, vs: List[Variable], f: Formula) extends
 
   override def toString = binding + " " + vs.mkString(""," ","") + ". " + f
 
+  def alpha(map: Map[Variable, Variable]) = Binding(binding, vs, f.alpha(map -- vs))
   lazy val freeVariables: Set[Variable] = f.freeVariables -- vs
   lazy val boundVariables: Set[Variable] = f.boundVariables ++ vs
 

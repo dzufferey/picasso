@@ -41,10 +41,14 @@ object LIA {
     sg.result
   }
 
-  def eq(universalConstants: Set[Variable], existentialConstants: Set[Variable], f: Formula): Formula = {
+  def qe(universalConstants: Set[Variable], existentialConstants: Set[Variable], f: Formula): Option[Formula] = {
     Logger.assert(isLIA(f), "LIA", f + " not in LIA.")
     //use the Princess thm prover
-    sys.error("TODO")
+    picasso.utils.tools.princess.Princess.eliminateQuantifiers(
+      universalConstants,
+      existentialConstants,
+      f
+    )
   }
 
 }

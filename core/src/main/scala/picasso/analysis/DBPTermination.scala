@@ -399,6 +399,55 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
       trs
     }
   }
+
+  //assumes the transitions also contains the frame
+  protected def simplifyPathByQE(trs: Seq[Transition]): Seq[Transition] = {
+    Logger.assert(trs.size > 1, "DBPTermination", "simplifyPathByQE with " + trs)
+    //-create substitutions for the variables (SSA)
+    val preVars = (trs map (_.readVariables)) :+ Set[Variable]()
+    val postVars = Set[Variable]() +: (trs map (_.updatedVars))
+    val vars = (preVars zip postVars) map {case (a,b) => a ++ b}
+
+    val dict1 = scala.collection.mutable.HashMap[Variable, Variable]()
+    val dict2 = scala.collection.mutable.HashMap[Variable, Variable]()
+    var cnt = 0
+    val dicts = for (vs <- vars) yield {
+      (Map[Variable, Variable]() /: vs)( (acc, v) => {
+        val newVar = Variable("X_" + cnt)
+        cnt += 1
+        acc + (v -> newVar)
+      })
+    }
+    val ssa = trs.zip( dicts.sliding(2).toIterable ).map{ case (t, slide) => t.alphaPre(slide(0)).alphaPost(slide(1)) }
+
+    import picasso.math.hol._
+    import picasso.math.qe._
+    
+    //-translate guards and updates to math.hol and make the query
+    val math = ssa.map(t => (ToMathAst(t.guard), Application(And, t.updates.map(ToMathAst.apply).toList)))
+    val (hyp, part1) =  math.head
+    val cstr = Application(And, part1 :: math.tail.flatMap{ case (g, t) => Seq(g,t) }.toList)
+    val query = Application(Implies, List(hyp, cstr))
+
+    //-try to quantify away the intermediate variables
+    val univ = dicts.head.values.map(ToMathAst.variable).toSet
+    val exists = dicts.last.values.map(ToMathAst.variable).toSet
+    val toEliminate = dicts.tail.init.flatMap(_.values).map(ToMathAst.variable)
+    val f = Exists(toEliminate.toList, query)
+    LIA.qe(univ, exists, f) match {
+      case Some(f2) =>
+        Logger("DBPTermination", LogDebug, "QE returned: " + f2)
+        //-back to model.integer.AST
+        val asCond = FromMathAst(f2)
+        Logger("DBPTermination", LogDebug, "QE returned: " + asCond)
+        //-use the first guard (hyp) to simplify the result
+        //-put back the original variables (de-SSA)
+        sys.error("TODO")
+      case None =>
+        trs
+    }
+  }
+
   ///////////////
   //The program//
   ///////////////
@@ -417,6 +466,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
               out.head match {
                 case (Covering(m), targets) => 
                   Logger.assert(targets.size == 1, "DBPTermination", "Expected single successor: " + targets)
+                  //XXX TODO simplifyPathByQE( transitionForWitness(witness) :+ covering(v2, m, targets.head))
                   simplifyPath( transitionForWitness(witness) :+ covering(v2, m, targets.head))
                 case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Covering, found: " + other)
               }

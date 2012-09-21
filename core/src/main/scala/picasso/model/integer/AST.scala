@@ -2,8 +2,9 @@ package picasso.model.integer
 
 import picasso.utils._
 
-abstract class Expression 
+sealed abstract class Expression 
 case class Plus(l: Expression, r: Expression) extends Expression 
+case class Minus(l: Expression, r: Expression) extends Expression 
 case class Constant(i: Int) extends Expression 
 case class Variable(name: String) extends Expression 
 
@@ -11,6 +12,7 @@ object Expression {
 
   def priority(e: Expression): Int = e match {
     case Plus(_,_) => 10
+    case Minus(_,_) => 15
     case Constant(_) | Variable(_) => 20
   }
 
@@ -21,18 +23,21 @@ object Expression {
 
   def print(e: Expression): String = e match {
     case Plus(l,r) => needParenthesis(priority(e), l) + " + " + needParenthesis(priority(e), r)
+    case Minus(l,r) => needParenthesis(priority(e), l) + " + " + needParenthesis(priority(e), r)
     case Constant(c) => c.toString
     case Variable(v) => v
   }
 
   def variables(e: Expression): Set[Variable] = e match {
     case Plus(l,r) => variables(l) ++ variables(r)
+    case Minus(l,r) => variables(l) ++ variables(r)
     case Constant(_) => Set()
     case v @ Variable(_) => Set(v)
   }
 
   def getTerms(e: Expression): List[Expression] = e match {
     case Plus(l,r) => getTerms(l) ::: getTerms(r)
+    //case Minus(l,r) => getTerms(l) ::: getTerms(r)
     case cstOrVar => List(cstOrVar)
   }
   
@@ -96,6 +101,7 @@ object Expression {
   //TODO lazyCopier
   def alpha(e: Expression, subst: Map[Variable,Expression]): Expression = e match {
     case Plus(l,r) => Plus(alpha(l, subst), alpha(r, subst)) 
+    case Minus(l,r) => Minus(alpha(l, subst), alpha(r, subst)) 
     case c @ Constant(_) => c
     case v @ Variable(_) => subst.getOrElse(v, v)
   }

@@ -46,7 +46,8 @@ object Parser extends StandardTokenParsers {
   protected def expression7: Parser[Formula] = rep1sep(expression8, "*") ^^ ( lst => lst.reduceLeft(  (a,b) => Application(Times, List(a,b)) ))
 
   protected def expression8: Parser[Formula] =
-    "-".? ~ expression9 ^^ { case Some(_) ~ e => Application(Not, List(e))
+    "-".? ~ expression9 ^^ { case Some(_) ~ Literal(l: Int) => Literal(-l).setType(Int)
+                             case Some(_) ~ e => Application(Minus, List(Literal(0).setType(Int), e))
                              case None ~ e => e }
   
   protected def expression9: Parser[Formula] =
