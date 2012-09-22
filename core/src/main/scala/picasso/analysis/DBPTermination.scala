@@ -422,6 +422,11 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
 
     import picasso.math.hol._
     import picasso.math.qe._
+
+    def collectDijs(f: Formula): Seq[Formula] = f match {
+      case Application(Or, args) => args flatMap collectDijs
+      case other => Seq(other)
+    }
     
     //-translate guards and updates to math.hol and make the query
     val math = ssa.map(t => (ToMathAst(t.guard), Application(And, t.updates.map(ToMathAst.apply).toList)))
@@ -437,8 +442,14 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     LIA.qe(univ, exists, f) match {
       case Some(f2) =>
         Logger("DBPTermination", LogDebug, "QE returned: " + f2)
+        val disj = collectDijs(f2)
+        val valid = disj.filter(d => LIA.valid(univ, exists, Application(Implies, List(hyp, d)) ).getOrElse(true) )
+        val f3 =
+          if (valid.isEmpty) Logger.logAndThrow("DBPTermination", LogError, "no valid disjunct")
+          else if (valid.size == 1) valid.head
+          else Application(Or, valid.toList)
         //-back to model.integer.AST
-        val asCond = FromMathAst(f2)
+        val asCond = FromMathAst(f3)
         Logger("DBPTermination", LogDebug, "QE returned: " + asCond)
         //-use the first guard (hyp) to simplify the result
         //-put back the original variables (de-SSA)
@@ -466,7 +477,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
               out.head match {
                 case (Covering(m), targets) => 
                   Logger.assert(targets.size == 1, "DBPTermination", "Expected single successor: " + targets)
-                  //XXX TODO simplifyPathByQE( transitionForWitness(witness) :+ covering(v2, m, targets.head))
+                  simplifyPathByQE( transitionForWitness(witness) :+ covering(v2, m, targets.head))
                   simplifyPath( transitionForWitness(witness) :+ covering(v2, m, targets.head))
                 case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Covering, found: " + other)
               }

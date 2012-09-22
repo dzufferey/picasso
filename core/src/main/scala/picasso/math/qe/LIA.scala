@@ -50,5 +50,14 @@ object LIA {
       f
     )
   }
+  
+  def valid(universalConstants: Set[Variable], existentialConstants: Set[Variable], f: Formula): Option[Boolean] = {
+    Logger.assert(isLIA(f), "LIA", f + " not in LIA.")
+    picasso.utils.tools.princess.Princess.isValid(
+      universalConstants,
+      existentialConstants,
+      f
+    )
+  }
 
 }

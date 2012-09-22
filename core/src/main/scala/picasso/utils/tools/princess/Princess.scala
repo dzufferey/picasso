@@ -52,9 +52,16 @@ object Princess {
     if (success == 0) {
       val toLookFor1 = "Formula is valid"
       val toLookFor2 = "Formula is invalid"
-      if (stdout contains toLookFor1) Some(true)
-      else if (stdout contains toLookFor2) Some(false)
-      else None
+      if (stdout contains toLookFor1) {
+        Logger("princess", LogDebug, "princess says valid.")
+        Some(true)
+      } else if (stdout contains toLookFor2) {
+        Logger("princess", LogDebug, "princess says invalid.")
+        Some(false)
+      } else {
+        Logger("princess", LogDebug, "princess says ? -> " + stdout)
+        None
+      }
     } else {
       Logger.logAndThrow("princess", LogError, "princess failed ("+success+"): " + stderr)
       None
