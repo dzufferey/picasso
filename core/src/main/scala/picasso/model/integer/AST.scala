@@ -41,6 +41,44 @@ object Expression {
     case cstOrVar => List(cstOrVar)
   }
   
+  def getPosTerms(e: Expression): List[Expression] = e match {
+    case Plus(l,r) => getPosTerms(l) ::: getPosTerms(r)
+    case Minus(l,r) => getPosTerms(l) ::: getNegTerms(r)
+    case cstOrVar => List(cstOrVar)
+  }
+  
+  def getNegTerms(e: Expression): List[Expression] = e match {
+    case Plus(l,r) => getNegTerms(l) ::: getNegTerms(r)
+    case Minus(l,r) => getNegTerms(l) ::: getPosTerms(r)
+    case cstOrVar => List(cstOrVar)
+  }
+  
+  def getPosNegTerms(e: Expression): (List[Expression], List[Expression]) = e match {
+    case Plus(l,r) =>
+      val (p1, n1) = getPosNegTerms(l)
+      val (p2, n2) = getPosNegTerms(r)
+      (p1 ::: p2, n1 ::: n2)
+    case Minus(l,r) =>
+      val (p1, n1) = getPosNegTerms(l)
+      val (p2, n2) = getPosNegTerms(r)
+      (p1 ::: n2, n1 ::: p2)
+    case cstOrVar => (List(cstOrVar), Nil)
+  }
+  
+  def decomposePosNeg(e: Expression): (List[Variable], List[Variable], Constant) = {
+    val (pos, neg) = getPosNegTerms(e)
+    val (pVars, pCst) = ( (List[Variable](), 0) /: pos)( (acc, p) => p match {
+      case v @ Variable(_) => (v :: acc._1, acc._2)
+      case Constant(c) => (acc._1, acc._2 + c)
+      case other => Logger.logAndThrow("integer.AST", LogError, "expected Variable or Constant, found: " + other)
+    })
+    val (nVars, nCst) = ( (List[Variable](), 0) /: neg)( (acc, p) => p match {
+      case v @ Variable(_) => (v :: acc._1, acc._2)
+      case Constant(c) => (acc._1, acc._2 + c)
+      case other => Logger.logAndThrow("integer.AST", LogError, "expected Variable or Constant, found: " + other)
+    })
+    (pVars, nVars, Constant(pCst - nCst))
+  }
 
   /** Returns a list of variables with positive polarity, then negative variables, then constant */
   def decompose(e: Expression): (List[Variable], Constant) = {
@@ -65,10 +103,15 @@ object Expression {
   def decomposeVector(e: Expression, idxMap: Map[Variable, Int]): (Array[Int], Int) = {
     val coeffArray = Array.ofDim[Int](idxMap.size)
     var constantTerm = 0
-    val pos = getTerms(e)
+    val (pos, neg) = getPosNegTerms(e)
     pos.foreach{
       case v @ Variable(_) => coeffArray(idxMap(v)) += 1
       case Constant(c) => constantTerm += c
+      case other => Logger.logAndThrow("integer.AST", LogError, "expected Variable or Constant, found: " + other)
+    }
+    neg.foreach{
+      case v @ Variable(_) => coeffArray(idxMap(v)) -= 1
+      case Constant(c) => constantTerm -= c
       case other => Logger.logAndThrow("integer.AST", LogError, "expected Variable or Constant, found: " + other)
     }
     (coeffArray, constantTerm)
@@ -77,25 +120,33 @@ object Expression {
     val idxMap = vars.zipWithIndex.toMap //bad when there is a lot of variables (10k) ...
     decomposeVector(e, idxMap)
   }
+  
+  def recompose(pos: List[Variable], neg: List[Variable], cst: Constant): Expression = {
+    if (pos.isEmpty) {
+      ((cst: Expression) /: neg)(Minus(_, _))
+    } else {
+      val posTerm = (pos: List[Expression]).reduceLeft(Plus(_, _))
+      val negTerm = (posTerm /: neg)(Minus(_, _))
+      if (cst.i == 0) negTerm
+      else Plus(negTerm, cst)
+    }
+  }
 
   def recompose(pos: List[Variable], cst: Constant): Expression = {
-    if (pos.isEmpty) cst
-    else {
-      val posTerm = (pos: List[Expression]).reduceLeft(Plus(_, _))
-      if (cst.i == 0) posTerm
-      else Plus(posTerm, cst)
-    }
+    recompose(pos, Nil, cst)
   }
   
   def recomposeVector(coeffs: Seq[Int], cst: Int, vars: Seq[Variable]): Expression = {
     assert(coeffs forall (_ >= 0) )
     val pos = for (i <- 0 until coeffs.length; j <- 0 until coeffs(i)) yield vars(i)
-    recompose(pos.toList, Constant(cst))
+    val neg = for (i <- 0 until coeffs.length; j <- coeffs(i) until 0) yield vars(i)
+    recompose(pos.toList, neg.toList, Constant(cst))
   }
 
   def simplify(e: Expression): Expression = {
-    val (p, c) = decompose(e)
-    recompose(p,c)
+    val vars = Expression.variables(e).toSeq
+    val (p, c) = decomposeVector(e, vars)
+    recomposeVector(p,c,vars)
   }
 
   //TODO lazyCopier
@@ -353,6 +404,11 @@ object Condition {
     case Or(l,r) => Or(alpha(l, subst), alpha(r, subst))
     case Not(c) => Not(alpha(c, subst))
     case l @ Literal(_) => l
+  }
+
+  def getTopLevelClauses(c: Condition): Seq[Condition] = c match {
+    case And(c1, c2) => getTopLevelClauses(c1) ++ getTopLevelClauses(c2)
+    case other => Seq(other)
   }
 
   def getLowerBounds(guard: Condition): Map[Variable, Int] = {

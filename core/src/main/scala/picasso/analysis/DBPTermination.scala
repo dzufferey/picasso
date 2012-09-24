@@ -419,6 +419,20 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
       })
     }
     val ssa = trs.zip( dicts.sliding(2).toIterable ).map{ case (t, slide) => t.alphaPre(slide(0)).alphaPost(slide(1)) }
+    
+    def reconstructUpdates(preVar: Set[Variable], postVar: Set[Variable], asCond: Condition): Seq[Statement] = {
+      //TODO
+      //cases relation:
+      //equalities
+      //disequalities
+      //inequalities
+      //cases:
+      //pre + post -> if Eq a relation, otherwise Error
+      //pre only -> error: cannot add hypothesis in the middle
+      //post only -> assume
+      sys.error("TODO")
+    }
+    
 
     import picasso.math.hol._
     import picasso.math.qe._
@@ -427,7 +441,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
       case Application(Or, args) => args flatMap collectDijs
       case other => Seq(other)
     }
-    
+
     //-translate guards and updates to math.hol and make the query
     val math = ssa.map(t => (ToMathAst(t.guard), Application(And, t.updates.map(ToMathAst.apply).toList)))
     val (hyp, part1) =  math.head
@@ -442,6 +456,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     LIA.qe(univ, exists, f) match {
       case Some(f2) =>
         Logger("DBPTermination", LogDebug, "QE returned: " + f2)
+        //remove the negated assumption that are part of f2 to keep only the new update cstr
         val disj = collectDijs(f2)
         val valid = disj.filter(d => LIA.valid(univ, exists, Application(Implies, List(hyp, d)) ).getOrElse(true) )
         val f3 =
@@ -451,9 +466,13 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
         //-back to model.integer.AST
         val asCond = FromMathAst(f3)
         Logger("DBPTermination", LogDebug, "QE returned: " + asCond)
-        //-use the first guard (hyp) to simplify the result
+        val updates = reconstructUpdates(dicts.head.values.toSet, dicts.last.values.toSet, asCond)
+        val comments = trs.map(_.comment).mkString("; ")
+        val t2 = new Transition(trs.head.sourcePC, trs.last.targetPC, trs.head.guard, updates, comments)
         //-put back the original variables (de-SSA)
-        sys.error("TODO")
+        val revDict1 = dicts.head.map{ case (a,b) => (b,a) }
+        val revDict2 = dicts.last.map{ case (a,b) => (b,a) }
+        Seq(t2.alphaPre(revDict1).alphaPost(revDict2))
       case None =>
         trs
     }
