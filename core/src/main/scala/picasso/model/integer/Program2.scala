@@ -50,7 +50,40 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
    *  not in the map means we don't know
    */
   def constantValueMap: Map[String,Map[Variable,Option[Int]]] = {
-    sys.error("TODO")
+    def default(s: String) = {
+      if (s == initPC) Map[Variable,Option[Int]]( variables.toSeq.map( _ -> None) :_* )
+      else Map[Variable,Option[Int]]()
+    }
+
+    def transfer(cstMap: Map[Variable,Option[Int]], t: Transition2): Map[Variable,Option[Int]] = {
+      val csts = cstMap.flatMap{ case (v,c) => if (t.domain(v)) c.map( v -> _ ) else None }
+      val t2 = t.propagteInputConstants(csts)
+      val outCst = t2.constantVariables
+      cstMap.map{ case (v,_) => (v, if (outCst contains v) Some(outCst(v)) else None)}
+    }
+
+    def join(a: Map[Variable,Option[Int]], b: Map[Variable,Option[Int]]) = {
+      val allKeys = a.keySet ++ b.keySet
+      val all = allKeys.view.map( v => {
+        val rhs = if(a.contains(v) && b.contains(v)) {
+          (a(v), b(v)) match {
+            case (Some(i1), Some(i2)) => if (i1 == i2) Some(i1) else None
+            case (_,_) => None
+          }
+        } else {
+          a.getOrElse(v, b(v))
+        }
+        (v -> rhs)
+      })
+      all.toMap
+    }
+
+    def cover(a: Map[Variable,Option[Int]], b: Map[Variable,Option[Int]]) = {
+      //all keys of b shoud be in a and they should be equal ...
+      b forall { case (k,v) => a.contains(k) && (a(k).isEmpty || a(k) == v) }
+    }
+
+    cfa.aiFixpoint(transfer, join, cover, default)
   }
 
   /** propagate the constants values  */
@@ -84,10 +117,17 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
     p2
   }
   
-  protected def duplicateTransitions: Program = {
-    //is the same if for the same input it produce the same output (assuming determinism)
-    //in the case of non-determinism, forall out1. exits out2. ... /\ out1 = out2 (and reverse)
-    sys.error("TODO")
+  protected def duplicateTransitions = {
+    val grouped = trs.groupBy(_.sourcePC).map(_._2).flatMap(_.groupBy(_.targetPC).map(_._2))
+    val pruned = grouped.map( ts => {
+      (List[Transition2]() /: ts.seq)( (acc, t) => {
+        if (acc exists (_ same t)) acc else t :: acc
+      })
+    })
+    val trs2 = pruned.seq.flatten.toSeq.par
+    val p2 = new Program2(initPC, trs2)
+    Logger("integer.Program", LogInfo, "duplicateTransitions: #transitions before = " + transitions.size + ", after = " + p2.transitions.size)
+    p2
   }
 
 }

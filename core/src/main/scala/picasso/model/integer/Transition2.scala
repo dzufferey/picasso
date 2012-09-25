@@ -302,6 +302,14 @@ class Transition2(val sourcePC: String,
   
   //TODO prune assume, i.e. simplify the relation
 
+  def same(t: Transition2): Boolean = {
+    //is the same if for the same input it produce the same output (assuming determinism)
+    //in the case of non-determinism, forall out1. exits out2. ... /\ out1 = out2 (and reverse)
+    //without that much quantifier elimination (as a single sat query);
+    //  exists ... s.t. (guard1 xor guard2) \/ (relation1 xor relation2)
+    sys.error("TODO")
+  }
+
 }
 
 object Transition2 {
