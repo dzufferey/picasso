@@ -160,7 +160,7 @@ object Expression {
 }
 
 //TODO the new vs old variable convention needs to be made cleaner ...
-abstract class Statement 
+sealed abstract class Statement 
 case class Transient(v: Variable) extends Statement //declare a local variable (used only in the initialization)
 case class Relation(_new: Expression, _old: Expression) extends Statement //eqality between an expr on new variables and an expr on old variables
 case class Variance(_new: Variable, _old: Variable, greater: Boolean = true, strict: Boolean = false) extends Statement //When a variable change and we need to force a 'direction' (used in the unfolding)
