@@ -100,7 +100,18 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
   }
 
   def reduceNumberOfVariables = {
-    //TODO reuse the same var for input and output.
+    val revCfa = cfa.reverse
+    val edgesToLoc = revCfa.vertices.iterator.map( v => v -> revCfa.outEdges(v).keys ).toMap
+    val varsByLoc = edgesToLoc.map{ case (l,trs) => (l,trs.flatMap(_.range).toSet) }
+    //make the conflicts graph with varsByLoc
+    val conflictsBase = (DiGraph.empty[GT.ULGT{type V = Variable}] /: variables)(_ + _)
+    val conflicts = (conflictsBase /: varsByLoc.values)( (acc, grp) => {
+      val edges = for (x <- grp; y <- grp if x != y) yield (x, (), y)
+      acc ++ edges
+    })
+    //TODO use the tranition to compute the affinity: sum of variables CoI
+    //TODO small coloring of conflict graph
+    //TODO renme variables: pay attention to the loc that get additional variables
     sys.error("TODO")
   }
   

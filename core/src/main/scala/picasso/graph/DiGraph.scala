@@ -931,7 +931,8 @@ extends GraphLike[GT.ULGT,P,DiGraph](_edges, ((x: P#V) => ())) {
   }
 
   def smallColoringFromSeed( affinity: (V, V) => Int = (_,_) => 0,
-                     partialColoring: Seq[Set[V]]) : Seq[Set[V]] = {
+                             partialColoring: Seq[Set[V]]
+                           ) : Seq[Set[V]] = {
     //check that the partial coloring is valid:
     //-each node appears only once
     assert(partialColoring.flatten.toSet.size == (0 /: partialColoring)(_ + _.size), "smallColoring: some node has two colors -> " + partialColoring)
