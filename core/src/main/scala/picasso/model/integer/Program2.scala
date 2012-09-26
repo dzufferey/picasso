@@ -27,7 +27,7 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
   }
 
   def printForARMC(writer: java.io.BufferedWriter) {
-    sys.error("TODO")//ARMCPrinter(writer, this)
+    ARMCPrinter(writer, this)
     writer.flush
   }
   
@@ -100,6 +100,7 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
   }
 
   def reduceNumberOfVariables = {
+    //TODO reuse the same var for input and output.
     sys.error("TODO")
   }
   
@@ -121,13 +122,18 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
     val grouped = trs.groupBy(_.sourcePC).map(_._2).flatMap(_.groupBy(_.targetPC).map(_._2))
     val pruned = grouped.map( ts => {
       (List[Transition2]() /: ts.seq)( (acc, t) => {
-        if (acc exists (_ same t)) acc else t :: acc
+        val acc1 = acc.filter(t2 => !Transition2.lteq(t2,t))
+        if (acc1 exists (Transition2.lteq(t, _))) acc1 else t :: acc1
       })
     })
     val trs2 = pruned.seq.flatten.toSeq.par
     val p2 = new Program2(initPC, trs2)
     Logger("integer.Program", LogInfo, "duplicateTransitions: #transitions before = " + transitions.size + ", after = " + p2.transitions.size)
     p2
+  }
+  
+  def candidteRankingFcts: Iterable[Set[Variable]] = {
+    sys.error("TODO")
   }
 
 }

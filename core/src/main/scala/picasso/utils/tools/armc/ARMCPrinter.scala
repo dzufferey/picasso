@@ -69,8 +69,60 @@ object ARMCPrinter extends PrologLikePrinter {
     writer.newLine
   }
 
+  protected def transPreds(vars: Seq[Variable], prog: Program2)(implicit writer: BufferedWriter) {
+    val vars2 = vars map primeVar
+    writer.write("trans_preds(")
+    writer.newLine
+    writer.write("  ")
+    loc(None, vars)
+    writer.write(",  ")
+    writer.newLine
+    writer.write("  ")
+    loc(None, vars2)
+    writer.write(",  ")
+    writer.newLine
+    writer.write("  [")
+    val preds = prog.candidteRankingFcts
+    val predsStr = preds.flatMap( varSet => {
+      val sum1 = varSet.reduceLeft[Expression](Plus(_,_))
+      val sum2 = varSet.map(primeVar).reduceLeft[Expression](Plus(_,_))
+      val c1 = printCondition( Lt(sum2, sum1) )
+      val c2 = printCondition( Eq(sum2, sum1) )
+      Seq(c1, c2)
+    } )
+    val varBoundsStr = preds.flatten.toSet[Variable].map( v => printCondition( Leq(Constant(0), primeVar(v)) ) )
+    writer.write((predsStr ++ varBoundsStr).mkString(" ",",\n    ","\n"))
+    writer.write("  ]).")
+    writer.newLine
+  }
 
   protected def cutpoints(trs: GenSeq[Transition])(implicit writer: BufferedWriter) {
+    //find all the cycles in the graph (induced cycles generate the complete cycle space)
+    //then set hitting problem (combinatorial optimisation) (can we do is as linear algebra in the cycle space or only as ILP ?)
+    val cfa = DiGraph[GT.ULGT{type V = String}](trs.map(t => (t.sourcePC, t.targetPC)).seq)
+    //TODO considering all the elementaryCycles is sufficient, but not necessary. We can do better and consider less cycles
+    val cycles = cfa.elementaryCycles
+    val setsToHit = cycles.map( _.states.toSet )
+    //for the moment, use a greedy algorithm ...
+    def greedy(candidate: Set[String], toCover: Seq[Set[String]], acc: Set[String]): Set[String] = {
+      if (candidate.isEmpty || toCover.isEmpty) {
+        assert(toCover.isEmpty)
+        acc
+      } else {
+        val best = candidate.maxBy( x => toCover.filter(_ contains x).length )
+        val toCover2 = toCover filterNot (_ contains best)
+        greedy(candidate - best, toCover2, acc + best)
+      }
+    }
+    val cutpoints = greedy(cfa.vertices, setsToHit, Set())
+    for (pc <- cutpoints) {
+        writer.write("cutpoint(pc(" + asLit(pc) + ")).")
+        writer.newLine
+    }
+  }
+  
+  protected def cutpoints(p: Program2)(implicit writer: BufferedWriter) {
+    val trs = p.transitions
     //find all the cycles in the graph (induced cycles generate the complete cycle space)
     //then set hitting problem (combinatorial optimisation) (can we do is as linear algebra in the cycle space or only as ILP ?)
     val cfa = DiGraph[GT.ULGT{type V = String}](trs.map(t => (t.sourcePC, t.targetPC)).seq)
@@ -121,6 +173,31 @@ object ARMCPrinter extends PrologLikePrinter {
     writer.newLine
     writer.write("    [], " + idx + ")." )
   }
+  
+  protected def r(t: Transition2, idx: Int, vars: Seq[Variable])(implicit writer: BufferedWriter) {
+    val vars2 = vars map primeVar
+    val frame = vars.filterNot( t.range(_) )
+    val additionalCstr = frame.map(v => Eq(v, primeVar(v)))
+    val pre = vars.iterator.map( v => (v,v) ).toMap
+    val post = vars.iterator.map( v => (v,primeVar(v)) ).toMap
+    val subst = t.substForRelation(pre, post)
+    val relation = (Condition.alpha(t.relation, subst) /: additionalCstr)(And(_,_))
+    writer.write("% " + t.comment); writer.newLine
+    writer.write("r(  ")
+    loc(t.sourcePC, vars)
+    writer.write(",")
+    writer.newLine
+    writer.write("    ")
+    loc(t.targetPC, vars2)
+    writer.write(",")
+    writer.newLine
+    writer.write("    ")
+    writer.write(printCondition(relation))
+    writer.write(",")
+    writer.newLine
+    writer.write("    [], " + idx + ")." )
+  }
+
 
   def apply(implicit writer: BufferedWriter, prog: Program) {
     val vars = prog.variables.toSeq
@@ -130,6 +207,21 @@ object ARMCPrinter extends PrologLikePrinter {
     transPreds(vars, prog); writer.newLine
     start(prog.initialPC)
     cutpoints(prog.transitions); writer.newLine
+    for ( (t, idx) <- prog.transitions.seq.zipWithIndex ) {
+      r(t, idx, vars)
+      writer.newLine
+    }
+    writer.flush
+  }
+
+  def apply(implicit writer: BufferedWriter, prog: Program2) {
+    val vars = prog.variables.toSeq
+    writer.write(preamble); writer.newLine
+    var2names(vars); writer.newLine
+    preds(vars); writer.newLine
+    transPreds(vars, prog); writer.newLine
+    start(prog.initialPC)
+    cutpoints(prog); writer.newLine
     for ( (t, idx) <- prog.transitions.seq.zipWithIndex ) {
       r(t, idx, vars)
       writer.newLine

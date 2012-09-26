@@ -302,17 +302,41 @@ class Transition2(val sourcePC: String,
   
   //TODO prune assume, i.e. simplify the relation
 
-  def same(t: Transition2): Boolean = {
-    //is the same if for the same input it produce the same output (assuming determinism)
-    //in the case of non-determinism, forall out1. exits out2. ... /\ out1 = out2 (and reverse)
-    //without that much quantifier elimination (as a single sat query);
-    //  exists ... s.t. (guard1 xor guard2) \/ (relation1 xor relation2)
-    sys.error("TODO")
-  }
-
 }
 
-object Transition2 {
+
+object Transition2 extends PartialOrdering[Transition2] {
+
+  //match pre/post, then test is rel_1 -> rel_2 is valid.
+  def lteq(t1: Transition2, t2: Transition2): Boolean = {
+    val range = t1.range ++ t2.range
+    val postSubst = range.iterator.map( v => (v, Variable(Namer("X_")))).toMap
+    val t1p = t1.alphaPost(postSubst)
+    val t2p = t2.alphaPost(postSubst)
+    val rel1 = t1p.relationOverPrePost
+    val rel2 = t2p.relationOverPrePost
+    import picasso.math.hol._
+    import picasso.math.qe._
+    val univ = (t1.domain ++ t2.domain ++ t1p.range ++ t2p.range).map(ToMathAst.variable)
+    val f1 = ToMathAst(rel1)
+    val f2 = ToMathAst(rel2)
+    val query = Application(Implies, List(f1, f2))
+    LIA.valid(univ, Set[Variable](), query) match {
+      case Some(b) => b
+      case None =>
+        Logger("model.integer", LogWarning, "Transition.lteq cannot prove that t1 \\subseteq t2")
+        false
+    }
+  }
+
+  def tryCompare(t1: Transition2, t2: Transition2): Option[Int] = {
+    (lteq(t1, t2), lteq(t2, t1)) match {
+      case (true, true) => Some(0)
+      case (true, false) => Some(-1)
+      case (false, true) => Some(1)
+      case (false, false) => None
+    }
+  }
 
   protected def convertStmt(s: Statement): Condition = s match {
     case Transient(v) => Logger.logAndThrow("model.integer", LogError, "convertStmt -> found Transient -> TODO \\exists")
