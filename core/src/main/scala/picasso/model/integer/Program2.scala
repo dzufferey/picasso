@@ -109,9 +109,23 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
       val edges = for (x <- grp; y <- grp if x != y) yield (x, (), y)
       acc ++ edges
     })
-    //TODO use the tranition to compute the affinity: sum of variables CoI
-    //TODO small coloring of conflict graph
-    //TODO renme variables: pay attention to the loc that get additional variables
+    //use the tranitions to compute the affinity: sum of variables CoI
+    val varToIdx = variables.toSeq.zipWithIndex.toMap
+    val affinityArray = Array.ofDim[Int](variables.size, variables.size)
+    for(t <- trs;
+        (v1, vs) <- t.coneOfInfluence;
+        v2 <- vs) { 
+      affinityArray(varToIdx(v1))(varToIdx(v2)) += 1
+      affinityArray(varToIdx(v2))(varToIdx(v1)) += 1
+    }
+    def affinity(v1: Variable, v2: Variable) = affinityArray(varToIdx(v1))(varToIdx(v2))
+    //def affinity(v1: Variable, v2: Variable): Int = {
+    //  Misc.commonPrefix(v1.name, v2.name)
+    //}
+    //small coloring of conflict graph
+    val largeClique = varsByLoc.values.maxBy(_.size)
+    val coloring = conflicts.smallColoring(affinity, largeClique)
+    //TODO rename variables: pay attention to the loc that get additional variables
     sys.error("TODO")
   }
   
