@@ -40,7 +40,22 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
   }
 
   def simplifyForTermination = {
-    sys.error("TODO")
+    Logger("integer.Program", LogDebug, "unsimplified program:")
+    Logger("integer.Program", LogDebug, writer => printForARMC(writer) )
+    Logger("integer.Program", LogInfo, "propagating constants.")
+    val p2 = this.propagateCst
+    Logger("integer.Program", LogDebug, writer => p2.printForARMC(writer) )
+    Logger("integer.Program", LogInfo, "merging variables.")
+    val p3 = p2.reduceNumberOfVariables
+    Logger("integer.Program", LogDebug, writer => p3.printForARMC(writer) )
+    Logger("integer.Program", LogInfo, "compacting transitions.")
+    val p4 = p3.compactPath
+    Logger("integer.Program", LogDebug, writer => p4.printForARMC(writer) )
+    Logger("integer.Program", LogInfo, "removing duplicate transitions.")
+    val p5 = p4.duplicateTransitions
+    Logger("integer.Program", LogDebug, writer => p5.printForARMC(writer) )
+    p5
+    //TODO sinks, ...
   }
 
   /** Returns a map of which variable has a cst value at some location
@@ -119,14 +134,39 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
       affinityArray(varToIdx(v2))(varToIdx(v1)) += 1
     }
     def affinity(v1: Variable, v2: Variable) = affinityArray(varToIdx(v1))(varToIdx(v2))
-    //def affinity(v1: Variable, v2: Variable): Int = {
-    //  Misc.commonPrefix(v1.name, v2.name)
-    //}
+    //def affinity(v1: Variable, v2: Variable): Int = Misc.commonPrefix(v1.name, v2.name)
     //small coloring of conflict graph
     val largeClique = varsByLoc.values.maxBy(_.size)
     val coloring = conflicts.smallColoring(affinity, largeClique)
-    //TODO rename variables: pay attention to the loc that get additional variables
-    sys.error("TODO")
+    //rename variables
+    val globalSubst = (Map[Variable, Variable]() /: coloring)( (acc, grp) => {
+      val repr = grp.head
+      (acc /: grp)( (map, v) => map + (v -> repr) )
+    })
+    //-> subst for each loc
+    val substByLoc = varsByLoc.map{ case (loc, vars) => (loc, globalSubst.filterKeys(vars contains _)) }
+    //-> add frame cstr to transitions that gets new variables
+    val trs2 = for (t <- trs) yield {
+      val srcSubst = substByLoc(t.sourcePC)
+      val trgSubst = substByLoc(t.targetPC)
+      val woFrame = t.alphaPre(srcSubst).alphaPost(trgSubst)
+      val newVars = trgSubst.values.toSet -- woFrame.range
+      //TODO what if we need to add the variable ?!
+      Logger.assert(newVars forall woFrame.domain, "model.integer", "new vars: " + newVars.mkString(", ") + "\n" + woFrame)
+      val cstr = newVars.iterator.map( v => Eq(woFrame.preVars(v),woFrame.postVars(v)) )
+      val allCstr = (woFrame.relation /: cstr)(And(_,_))
+      new Transition2(
+        woFrame.sourcePC,
+        woFrame.targetPC,
+        woFrame.preVars,
+        woFrame.postVars,
+        allCstr,
+        woFrame.comment
+      )
+    }
+    val p2 = new Program2(initialPC, trs2)
+    Logger("integer.Program", LogInfo, "compactPath: #variables before = " + variables.size + ", after = " + p2.variables.size)
+    p2
   }
   
   def cfa: EdgeLabeledDiGraph[GT.ELGT{type V = String; type EL = Transition2}] = {

@@ -340,6 +340,25 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     val stmts = (declare ++ assumes1 ++ assumes2 ++ stmts1 ++ stmts2).toSeq
     new Transition(pc0, pc1, Literal(true), stmts, "initialize")
   }
+  
+  protected def initialize2(init: S, allVariables: Set[Variable]): Transition2 = {
+    val (pc0, _) = getPC(emptyConf)
+    val (pc1, map1) = getPC(init)
+    //the inital transition is similar to the widening transitions ... 
+    val stmts1 = for (node <- init.vertices) yield {
+       getCardinality(map1, node) match {
+         case v @ Variable(_) =>
+           if (node.depth == 0) Affect(v, Constant(1))
+           else Assume(Lt(Constant(0),v))
+         case Constant(c) => Skip
+         case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
+       }
+    }
+    val zeroVars = allVariables -- map1.values
+    val stmts2 = for (v <- zeroVars) yield Affect(v, Constant(0))
+    val stmts = (stmts1 ++ stmts2).toSeq
+    Transition2(new Transition(pc0, pc1, Literal(true), stmts, "initialize"))
+  }
 
   protected def transitionForWitness(witness: TransitionWitness[P]): Seq[Transition] = {
     val t1 =
@@ -401,86 +420,58 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
   }
 
   //assumes the transitions also contains the frame
-  protected def simplifyPathByQE(trs: Seq[Transition]): Seq[Transition] = {
-    Logger.assert(trs.size > 1, "DBPTermination", "simplifyPathByQE with " + trs)
-    //-create substitutions for the variables (SSA)
-    val preVars = (trs map (_.readVariables)) :+ Set[Variable]()
-    val postVars = Set[Variable]() +: (trs map (_.updatedVars))
-    val vars = (preVars zip postVars) map {case (a,b) => a ++ b}
-
-    val dict1 = scala.collection.mutable.HashMap[Variable, Variable]()
-    val dict2 = scala.collection.mutable.HashMap[Variable, Variable]()
-    var cnt = 0
-    val dicts = for (vs <- vars) yield {
-      (Map[Variable, Variable]() /: vs)( (acc, v) => {
-        val newVar = Variable("X_" + cnt)
-        cnt += 1
-        acc + (v -> newVar)
-      })
-    }
-    val ssa = trs.zip( dicts.sliding(2).toIterable ).map{ case (t, slide) => t.alphaPre(slide(0)).alphaPost(slide(1)) }
-    
-    def reconstructUpdates(preVar: Set[Variable], postVar: Set[Variable], asCond: Condition): Seq[Statement] = {
-      //TODO
-      //cases relation:
-      //equalities
-      //disequalities
-      //inequalities
-      //cases:
-      //pre + post -> if Eq a relation, otherwise Error
-      //pre only -> error: cannot add hypothesis in the middle
-      //post only -> assume
-      sys.error("TODO")
-    }
-    
-
-    import picasso.math.hol._
-    import picasso.math.qe._
-
-    def collectDijs(f: Formula): Seq[Formula] = f match {
-      case Application(Or, args) => args flatMap collectDijs
-      case other => Seq(other)
-    }
-
-    //-translate guards and updates to math.hol and make the query
-    val math = ssa.map(t => (ToMathAst(t.guard), Application(And, t.updates.map(ToMathAst.apply).toList)))
-    val (hyp, part1) =  math.head
-    val cstr = Application(And, part1 :: math.tail.flatMap{ case (g, t) => Seq(g,t) }.toList)
-    val query = Application(Implies, List(hyp, cstr))
-
-    //-try to quantify away the intermediate variables
-    val univ = dicts.head.values.map(ToMathAst.variable).toSet
-    val exists = dicts.last.values.map(ToMathAst.variable).toSet
-    val toEliminate = dicts.tail.init.flatMap(_.values).map(ToMathAst.variable)
-    val f = Exists(toEliminate.toList, query)
-    LIA.qe(univ, exists, f) match {
-      case Some(f2) =>
-        Logger("DBPTermination", LogDebug, "QE returned: " + f2)
-        //remove the negated assumption that are part of f2 to keep only the new update cstr
-        val disj = collectDijs(f2)
-        val valid = disj.filter(d => LIA.valid(univ, exists, Application(Implies, List(hyp, d)) ).getOrElse(true) )
-        val f3 =
-          if (valid.isEmpty) Logger.logAndThrow("DBPTermination", LogError, "no valid disjunct")
-          else if (valid.size == 1) valid.head
-          else Application(Or, valid.toList)
-        //-back to model.integer.AST
-        val asCond = FromMathAst(f3)
-        Logger("DBPTermination", LogDebug, "QE returned: " + asCond)
-        val updates = reconstructUpdates(dicts.head.values.toSet, dicts.last.values.toSet, asCond)
-        val comments = trs.map(_.comment).mkString("; ")
-        val t2 = new Transition(trs.head.sourcePC, trs.last.targetPC, trs.head.guard, updates, comments)
-        //-put back the original variables (de-SSA)
-        val revDict1 = dicts.head.map{ case (a,b) => (b,a) }
-        val revDict2 = dicts.last.map{ case (a,b) => (b,a) }
-        Seq(t2.alphaPre(revDict1).alphaPost(revDict2))
-      case None =>
-        trs
-    }
+  protected def simplifyPathByQE(trs: Seq[Transition]): Seq[Transition2] = {
+    val tr2s = trs.map(Transition2.apply)
+    Transition2.compact(tr2s)
   }
 
   ///////////////
   //The program//
   ///////////////
+
+  protected def makeTransitions2(tg: EdgeLabeledDiGraph[TransitionsGraphFromCover.TG[P]]): ParIterable[Transition2] = {
+    import TransitionsGraphFromCover._
+    //TODO the edges should go by pairs: transition + covering
+    //the simplification might be more efficient if the first pass simplify both.
+    //TODO some check to be sure the graph has the right form ?
+    tg.vertices.toSeq.par.flatMap( v1 => {
+      tg.outEdges(v1).flatMap{
+        case (Transition(witness), succs) =>
+          succs.toSeq.flatMap(v2 => {
+            val out = tg.outEdges(v2)
+            if (out.size == 1) {
+              out.head match {
+                case (Covering(m), targets) => 
+                  Logger.assert(targets.size == 1, "DBPTermination", "Expected single successor: " + targets)
+                  simplifyPathByQE( transitionForWitness(witness) :+ covering(v2, m, targets.head))
+                case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Covering, found: " + other)
+              }
+            } else {
+              val p1 = simplifyPathByQE(transitionForWitness(witness))
+              val p2s = out.map{
+                case (Covering(m), targets) => 
+                  Logger.assert(targets.size == 1, "DBPTermination", "Expected single successor: " + targets)
+                  Transition2(covering(v2, m, targets.head))
+                case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Covering, found: " + other)
+              }
+              p2s ++ p1
+            }
+          })
+        case _ => None
+      }
+    })
+  }
+
+  //TODO Program2
+  def makeIntegerProgram2(cover: DownwardClosedSet[S]): Program2 = {
+    val tg = TransitionsGraphFromCover(this, cover)
+    val trs = makeTransitions2(tg)
+    val variables = (Set[Variable]() /: trs)(_ ++ _.variables)
+    val initials = for (init <- cover.basis.toSeq.par) yield initialize2(init, variables)
+    val initState = initials.head.sourcePC
+    new Program2(initState, (initials ++ trs): ParSeq[Transition2] )
+  }
+  //TODO generate directly the new transition without going through the old one.
 
   protected def makeTransitions(tg: EdgeLabeledDiGraph[TransitionsGraphFromCover.TG[P]]): ParIterable[Transition] = {
     import TransitionsGraphFromCover._
@@ -496,7 +487,6 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
               out.head match {
                 case (Covering(m), targets) => 
                   Logger.assert(targets.size == 1, "DBPTermination", "Expected single successor: " + targets)
-                  simplifyPathByQE( transitionForWitness(witness) :+ covering(v2, m, targets.head))
                   simplifyPath( transitionForWitness(witness) :+ covering(v2, m, targets.head))
                 case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Covering, found: " + other)
               }
@@ -528,8 +518,18 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     val initState = initials.head.sourcePC
     new Program(initState, (initials ++ trs): ParSeq[Transition] )
   }
-
-  def termination(initState: S) = {
+  
+  def termination2(initState: S) = {
+    val (cover, tree) = computeTree(initState)
+    Logger("DBPTermination", LogNotice, "Extracting numerical abstraction from the cover.")
+    val program1 = makeIntegerProgram2(cover)
+    Logger("DBPTermination", LogNotice, "Extraction done. Simplifying ... ")
+    val program2 = program1.simplifyForTermination
+    //Logger("DBPTermination", LogNotice, "Merging candidates = " + ProgramHeuristics.counterMerging(program2)
+    (cover, tree, program2)
+  }
+  
+  def termination1(initState: S) = {
     val (cover, tree) = computeTree(initState)
     Logger("DBPTermination", LogNotice, "Extracting numerical abstraction from the cover.")
     val program1 = makeIntegerProgram(cover)
@@ -538,4 +538,6 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     //Logger("DBPTermination", LogNotice, "Merging candidates = " + ProgramHeuristics.counterMerging(program2)
     (cover, tree, program2)
   }
+
+  def termination(s: S) = termination2(s)
 }

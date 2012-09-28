@@ -5,8 +5,12 @@ import picasso.utils._
 sealed abstract class Expression 
 case class Plus(l: Expression, r: Expression) extends Expression 
 case class Minus(l: Expression, r: Expression) extends Expression 
-case class Constant(i: Int) extends Expression 
-case class Variable(name: String) extends Expression 
+case class Constant(i: Int) extends Expression {
+  override def toString = i.toString
+}
+case class Variable(name: String) extends Expression {
+  override def toString = name
+}
 
 object Expression {
 
@@ -250,12 +254,12 @@ object Statement {
     case vr @ Variance(v3, v, geq, strict) =>
       if (subst.contains(v)) {
         subst(v) match {
-          case v2 @ Variable(_) => Variance(v2, v3, geq, strict)
+          case v2 @ Variable(_) => Variance(v3, v2, geq, strict)
           case c @ Constant(_) =>
-            if (geq && strict) Assume(Lt(c, v))
-            else if (geq && !strict) Assume(Leq(c, v))
-            else if (!geq && strict) Assume(Lt(v, c))
-            else Assume(Leq(v, c))
+            if (geq && strict) Assume(Lt(c, v3))
+            else if (geq && !strict) Assume(Leq(c, v3))
+            else if (!geq && strict) Assume(Lt(v3, c))
+            else Assume(Leq(v3, c))
           case other => Logger.logAndThrow("integer.AST", LogError, "alphaPre of Variance, expected Variable or Constant, found: " + other)
         }
       } else {
@@ -269,9 +273,9 @@ object Statement {
     case Assume(c) => Assume(Condition.alpha(c, subst))
     case tr @ Transient(t) => assert(!subst.contains(t)); tr
     case vr @ Variance(v, v2, geq, strict) =>
-      if (subst.contains(v2)) {
-        subst(v2) match {
-          case v3 @ Variable(_) => Variance(v, v3, geq, strict)
+      if (subst.contains(v)) {
+        subst(v) match {
+          case v3 @ Variable(_) => Variance(v3, v2, geq, strict)
           case other => Logger.logAndThrow("integer.AST", LogError, "alphaPost of Variance, expected Variable, found: " + other)
         }
       } else vr

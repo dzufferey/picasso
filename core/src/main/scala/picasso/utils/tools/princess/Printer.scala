@@ -105,9 +105,9 @@ object Printer {
     if (priority2 <= priority1) writer.write(" )")
   }
 
-  protected def printFormula(f: Formula, currPriority: Int = -1)(implicit writer: BufferedWriter) = f match {
-    case Exists(vars, f2) => printQuantifier("exists", vars, f2)
-    case ForAll(vars, f2) => printQuantifier("forall", vars, f2)
+  protected def printFormula(f: Formula, currPriority: Int = -1)(implicit writer: BufferedWriter): Unit = f match {
+    case Exists(vars, f2) => if (vars.isEmpty) printFormula(f2, currPriority) else printQuantifier("exists", vars, f2)
+    case ForAll(vars, f2) => if (vars.isEmpty) printFormula(f2, currPriority) else printQuantifier("forall", vars, f2)
     case v @ Variable(_) => writer.write(asVar(v))
     case Literal(l) => writer.write(l.toString)
     case Application(fct: InterpretedFct, args) => printApplication(fct, args, currPriority)

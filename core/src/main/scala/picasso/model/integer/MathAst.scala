@@ -34,7 +34,7 @@ object ToMathAst {
       case Assume(c) =>
         apply(c)
 
-      case Variance(v1, v2, geq, strict) =>
+      case Variance(_new, _old, geq, strict) =>
         val fct = if (geq) {
           if (strict) picasso.math.hol.Gt
           else picasso.math.hol.Geq
@@ -42,7 +42,7 @@ object ToMathAst {
           if (strict) picasso.math.hol.Lt
           else picasso.math.hol.Leq
         }
-        picasso.math.hol.Application(fct, List(apply(v2), apply(v1)))
+        picasso.math.hol.Application(fct, List(apply(_new), apply(_old)))
     }
   }
   

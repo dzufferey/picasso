@@ -15,9 +15,13 @@ object SysCmd {
       case None => process
     }
 
-    val bufferOut = new StringBuffer()
-    val bufferErr = new StringBuffer()
-    val processLogger = ProcessLogger(bufferOut append _, bufferErr append _)
+    val bufferOut = new StringBuilder()
+    val bufferErr = new StringBuilder()
+    val processLogger =
+      ProcessLogger(
+        line => {bufferOut append line; bufferOut append "\n"},
+        line => {bufferErr append line; bufferErr append "\n"}
+      )
     Logger("Utils", LogInfo, "Executing "+ cmds.mkString(""," ",""))
     val exitCode = withInput ! processLogger
     (exitCode, bufferOut.toString, bufferErr.toString)

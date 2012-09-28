@@ -20,9 +20,9 @@ class Transition2(val sourcePC: String,
   lazy val variables: Set[Variable] = domain ++ range
   
   //internal variables
-  lazy val iDomain: Set[Variable] = preVars.keySet
-  lazy val iRange: Set[Variable] = postVars.keySet
-  lazy val iVariables: Set[Variable] = domain ++ range
+  lazy val iDomain: Set[Variable] = toPre.keySet
+  lazy val iRange: Set[Variable] = toPost.keySet
+  lazy val iVariables: Set[Variable] = iDomain ++ iRange
 
   //sanity checks
   Logger.assert(Condition.variables(relation).subsetOf(iVariables), "model.integer", "not closed: " + this)
@@ -339,7 +339,7 @@ object Transition2 extends PartialOrdering[Transition2] {
   }
 
   protected def convertStmt(s: Statement): Condition = s match {
-    case Transient(v) => Logger.logAndThrow("model.integer", LogError, "convertStmt -> found Transient -> TODO \\exists")
+    case Transient(v) => Logger.logAndThrow("model.integer", LogError, "convertStmt -> found Transient -> TODO \\exists " + v.name)
     case Relation(_new, _old) => Eq(_new, _old)
     case Skip => Literal(true)
     case Assume(c) => c
@@ -355,7 +355,7 @@ object Transition2 extends PartialOrdering[Transition2] {
     val t2 = t.alphaPre(preVars).alphaPost(postVars)
     val stmts = t2.updates.map(convertStmt)
     val relation = Condition.simplify((t2.guard /: stmts)(And(_,_)))
-    new Transition2(
+    val t3 = new Transition2(
       t2.sourcePC,
       t2.targetPC,
       preVars,
@@ -363,6 +363,9 @@ object Transition2 extends PartialOrdering[Transition2] {
       relation,
       t2.comment
     )
+    Logger("model.integer", LogDebug, "t  = " + t)
+    Logger("model.integer", LogDebug, "t' = " + t3)
+    t3
   }
 
   //compact using QE

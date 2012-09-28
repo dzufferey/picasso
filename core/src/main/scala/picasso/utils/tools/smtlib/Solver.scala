@@ -3,6 +3,7 @@ package picasso.utils.tools.smtlib
 import picasso.math.hol._
 import picasso.utils._
 import scala.sys.process._
+import java.io._
 
 sealed abstract class Theory
 case object QF_LIA
@@ -10,23 +11,48 @@ case object LIA
 case object QF_LRA
 case object LRA
 
-class Solver(th: Theory, cmd: String, options: Iterable[String], implicitDeclaration: Boolean) {
+class Solver(th: Theory, cmd: String, options: Iterable[String]/*, implicitDeclaration: Boolean*/) {
 
-  //TODO solver process -> use JAVA process ???
   //TODO implicit symbol declaration, keep a local stack+set of symbol to know what is declared
 
   protected var stackCounter = 0
 
-  protected val solverInput = sys.error("TODO")
-  protected val solverOutput = sys.error("TODO")
+  protected val solver = java.lang.Runtime.getRuntime.exec(Array(cmd) ++ options, null, null)
+  protected val solverInput = new BufferedWriter(new OutputStreamWriter(solver.getOutputStream()))
+  protected val solverOutput = new BufferedReader(new InputStreamReader(solver.getInputStream()))
+  protected val solverError = new BufferedReader(new InputStreamReader(solver.getErrorStream()))
 
-  protected val solver: Process = {
-    //(cmd + options.mkString(" ")) #< solverInput #> solverOutput
-    sys.error("TODO")
+  override def finalize {
+    try {
+      solver.exitValue
+    } catch {
+      case _: java.lang.IllegalThreadStateException =>
+        solver.destroy
+    }
   }
 
   protected def toSolver(cmd: String) {
-    sys.error("TODO")
+    solverInput.write(cmd)
+    solverInput.newLine
+    solverInput.flush
+  }
+
+  protected def fromSolver: String = {
+    if (solverError.ready) {
+      val acc = new StringBuilder()
+      while(solverError.ready) {
+        acc.append(solverError.readLine)
+        acc.append("\n")
+      }
+      Logger.logAndThrow("smtlib", LogError, "solver returned:\n" + acc)
+    } else {
+      solverOutput.readLine
+    }
+  }
+
+  def exit = {
+    toSolver("(exit)")
+    solver.waitFor
   }
   
   def declare(t: Type) = t match {
@@ -47,7 +73,11 @@ class Solver(th: Theory, cmd: String, options: Iterable[String], implicitDeclara
   
   def assert(f: Formula) {
     //(assert f)
-    sys.error("TODO")
+    solverInput.write("(assert ")
+    Printer(solverInput, f)
+    solverInput.write(")")
+    solverInput.newLine
+    //solverInput.flush
   }
   
   def push {
@@ -62,11 +92,13 @@ class Solver(th: Theory, cmd: String, options: Iterable[String], implicitDeclara
   }
   
   def checkSat: Option[Boolean] = {
-    sys.error("TODO")
-  }
-
-  def exit {
-    sys.error("TODO")
+    toSolver("(check-sat)")
+    fromSolver match {
+      case "sat" => Some(true)
+      case "unsat" => Some(false)
+      case "unknown" => None
+      case other => Logger.logAndThrow("smtlib", LogError, "checkSat: solver said " + other)
+    }
   }
 
 }

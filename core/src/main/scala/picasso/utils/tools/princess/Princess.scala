@@ -9,13 +9,14 @@ object Princess {
     val toLookFor = "Formula is valid, resulting most-general constraint:"
     val lines = out.lines.dropWhile(l => !l.startsWith (toLookFor))
     if (lines.hasNext) {
-      val formulaStr = lines.next.substring(toLookFor.length)
+      lines.next
+      val formulaStr = lines.next
       Parser.parseExpression(formulaStr).map(f => {
         val toVar = (Map[Variable, Variable]() /: f.freeVariables)( (acc, v) => acc + (Variable(Printer.asVar(v)) -> v))
         f.alpha(toVar)
       })
     } else {
-      Logger("princess", LogWarning, "princess could not solve ?: " + out + err)
+      Logger("princess", LogWarning, "princess could not solve ?:\n" + out + "\n" + err)
       None
     }
   }
@@ -25,7 +26,7 @@ object Princess {
     if (success == 0) {
       processOutput(stdout, stderr)
     } else {
-      Logger.logAndThrow("princess", LogError, "princess failed ("+success+"): " + stderr)
+      Logger.logAndThrow("princess", LogError, "princess failed ("+success+"):\n" + stderr)
       None
     }
   }
@@ -63,7 +64,7 @@ object Princess {
         None
       }
     } else {
-      Logger.logAndThrow("princess", LogError, "princess failed ("+success+"): " + stderr)
+      Logger.logAndThrow("princess", LogError, "princess failed ("+success+"):\n" + stderr)
       None
     }
   }
