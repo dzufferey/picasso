@@ -82,7 +82,7 @@ object ARMCPrinter extends PrologLikePrinter {
     writer.write(",  ")
     writer.newLine
     writer.write("  [")
-    val preds = prog.candidteRankingFcts
+    val preds = prog.candidateRankingFcts
     val predsStr = preds.flatMap( varSet => {
       val sum1 = varSet.reduceLeft[Expression](Plus(_,_))
       val sum2 = varSet.map(primeVar).reduceLeft[Expression](Plus(_,_))

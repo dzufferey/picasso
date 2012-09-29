@@ -95,7 +95,9 @@ class Transition2(val sourcePC: String,
   
   /** returns a substitution that can be used to subtitute the internal variables. */
   def substForRelation(substPre: Map[Variable, Variable], substPost: Map[Variable, Variable]) = {
-    substPre.map{ case (a,b) => (preVars(a), b) } ++ substPost.map{ case (a,b) => (postVars(a), b) }
+    val s1 = substPre.flatMap{ case (a,b) => preVars.get(a).map{ a2 => a2 -> b } }
+    val s2 = substPost.flatMap{ case (a,b) => postVars.get(a).map{ a2 => a2 -> b } }
+    s1 ++ s2
   }
 
   /** when the pre/post variables are disjoint, returns the relation over those variables.
@@ -163,13 +165,13 @@ class Transition2(val sourcePC: String,
   protected def quantifyAwayPreVars = {
     import picasso.math.hol._
     import picasso.math.qe._
-    val univ = iDomain.map(ToMathAst.variable)
-    val exists = iRange.map(ToMathAst.variable)
+    val toRemove = iDomain.map(ToMathAst.variable)
+    val toKeep = iRange.map(ToMathAst.variable)
     val guardF = ToMathAst(guard)
     val updatesF = ToMathAst(updates)
-    val queryBody = Application(Implies, List(guardF, updatesF))
-    val query = ForAll(univ.toList, queryBody)
-    LIA.qe(Set[Variable](), exists, query) match {
+    val queryBody = Application(And, List(guardF, updatesF))
+    val query = Exists(toRemove.toList, queryBody)
+    LIA.qe(Set[Variable](), toKeep, query) match {
       case Some(f2) =>
         val asCond = FromMathAst(f2)
         Logger("model.interger", LogDebug, "Transition.quantifyAwayPreVars, QE returned: " + asCond)
@@ -214,6 +216,7 @@ class Transition2(val sourcePC: String,
     }
     (Map[Variable, Int]() /: varCstPairs)( (acc, varCst) => {
       val (v,c) = varCst
+      //Logger("model.interger", LogDebug, "Transition.checkIfConstant: " + v + " = " + c)
       if (acc contains v) {
         Logger.assert(c == acc(v), "model.integer", v + " = " + c + " = " + acc(v))
         acc
@@ -244,7 +247,9 @@ class Transition2(val sourcePC: String,
   //returns the post vars that get a constant value
   def constantVariables: Map[Variable, Int] = {
     val csts = iConstantVariable.filterKeys(iRange)
-    csts.map{ case (v, c) => (toPost(v), c) }
+    val outCsts = csts.map{ case (v, c) => (toPost(v), c) }
+    Logger("model.interger", LogDebug, "Transition.constantVariables: " + outCsts.mkString(", ") )
+    outCsts
   }
 
   def propagteInputConstants(csts: Map[Variable, Int]) = {

@@ -11,10 +11,7 @@ object Princess {
     if (lines.hasNext) {
       lines.next
       val formulaStr = lines.next
-      Parser.parseExpression(formulaStr).map(f => {
-        val toVar = (Map[Variable, Variable]() /: f.freeVariables)( (acc, v) => acc + (Variable(Printer.asVar(v)) -> v))
-        f.alpha(toVar)
-      })
+      Parser.parseExpression(formulaStr)
     } else {
       Logger("princess", LogWarning, "princess could not solve ?:\n" + out + "\n" + err)
       None
@@ -38,7 +35,11 @@ object Princess {
         Logger("princess", LogInfo, "query:")
         Logger("princess", LogInfo, Printer(_, universalConstants, existentialConstants, f))
         IO.writeInFile(file, Printer(_, universalConstants, existentialConstants, f))
-        eliminateQuantifiersFile(file)
+        eliminateQuantifiersFile(file).map(f => {
+          val varsLeft = universalConstants ++ existentialConstants
+          val toVar = (Map[Variable, Variable]() /: (varsLeft))( (acc, v) => acc + (Variable(Printer.asVar(v)) -> v))
+          f.alpha(toVar)
+        })
       } finally {
         SysCmd(Array("rm", file))
       }

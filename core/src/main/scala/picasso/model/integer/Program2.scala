@@ -115,9 +115,19 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
   }
 
   def reduceNumberOfVariables = {
-    val revCfa = cfa.reverse
-    val edgesToLoc = revCfa.vertices.iterator.map( v => v -> revCfa.outEdges(v).keys ).toMap
-    val varsByLoc = edgesToLoc.map{ case (l,trs) => (l,trs.flatMap(_.range).toSet) }
+    //TODO change the way variables and conflicts are computed.
+    val trsButInit = trs.filter(_.sourcePC != initialPC)
+    val bySrc = trsButInit.groupBy(_.sourcePC)
+    val byTrg = trsButInit.groupBy(_.targetPC)
+    val locs = pcs - initialPC
+    val varsByLoc: Map[String, Set[Variable]] =
+      locs.iterator.map( l => {
+        val v1 = bySrc(l).flatMap(_.domain)
+        val v2 = byTrg(l).flatMap(_.range)
+        (l, (v1 ++ v2).seq.toSet)
+      }).toMap
+    Logger("model.integer", LogNotice, "varsByLoc ->\n  " + varsByLoc.mkString("\n  "))
+
     //make the conflicts graph with varsByLoc
     val conflictsBase = (DiGraph.empty[GT.ULGT{type V = Variable}] /: variables)(_ + _)
     val conflicts = (conflictsBase /: varsByLoc.values)( (acc, grp) => {
@@ -138,6 +148,7 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
     //small coloring of conflict graph
     val largeClique = varsByLoc.values.maxBy(_.size)
     val coloring = conflicts.smallColoring(affinity, largeClique)
+    Logger("model.integer", LogNotice, "coloring ->\n  " + coloring.mkString("\n  "))
     //rename variables
     val globalSubst = (Map[Variable, Variable]() /: coloring)( (acc, grp) => {
       val repr = grp.head
@@ -147,9 +158,13 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
     val substByLoc = varsByLoc.map{ case (loc, vars) => (loc, globalSubst.filterKeys(vars contains _)) }
     //-> add frame cstr to transitions that gets new variables
     val trs2 = for (t <- trs) yield {
-      val srcSubst = substByLoc(t.sourcePC)
+      //Logger("model.integer", LogNotice, "t -> " + t.toString)
+      val srcSubst = if (t.sourcePC == initialPC) globalSubst else substByLoc(t.sourcePC)
       val trgSubst = substByLoc(t.targetPC)
       val woFrame = t.alphaPre(srcSubst).alphaPost(trgSubst)
+      //Logger("model.integer", LogNotice, "srcSubst -> " + srcSubst.mkString(", "))
+      //Logger("model.integer", LogNotice, "trgSubst -> " + trgSubst.mkString(", "))
+      //Logger("model.integer", LogNotice, "woFrame -> " + woFrame.toString)
       val newVars = trgSubst.values.toSet -- woFrame.range
       //TODO what if we need to add the variable ?!
       Logger.assert(newVars forall woFrame.domain, "model.integer", "new vars: " + newVars.mkString(", ") + "\n" + woFrame)
@@ -197,8 +212,13 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
     p2
   }
   
-  def candidteRankingFcts: Iterable[Set[Variable]] = {
-    sys.error("TODO")
+  def candidateRankingFcts: Iterable[Set[Variable]] = {
+    //val cyclesIterator = cfa.enumerateSomeCycles
+    //val boundedIterator = if (Config.cyclesBound >= 0) cyclesIterator.take(Config.cyclesBound) else cyclesIterator
+    //val candidates = boundedIterator.flatMap(c => TransitionHeuristics.transitionPredicates(c.labels))
+    //candidates.toSet
+    //sys.error("TODO")
+    Nil
   }
 
 }

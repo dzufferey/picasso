@@ -207,6 +207,11 @@ extends Traceable[P#V,P#EL] with GraphAlgorithms[PB, P, G] {
     val toRemove = vertices.filterNot(fct)
     this -- toRemove
   }
+  
+  def filterEdges(fct: ((V,EL,V)) => Boolean): Self = {
+    val toRemove = edges.filterNot(fct)
+    (this /: toRemove)( (acc,e) => acc.-(e._1, e._2, e._3) )
+  }
 
   def inducedSubgraph(nodes: Set[V]): Self = filterNodes(nodes contains _)
 
