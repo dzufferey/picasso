@@ -49,8 +49,8 @@ case class Application(fct: Formula, args: List[Formula]) extends Formula {
   override def toString = fct.toString + args.mkString("(",", ",")")
 
   def alpha(map: Map[Variable, Variable]) = Application(fct, args.map(_.alpha(map)))
-  lazy val freeVariables: Set[Variable] = Set[Variable]()
-  lazy val boundVariables: Set[Variable] = Set[Variable]()
+  lazy val freeVariables: Set[Variable] = (Set[Variable]() /: args)(_ ++ _.freeVariables)
+  lazy val boundVariables: Set[Variable] = (Set[Variable]() /: args)(_ ++ _.boundVariables)
 
 }
 

@@ -6,10 +6,10 @@ import scala.sys.process._
 import java.io._
 
 sealed abstract class Theory
-case object QF_LIA
-case object LIA
-case object QF_LRA
-case object LRA
+case object QF_LIA extends Theory
+case object LIA extends Theory
+case object QF_LRA extends Theory
+case object LRA extends Theory
 
 class Solver(th: Theory, cmd: String, options: Iterable[String]/*, implicitDeclaration: Boolean*/) {
 
@@ -22,6 +22,11 @@ class Solver(th: Theory, cmd: String, options: Iterable[String]/*, implicitDecla
   protected val solverOutput = new BufferedReader(new InputStreamReader(solver.getInputStream()))
   protected val solverError = new BufferedReader(new InputStreamReader(solver.getErrorStream()))
 
+  //initialisation
+  Logger("smtlib", LogDebug, "starting: " + (Array(cmd) ++ options).mkString(" "))
+  toSolver("(set-option :print-success false)")
+  toSolver("(set-logic "+th+")")
+
   override def finalize {
     try {
       solver.exitValue
@@ -32,6 +37,7 @@ class Solver(th: Theory, cmd: String, options: Iterable[String]/*, implicitDecla
   }
 
   protected def toSolver(cmd: String) {
+    Logger("smtlib", LogDebug, "> " +cmd)
     solverInput.write(cmd)
     solverInput.newLine
     solverInput.flush
@@ -46,7 +52,9 @@ class Solver(th: Theory, cmd: String, options: Iterable[String]/*, implicitDecla
       }
       Logger.logAndThrow("smtlib", LogError, "solver returned:\n" + acc)
     } else {
-      solverOutput.readLine
+      val res = solverOutput.readLine
+      Logger("smtlib", LogDebug, "< " + res)
+      res
     }
   }
 
@@ -61,18 +69,19 @@ class Solver(th: Theory, cmd: String, options: Iterable[String]/*, implicitDecla
   }
 
   def declare(f: Formula) = f match {
-    case v @ Variable(name) =>
+    case v @ Variable(_) =>
       val (args, ret) = v.tpe match {
         case Function(args, r) => (args, r)
         case other => (Nil, other)
       }
       val argsDecl = args.map(Printer.tpe).mkString("("," ",")")
-      toSolver("(declare-fun " + name + " " + argsDecl + " " + Printer.tpe(ret) + ")")
+      toSolver("(declare-fun " + Printer.asVar(v) + " " + argsDecl + " " + Printer.tpe(ret) + ")")
     case other => Logger.logAndThrow("smtlib", LogError, "not supported: " + other)
   }
   
   def assert(f: Formula) {
     //(assert f)
+    Logger("smtlib", LogDebug, Printer(_, f))
     solverInput.write("(assert ")
     Printer(solverInput, f)
     solverInput.write(")")

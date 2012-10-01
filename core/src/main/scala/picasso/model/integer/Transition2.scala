@@ -94,7 +94,7 @@ class Transition2(val sourcePC: String,
   }
   
   /** returns a substitution that can be used to subtitute the internal variables. */
-  def substForRelation(substPre: Map[Variable, Variable], substPost: Map[Variable, Variable]) = {
+  def substForRelation[A](substPre: Map[Variable, A], substPost: Map[Variable, A]) = {
     val s1 = substPre.flatMap{ case (a,b) => preVars.get(a).map{ a2 => a2 -> b } }
     val s2 = substPost.flatMap{ case (a,b) => postVars.get(a).map{ a2 => a2 -> b } }
     s1 ++ s2
@@ -253,7 +253,7 @@ class Transition2(val sourcePC: String,
   }
 
   def propagteInputConstants(csts: Map[Variable, Int]) = {
-    val subst = csts.flatMap{ case (v,c) => preVars.get(v).map( v2 => v2 -> Constant(c)) }
+    val subst = substForRelation(csts.mapValues( i => Constant(i)), Map[Variable,Constant]())
     new Transition2(
       sourcePC,
       targetPC,
@@ -265,8 +265,8 @@ class Transition2(val sourcePC: String,
   }
 
   def propagteOutputConstants(vars: Set[Variable]) = {
-    val vars2 = vars map postVars
-    val csts = iConstantVariable.filterKeys(iRange)
+    val vars2 = vars.flatMap(postVars.get)
+    val csts = iConstantVariable.filterKeys(v => iRange(v) && vars2(v) )
     Logger.assert( vars2 subsetOf csts.keySet, "model.integer", "propagting some non-contant terms")
     new Transition2(
       sourcePC,
@@ -373,6 +373,26 @@ object Transition2 extends PartialOrdering[Transition2] {
     t3
   }
 
+  protected def ssa(trs: Seq[Transition2]): (Seq[Map[Variable,Variable]], Seq[Transition2]) = {
+    //-create substitutions for the variables (SSA)
+    val preVars = (trs map (_.domain)) :+ Set[Variable]()
+    val postVars = Set[Variable]() +: (trs map (_.range))
+    val vars = (preVars zip postVars) map {case (a,b) => a ++ b}
+    
+    val dict1 = scala.collection.mutable.HashMap[Variable, Variable]()
+    val dict2 = scala.collection.mutable.HashMap[Variable, Variable]()
+    var cnt = 0
+    val dicts = for (vs <- vars) yield {
+      (Map[Variable, Variable]() /: vs)( (acc, v) => {
+        val newVar = Variable("X_" + cnt)
+        cnt += 1
+        acc + (v -> newVar)
+      })
+    }
+    val trs2 = trs.zip( dicts.sliding(2).toIterable ).map{ case (t, slide) => t.alphaPre(slide(0)).alphaPost(slide(1)) }
+    (dicts, trs2)
+  }
+
   //compact using QE
   def compact(trs: Seq[Transition2]): Seq[Transition2] = {
     for (i <- 0 until (trs.length -1) ) {
@@ -381,22 +401,8 @@ object Transition2 extends PartialOrdering[Transition2] {
     if (trs.length <= 1) {
       trs
     } else {
-      //-create substitutions for the variables (SSA)
-      val preVars = (trs map (_.domain)) :+ Set[Variable]()
-      val postVars = Set[Variable]() +: (trs map (_.range))
-      val vars = (preVars zip postVars) map {case (a,b) => a ++ b}
-     
-      val dict1 = scala.collection.mutable.HashMap[Variable, Variable]()
-      val dict2 = scala.collection.mutable.HashMap[Variable, Variable]()
-      var cnt = 0
-      val dicts = for (vs <- vars) yield {
-        (Map[Variable, Variable]() /: vs)( (acc, v) => {
-          val newVar = Variable("X_" + cnt)
-          cnt += 1
-          acc + (v -> newVar)
-        })
-      }
-      val ssa = trs.zip( dicts.sliding(2).toIterable ).map{ case (t, slide) => t.alphaPre(slide(0)).alphaPost(slide(1)) }
+
+      val (dicts, ssaed) = ssa(trs)
       
       import picasso.math.hol._
       import picasso.math.qe._
@@ -407,10 +413,10 @@ object Transition2 extends PartialOrdering[Transition2] {
       }
      
       //-translate guards and updates to math.hol and make the query
-      val hyp = ssa.head.guardOverPrePost
+      val hyp = ssaed.head.guardOverPrePost
       val hypF = ToMathAst(hyp)
-      val part1 = ssa.head.updatesOverPrePost
-      val cstr = Application(And, ToMathAst(part1) :: ssa.tail.map(t => ToMathAst(t.relationOverPrePost)).toList)
+      val part1 = ssaed.head.updatesOverPrePost
+      val cstr = Application(And, ToMathAst(part1) :: ssaed.tail.map(t => ToMathAst(t.relationOverPrePost)).toList)
       val query = Application(Implies, List(hypF, cstr))
      
       //-try to quantify away the intermediate variables
@@ -443,6 +449,46 @@ object Transition2 extends PartialOrdering[Transition2] {
           trs
       }
     }
+  }
+  
+  def candidateRankingFcts(cycle: Seq[Transition2]): Iterable[Set[Variable]] = {
+    Logger.assert(!cycle.isEmpty && cycle.head.sourcePC == cycle.last.targetPC, "model.integer", "not a cycle: " + cycle)
+    //ssa
+    val (dicts, ssaed) = ssa(cycle)
+    val pre =  dicts.head
+    val post = dicts.last
+    Logger.assert(pre.keySet == post.keySet, "model.integer", "not the same variables?\n" + pre.keySet.mkString(", ") + "\n" + post.keySet.mkString(", "))
+    //compose the transitions
+    val composedRelation = ssaed.view.map(_.relationOverPrePost).reduceLeft(And(_,_))
+
+    val allVars = dicts.flatMap(_.values).toSet.map(ToMathAst.variable)
+    
+    //ask whether a variable is striclty decreasing
+    def decrease(vars: Iterable[Variable]): Boolean = {
+      val v1 = vars.map(v => pre(v): Expression).reduceLeft(Plus(_,_))
+      val v2 = vars.map(v => post(v): Expression).reduceLeft(Plus(_,_))
+      val query = And(composedRelation, Leq(v1, v2))
+      picasso.math.qe.LIA.valid(Set(), allVars, ToMathAst(query)) match {
+        case Some(b) => b
+        case None =>
+          Logger("model.integer", LogWarning, "Transition.candidateRankingFcts, cannot solve: " + query)
+          false
+      }
+    }
+
+    //TODO we need something faster and better quality !!
+
+    val (decr, incr) = pre.keySet.partition(v => decrease(List(v)))
+    val part1 = decr.subsets.flatMap(sub => if (sub.isEmpty) None else Some(sub)).toSeq
+
+    def tryAdd(base: Set[Variable], candidates: Set[Variable]): Seq[Set[Variable]] = {
+      val ok = candidates.filter(v => decrease(base + v))
+      var suffixes = ok
+      val recurse = ok.toSeq.flatMap(v => { suffixes -= v; tryAdd(base + v, suffixes)} )
+      base +: recurse
+    }
+
+    part1.flatMap(tryAdd(_, incr))
   }
 
 }

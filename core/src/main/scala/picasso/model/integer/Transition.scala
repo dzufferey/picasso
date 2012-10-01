@@ -616,7 +616,7 @@ object TransitionHeuristics {
       case Variance(_new, _old, greater, strict) if (_old == _new) =>
         if (greater) knowledge + (_new -> VarChange.and(knowledge(_new), Increase))
         else knowledge + (_new -> VarChange.and(knowledge(_new), Decrease))
-      case Transient(_) | Skip | Assume(_) => knowledge
+      case _ => knowledge
     }
     (init /: t.updates)(processStmt)
   }

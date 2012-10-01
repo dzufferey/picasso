@@ -349,7 +349,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
        getCardinality(map1, node) match {
          case v @ Variable(_) =>
            if (node.depth == 0) Affect(v, Constant(1))
-           else Assume(Lt(Constant(0),v))
+           else Assume(Leq(Constant(0),v))
          case Constant(c) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        }

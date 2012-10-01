@@ -5,6 +5,8 @@ import picasso.utils._
 
 object Princess {
 
+  //TODO    [Debug] @ princess: princess says ? -> No countermodel exists, formula is valid
+
   protected def processOutput(out: String, err: String): Option[Formula] = {
     val toLookFor = "Formula is valid, resulting most-general constraint:"
     val lines = out.lines.dropWhile(l => !l.startsWith (toLookFor))
@@ -32,8 +34,8 @@ object Princess {
     val (code, file, err) = SysCmd(Array("mktemp"))
     if (code == 0) {
       try {
-        Logger("princess", LogInfo, "query:")
-        Logger("princess", LogInfo, Printer(_, universalConstants, existentialConstants, f))
+        Logger("princess", LogDebug, "query:")
+        Logger("princess", LogDebug, Printer(_, universalConstants, existentialConstants, f))
         IO.writeInFile(file, Printer(_, universalConstants, existentialConstants, f))
         eliminateQuantifiersFile(file).map(f => {
           val varsLeft = universalConstants ++ existentialConstants
@@ -74,8 +76,8 @@ object Princess {
     val (code, file, err) = SysCmd(Array("mktemp"))
     if (code == 0) {
       try {
-        Logger("princess", LogInfo, "query:")
-        Logger("princess", LogInfo, Printer(_, universalConstants, existentialConstants, f))
+        Logger("princess", LogDebug, "query:")
+        Logger("princess", LogDebug, Printer(_, universalConstants, existentialConstants, f))
         IO.writeInFile(file, Printer(_, universalConstants, existentialConstants, f))
         isValidFile(file)
       } finally {

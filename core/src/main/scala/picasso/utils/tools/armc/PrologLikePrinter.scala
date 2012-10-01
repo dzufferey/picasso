@@ -42,7 +42,7 @@ class PrologLikePrinter {
   }
 
   protected def needParenthesis(currentPriority: Int, e: Expression): String = {
-    if (Expression.priority(e) < currentPriority) "(" + print(e) + ")"
+    if (Expression.priority(e) < currentPriority) "(" + printExpression(e) + ")"
     else printExpression(e)
   }
   protected def printExpression(e: Expression): String = e match {

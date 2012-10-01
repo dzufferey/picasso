@@ -66,6 +66,7 @@ object Printer {
     case Exists(vars, f2) => printQuantifier("exists", vars, f2)
     case ForAll(vars, f2) => printQuantifier("forall", vars, f2)
     case v @ Variable(_) => writer.write(asVar(v))
+    case Literal(l: Int) => if (l >= 0) writer.write(l.toString) else writer.write("(- " + (-l).toString + ")")
     case Literal(l) => writer.write(l.toString)
     case Application(fct, args) => 
       writer.write("(")

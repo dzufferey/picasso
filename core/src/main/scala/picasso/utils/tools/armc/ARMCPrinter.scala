@@ -191,9 +191,9 @@ object ARMCPrinter extends PrologLikePrinter {
     loc(t.targetPC, vars2)
     writer.write(",")
     writer.newLine
-    writer.write("    ")
+    writer.write("    [ ")
     writer.write(printCondition(relation))
-    writer.write(",")
+    writer.write(" ],")
     writer.newLine
     writer.write("    [], " + idx + ")." )
   }
@@ -214,12 +214,12 @@ object ARMCPrinter extends PrologLikePrinter {
     writer.flush
   }
 
-  def apply(implicit writer: BufferedWriter, prog: Program2) {
+  def apply(implicit writer: BufferedWriter, prog: Program2, withPreds: Boolean = true) {
     val vars = prog.variables.toSeq
     writer.write(preamble); writer.newLine
     var2names(vars); writer.newLine
     preds(vars); writer.newLine
-    transPreds(vars, prog); writer.newLine
+    if (withPreds) { transPreds(vars, prog); writer.newLine }
     start(prog.initialPC)
     cutpoints(prog); writer.newLine
     for ( (t, idx) <- prog.transitions.seq.zipWithIndex ) {

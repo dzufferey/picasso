@@ -56,14 +56,16 @@ object Printer {
   def asVar(v: Variable): String = asVar(v.name)
 
   protected def cstDecl(what: String, vars: Iterable[Variable])(implicit writer: BufferedWriter) {
-    writer.write("\\"+what+" {")
-    writer.newLine
-    for(v <- vars) {
-      writer.write("  int " + asVar(v) + ";")
+    if (!vars.isEmpty) {
+      writer.write("\\"+what+" {")
+      writer.newLine
+      for(v <- vars) {
+        writer.write("  int " + asVar(v) + ";")
+        writer.newLine
+      }
+      writer.write("}")
       writer.newLine
     }
-    writer.write("}")
-    writer.newLine
   }
 
   protected def univCst(vars: Iterable[Variable])(implicit writer: BufferedWriter) {

@@ -74,7 +74,10 @@ object FromMathAst {
           Logger.assert( args2.size == 2, "integer.MathAst",
             "FromMathAst, Times with " + args2 )
           args2(0) match {
-            case Constant(c) => (0 until c).map(_ => args2(1)).reduceLeft(Plus(_, _))
+            case Constant(c) =>
+              if (c > 0) (0 until c).map(_ => args2(1)).reduceLeft(Plus(_, _))
+              if (c == 0) Constant(0)
+              else ((Constant(0): Expression) /: (0 until -c).map(_ => args2(1)))(Minus(_, _))
             case other => Logger.logAndThrow("integer.MathAst", LogError, "FromMathAst.expression, expected Constant found: " + other)
           }
         case other => Logger.logAndThrow("integer.MathAst", LogError, "FromMathAst.expression fct: " + other)

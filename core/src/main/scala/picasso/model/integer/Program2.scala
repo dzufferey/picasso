@@ -26,6 +26,21 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
     trs.aggregate(Set[Variable]())(_ ++ _.variables, _ ++ _)
   }
 
+  lazy val varsByLoc: Map[String, Set[Variable]] = {
+    val bySrc = trs.groupBy(_.sourcePC)
+    val byTrg = trs.groupBy(_.targetPC)
+    pcs.iterator.map( l => {
+      val v1 = bySrc.get(l).map(_.flatMap(_.domain).seq)
+      val v2 = byTrg.get(l).map(_.flatMap(_.range).seq)
+      (l, (v1 ++ v2).flatten.toSet)
+    }).toMap
+  }
+  
+  def printForARMCnoPreds(writer: java.io.BufferedWriter) {
+    ARMCPrinter(writer, this, false)
+    writer.flush
+  }
+
   def printForARMC(writer: java.io.BufferedWriter) {
     ARMCPrinter(writer, this)
     writer.flush
@@ -41,19 +56,19 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
 
   def simplifyForTermination = {
     Logger("integer.Program", LogDebug, "unsimplified program:")
-    Logger("integer.Program", LogDebug, writer => printForARMC(writer) )
+    Logger("integer.Program", LogDebug, writer => printForARMCnoPreds(writer) )
     Logger("integer.Program", LogInfo, "propagating constants.")
     val p2 = this.propagateCst
-    Logger("integer.Program", LogDebug, writer => p2.printForARMC(writer) )
+    Logger("integer.Program", LogDebug, writer => p2.printForARMCnoPreds(writer) )
     Logger("integer.Program", LogInfo, "merging variables.")
     val p3 = p2.reduceNumberOfVariables
-    Logger("integer.Program", LogDebug, writer => p3.printForARMC(writer) )
+    Logger("integer.Program", LogDebug, writer => p3.printForARMCnoPreds(writer) )
     Logger("integer.Program", LogInfo, "compacting transitions.")
     val p4 = p3.compactPath
-    Logger("integer.Program", LogDebug, writer => p4.printForARMC(writer) )
+    Logger("integer.Program", LogDebug, writer => p4.printForARMCnoPreds(writer) )
     Logger("integer.Program", LogInfo, "removing duplicate transitions.")
     val p5 = p4.duplicateTransitions
-    Logger("integer.Program", LogDebug, writer => p5.printForARMC(writer) )
+    Logger("integer.Program", LogDebug, writer => p5.printForARMCnoPreds(writer) )
     p5
     //TODO sinks, ...
   }
@@ -65,16 +80,20 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
    *  not in the map means we don't know
    */
   def constantValueMap: Map[String,Map[Variable,Option[Int]]] = {
+    //TODO variables by location
+
     def default(s: String) = {
       if (s == initPC) Map[Variable,Option[Int]]( variables.toSeq.map( _ -> None) :_* )
       else Map[Variable,Option[Int]]()
     }
 
     def transfer(cstMap: Map[Variable,Option[Int]], t: Transition2): Map[Variable,Option[Int]] = {
-      val csts = cstMap.flatMap{ case (v,c) => if (t.domain(v)) c.map( v -> _ ) else None }
+      val csts = cstMap.flatMap{ case (v,c) => c.map( v -> _ ) }
       val t2 = t.propagteInputConstants(csts)
       val outCst = t2.constantVariables
-      cstMap.map{ case (v,_) => (v, if (outCst contains v) Some(outCst(v)) else None)}
+      val frame = cstMap -- t.range
+      val unk = t.range -- outCst.keySet
+      frame ++ outCst.map{ case (v, c) => v -> Some(c) } ++ unk.iterator.map(_ -> None)
     }
 
     def join(a: Map[Variable,Option[Int]], b: Map[Variable,Option[Int]]) = {
@@ -108,29 +127,22 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
 
     val trs2 = trs.par.map(t => {
       val preSubst = map(t.sourcePC).flatMap{ case (k, v) => v.map(i => (k, i)) }
-      t.propagteInputConstants(preSubst)
+      val postSubst = map(t.targetPC).flatMap{ case (k, v) => v.map(_ => k) }.toSet
+      val t2 = t.propagteInputConstants(preSubst).propagteOutputConstants(postSubst)
+      //Logger("integer.Program", LogDebug, "eliminating: " + postSubst.mkString(", ") + "\nin " + t + "\ngives " + t2)
+      t2
     })
-    new Program2(initPC, trs2)
-    
+    val p2 = new Program2(initPC, trs2)
+    Logger("integer.Program", LogInfo, "propagateCst: #variables before = " + variables.size + ", after = " + p2.variables.size)
+    p2
   }
 
   def reduceNumberOfVariables = {
-    //TODO change the way variables and conflicts are computed.
-    val trsButInit = trs.filter(_.sourcePC != initialPC)
-    val bySrc = trsButInit.groupBy(_.sourcePC)
-    val byTrg = trsButInit.groupBy(_.targetPC)
-    val locs = pcs - initialPC
-    val varsByLoc: Map[String, Set[Variable]] =
-      locs.iterator.map( l => {
-        val v1 = bySrc(l).flatMap(_.domain)
-        val v2 = byTrg(l).flatMap(_.range)
-        (l, (v1 ++ v2).seq.toSet)
-      }).toMap
-    Logger("model.integer", LogNotice, "varsByLoc ->\n  " + varsByLoc.mkString("\n  "))
-
+    val varsByLocButInit = varsByLoc - initialPC
+    Logger("model.integer", LogDebug, "varsByLocButInit ->\n  " + varsByLocButInit.mkString("\n  "))
     //make the conflicts graph with varsByLoc
     val conflictsBase = (DiGraph.empty[GT.ULGT{type V = Variable}] /: variables)(_ + _)
-    val conflicts = (conflictsBase /: varsByLoc.values)( (acc, grp) => {
+    val conflicts = (conflictsBase /: varsByLocButInit.values)( (acc, grp) => {
       val edges = for (x <- grp; y <- grp if x != y) yield (x, (), y)
       acc ++ edges
     })
@@ -146,16 +158,17 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
     def affinity(v1: Variable, v2: Variable) = affinityArray(varToIdx(v1))(varToIdx(v2))
     //def affinity(v1: Variable, v2: Variable): Int = Misc.commonPrefix(v1.name, v2.name)
     //small coloring of conflict graph
-    val largeClique = varsByLoc.values.maxBy(_.size)
+    val largeClique = varsByLocButInit.values.maxBy(_.size)
     val coloring = conflicts.smallColoring(affinity, largeClique)
-    Logger("model.integer", LogNotice, "coloring ->\n  " + coloring.mkString("\n  "))
+    Logger("model.integer", LogDebug, "coloring ->\n  " + coloring.mkString("\n  "))
     //rename variables
     val globalSubst = (Map[Variable, Variable]() /: coloring)( (acc, grp) => {
       val repr = grp.head
       (acc /: grp)( (map, v) => map + (v -> repr) )
     })
     //-> subst for each loc
-    val substByLoc = varsByLoc.map{ case (loc, vars) => (loc, globalSubst.filterKeys(vars contains _)) }
+    val substByLoc = varsByLocButInit.map{ case (loc, vars) => (loc, globalSubst.filterKeys(vars contains _)) }
+    //TODO initialPC
     //-> add frame cstr to transitions that gets new variables
     val trs2 = for (t <- trs) yield {
       //Logger("model.integer", LogNotice, "t -> " + t.toString)
@@ -166,15 +179,15 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
       //Logger("model.integer", LogNotice, "trgSubst -> " + trgSubst.mkString(", "))
       //Logger("model.integer", LogNotice, "woFrame -> " + woFrame.toString)
       val newVars = trgSubst.values.toSet -- woFrame.range
-      //TODO what if we need to add the variable ?!
-      Logger.assert(newVars forall woFrame.domain, "model.integer", "new vars: " + newVars.mkString(", ") + "\n" + woFrame)
-      val cstr = newVars.iterator.map( v => Eq(woFrame.preVars(v),woFrame.postVars(v)) )
+      val preVars2 = woFrame.preVars ++ newVars.iterator.map( v => (v, woFrame.preVars.getOrElse(v, Variable(Namer("NewPreVar")))) )
+      val postVars2 = woFrame.postVars ++ newVars.iterator.map( v => (v, Variable(Namer("NewPostVar"))) )
+      val cstr = newVars.iterator.map( v => Eq(preVars2(v), postVars2(v)) )
       val allCstr = (woFrame.relation /: cstr)(And(_,_))
       new Transition2(
         woFrame.sourcePC,
         woFrame.targetPC,
-        woFrame.preVars,
-        woFrame.postVars,
+        preVars2,
+        postVars2,
         allCstr,
         woFrame.comment
       )
@@ -213,12 +226,10 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
   }
   
   def candidateRankingFcts: Iterable[Set[Variable]] = {
-    //val cyclesIterator = cfa.enumerateSomeCycles
-    //val boundedIterator = if (Config.cyclesBound >= 0) cyclesIterator.take(Config.cyclesBound) else cyclesIterator
-    //val candidates = boundedIterator.flatMap(c => TransitionHeuristics.transitionPredicates(c.labels))
-    //candidates.toSet
-    //sys.error("TODO")
-    Nil
+    val cyclesIterator = cfa.enumerateSomeCycles
+    val boundedIterator = if (Config.cyclesBound >= 0) cyclesIterator.take(Config.cyclesBound) else cyclesIterator
+    val candidates = boundedIterator.flatMap(c => Transition2.candidateRankingFcts(c.labels))
+    candidates.toSet
   }
 
 }
