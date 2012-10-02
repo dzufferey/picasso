@@ -457,7 +457,11 @@ object Transition2 extends PartialOrdering[Transition2] {
     val (dicts, ssaed) = ssa(cycle)
     val pre =  dicts.head
     val post = dicts.last
-    Logger.assert(pre.keySet == post.keySet, "model.integer", "not the same variables?\n" + pre.keySet.mkString(", ") + "\n" + post.keySet.mkString(", "))
+    Logger.assert(
+      pre.keySet == post.keySet,
+      "model.integer",
+      "not the same variables?\n" + pre.keySet.mkString(", ") + "\n" + post.keySet.mkString(", ") + "\n" + cycle.mkString("\n")
+    )
     //compose the transitions
     val composedRelation = ssaed.view.map(_.relationOverPrePost).reduceLeft(And(_,_))
 
@@ -481,6 +485,7 @@ object Transition2 extends PartialOrdering[Transition2] {
     val (decr, incr) = pre.keySet.partition(v => decrease(List(v)))
     val part1 = decr.subsets.flatMap(sub => if (sub.isEmpty) None else Some(sub)).toSeq
 
+    //TODO incrementally
     def tryAdd(base: Set[Variable], candidates: Set[Variable]): Seq[Set[Variable]] = {
       val ok = candidates.filter(v => decrease(base + v))
       var suffixes = ok

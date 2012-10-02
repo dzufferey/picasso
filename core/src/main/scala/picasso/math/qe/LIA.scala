@@ -92,15 +92,24 @@ object LIA {
   }
 
   protected def sat(f: Formula): Option[Boolean] = {
-    import smtlib._
     Logger.assert(isQFLIA(f), "LIA", f + " not in LIA.")
-    val fv = f.freeVariables
-    val solver = new Solver(QF_LIA, "z3", Array("-smt2", "-in"))
-    for (v <- fv) solver.declare(v)
+    val solver = qfSolver
+    //val fv = f.freeVariables
+    //for (v <- fv) solver.declare(v)
     solver.assert(f)
     val res = solver.checkSat
     solver.exit
     res
+  }
+
+  def qfSolver: smtlib.Solver = {
+    import smtlib._
+    new Solver(QF_LIA, "z3", Array("-smt2", "-in"))
+  }
+
+  def solver: smtlib.Solver = {
+    import smtlib._
+    new Solver(smtlib.LIA, "z3", Array("-smt2", "-in"))
   }
 
 }

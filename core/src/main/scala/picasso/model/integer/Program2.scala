@@ -178,17 +178,18 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
       //Logger("model.integer", LogNotice, "srcSubst -> " + srcSubst.mkString(", "))
       //Logger("model.integer", LogNotice, "trgSubst -> " + trgSubst.mkString(", "))
       //Logger("model.integer", LogNotice, "woFrame -> " + woFrame.toString)
-      val newVars = trgSubst.values.toSet -- woFrame.range
-      val preVars2 = woFrame.preVars ++ newVars.iterator.map( v => (v, woFrame.preVars.getOrElse(v, Variable(Namer("NewPreVar")))) )
-      val postVars2 = woFrame.postVars ++ newVars.iterator.map( v => (v, Variable(Namer("NewPostVar"))) )
-      val cstr = newVars.iterator.map( v => Eq(preVars2(v), postVars2(v)) )
-      val allCstr = (woFrame.relation /: cstr)(And(_,_))
+      val newPreVars = srcSubst.values.toSet -- woFrame.domain
+      val newPostVars = trgSubst.values.toSet -- woFrame.range
+      val preVars2 = woFrame.preVars ++ newPreVars.iterator.map( v => (v, Variable(Namer("NewPreVar"))) )
+      val postVars2 = woFrame.postVars ++ newPostVars.iterator.map( v => (v, Variable(Namer("NewPostVar"))) )
+      //val cstr = newPostVars.iterator.map( v => Eq(preVars2(v), postVars2(v)) )
+      //val allCstr = (woFrame.relation /: cstr)(And(_,_))
       new Transition2(
         woFrame.sourcePC,
         woFrame.targetPC,
         preVars2,
         postVars2,
-        allCstr,
+        woFrame.relation,//allCstr,
         woFrame.comment
       )
     }

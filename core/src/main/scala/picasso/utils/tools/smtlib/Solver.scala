@@ -11,7 +11,7 @@ case object LIA extends Theory
 case object QF_LRA extends Theory
 case object LRA extends Theory
 
-class Solver(th: Theory, cmd: String, options: Iterable[String]/*, implicitDeclaration: Boolean*/) {
+class Solver(th: Theory, cmd: String, options: Iterable[String], implicitDeclaration: Boolean = true) {
 
   //TODO implicit symbol declaration, keep a local stack+set of symbol to know what is declared
 
@@ -21,6 +21,9 @@ class Solver(th: Theory, cmd: String, options: Iterable[String]/*, implicitDecla
   protected val solverInput = new BufferedWriter(new OutputStreamWriter(solver.getOutputStream()))
   protected val solverOutput = new BufferedReader(new InputStreamReader(solver.getInputStream()))
   protected val solverError = new BufferedReader(new InputStreamReader(solver.getErrorStream()))
+
+  protected val declared = scala.collection.mutable.HashSet[Variable]()
+  protected val declStack = scala.collection.mutable.Stack(Set[Variable]())
 
   //initialisation
   Logger("smtlib", LogDebug, "starting: " + (Array(cmd) ++ options).mkString(" "))
@@ -80,6 +83,13 @@ class Solver(th: Theory, cmd: String, options: Iterable[String]/*, implicitDecla
   }
   
   def assert(f: Formula) {
+    if (implicitDeclaration) {
+      val newVars = f.freeVariables -- declared
+      declared ++= newVars
+      val stackFrame = declStack.pop
+      declStack.push(stackFrame ++ newVars)
+      newVars foreach declare
+    }
     //(assert f)
     Logger("smtlib", LogDebug, Printer(_, f))
     solverInput.write("(assert ")
@@ -90,11 +100,17 @@ class Solver(th: Theory, cmd: String, options: Iterable[String]/*, implicitDecla
   }
   
   def push {
+    if (implicitDeclaration) {
+      declStack.push(Set[Variable]())
+    }
     stackCounter += 1
     toSolver("(push 1)")
   }
   
   def pop {
+    if (implicitDeclaration) {
+      declared -- declStack.pop
+    }
     Logger.assert(stackCounter > 0, "smtlib", "pop -> stackCounter = " + stackCounter)
     toSolver("(pop 1)")
     stackCounter -= 1
@@ -108,6 +124,14 @@ class Solver(th: Theory, cmd: String, options: Iterable[String]/*, implicitDecla
       case "unknown" => None
       case other => Logger.logAndThrow("smtlib", LogError, "checkSat: solver said " + other)
     }
+  }
+
+  def test(f: Formula): Option[Boolean] = {
+    push
+    assert(f)
+    val res = checkSat
+    pop
+    res
   }
 
 }
