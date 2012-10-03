@@ -3,6 +3,7 @@ package picasso.model.integer
 import picasso.utils._
 import picasso.graph._
 
+//implicit assumption that we are working with natural number (counters), not integers
 class Transition2(val sourcePC: String,
                  val targetPC: String,
                  val preVars: Map[Variable, Variable],
@@ -278,8 +279,6 @@ class Transition2(val sourcePC: String,
     )
   }
 
-  //TODO about sinks
-
   protected def iConeOfInfluence: Map[Variable,Set[Variable]] = {
     val clauses = Condition.getTopLevelClauses(relation)
     val clausesVars = clauses.map( cl => Condition.variables(cl) )
@@ -306,6 +305,7 @@ class Transition2(val sourcePC: String,
   }
   
   //TODO prune assume, i.e. simplify the relation
+
 
 }
 
@@ -428,6 +428,7 @@ object Transition2 extends PartialOrdering[Transition2] {
         case Some(f2) =>
           //remove the negated assumption that are part of f2 to keep only the new update cstr
           val disj = collectDijs(f2)
+          //can we make thsi withoug quant alternation ? (divide by 2 the number of princess queries)
           val valid = disj.filter(d => LIA.valid(univ, exists, Application(Implies, List(hypF, d)) ).getOrElse(true) )
           val f3 =
             if (valid.isEmpty) Logger.logAndThrow("model.integer", LogError, "compact, no valid disjunct")

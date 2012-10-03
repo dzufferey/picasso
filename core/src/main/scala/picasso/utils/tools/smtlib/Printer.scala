@@ -80,7 +80,7 @@ object Printer {
   }
 
   def apply(implicit writer: BufferedWriter, f: Formula) {
-    printFormula(f)
+    printFormula(Formula.flatten(f))
     //writer.newLine
   }
 

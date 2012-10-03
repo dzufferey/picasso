@@ -194,7 +194,7 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
       )
     }
     val p2 = new Program2(initialPC, trs2)
-    Logger("integer.Program", LogInfo, "compactPath: #variables before = " + variables.size + ", after = " + p2.variables.size)
+    Logger("integer.Program", LogInfo, "reduceNumberOfVariables: #variables before = " + variables.size + ", after = " + p2.variables.size)
     p2
   }
   
@@ -225,6 +225,11 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
     Logger("integer.Program", LogInfo, "duplicateTransitions: #transitions before = " + transitions.size + ", after = " + p2.transitions.size)
     p2
   }
+
+//protected def flow: DiGraph[GT.ULGT{type V = Variable}] = {
+//  //try to track what is going where ...
+//  sys.error("TODO")
+//}
   
   def candidateRankingFcts: Iterable[Set[Variable]] = {
     val cyclesIterator = cfa.enumerateSomeCycles

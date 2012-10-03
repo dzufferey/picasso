@@ -6,6 +6,8 @@ import java.io._
 
 object Printer {
 
+  //TODO flatten sums, conj, disj, ...
+
   protected def unary(i: InterpretedFct) = i match {
     case Not => true
     case _ => false
@@ -117,7 +119,7 @@ object Printer {
   }
   
   def apply(implicit writer: BufferedWriter, f: Formula) {
-    printFormula(f)
+    printFormula(Formula.flatten(f))
     writer.newLine
   }
 
