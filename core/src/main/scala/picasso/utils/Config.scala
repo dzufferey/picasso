@@ -121,7 +121,8 @@ class Config {
   //verbosity
   newOption("-v", Arg.Unit(() => Logger.moreVerbose), "increase the verbosity level.")
   newOption("-q", Arg.Unit(() => Logger.lessVerbose), "decrease the verbosity level.")
-  newOption("--hide", Arg.String( str => Logger.disallow(str)), "hide the output with given prefix")
+  newOption("--hide", Arg.String( str => Logger.disallow(str)), "hide the output with given prefix.")
+  newOption("--noAssert", Arg.Unit(() => Logger.disableAssert), "remove some assertions.")
 
   //general reporting option
   var report = false

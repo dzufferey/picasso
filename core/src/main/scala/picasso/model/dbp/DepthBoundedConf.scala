@@ -86,7 +86,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     //goal: whatever smaller (this) can do by unfolding, bigger can also do it ...
     val (bigger, candidatesF, candidatesB) = mi
     //(1) difference of depth (good for unit propagation)
-    val depthCstr: Iterable[Clause[(V,V)]] = for(x <- vertices.toSeq; y <- candidatesF(x) if (x.depth > y.depth)) yield {
+    val depthCstr: Iterable[Clause[(V,V)]] = for(x <- vertices.toSeq if x.depth > 0; y <- candidatesF(x) if y.depth == 0) yield {
       val lit: Lit[(V,V)] = Neg(x -> y)
       val cl: Clause[(V,V)] = Seq(lit)
       cl
@@ -106,6 +106,11 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
          ) yield {
         val d1 = y1.depth - x1.depth
         val d2 = y2.depth - x2.depth
+        //x1 to y1 edge is
+        //d1 > 0 -> one-to-many
+        //d1 = 0 -> one-to-one
+        //d1 < 0 -> many-to-one
+        //same for x2 to y2
      
         //assert that the difference is at least the same
         if ((d1 > 0 && d2 <= 0) || (d1 < 0 && d2 >= 0)) {
@@ -114,23 +119,6 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
           Seq[Clause[(V,V)]]() //ok
         }
       }
-    /* OLD version of deltaDepth
-    val deltaDepth: Iterable[Iterable[Clause[(V,V)]]] =
-      for((x1, el, y1) <- edges;
-          (x2:V) <- candidatesF(x1) if (x1.depth <= x2.depth);
-          (y2:V) <- candidatesF(y1) if (y1.depth <= y2.depth)
-         ) yield {
-      val d1 = y1.depth - x1.depth
-      val d2 = y2.depth - x2.depth
-
-      //assert that the difference is at least the same
-      if ((d1 > 0 && d2 < d1) || (d1 < 0 && d2 > d1)) {
-        Seq[Clause[(V,V)]](Seq(Neg(x1 -> x2), Neg(y1 -> y2))) //cannot be both true at the same time
-      } else {
-        Seq[Clause[(V,V)]]() //ok
-      }
-    }
-    */
 
     //TODO depthInjective should be rephrased in term of components ?
     /*
@@ -172,6 +160,16 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     //Console.println(deltaDepth.flatten.toString)
     depthCstr ++ deltaDepth.flatten ++ depthInjective.flatten
   }
+  
+  private implicit def dropDepth[T1, T2](implicit ord1: WellPartialOrdering[P#State]): WellPartialOrdering[P#VL] = 
+    new WellPartialOrdering[P#VL]{
+      def tryCompare(x: P#VL, y: P#VL): Option[Int] = {
+        ord1.tryCompare(x._1, y._1)
+      }
+      def lteq(x: P#VL, y: P#VL): Boolean = {
+        ord1.lteq(x._1, y._1)
+      }
+    }
 
   def morphisms(bigger: Self, partialMorph: Morphism = Map.empty[V,V])(implicit wpo: WellPartialOrdering[P#State]) : Iterator[Morphism] = 
     lazyMorphismsBySat[P](bigger, _.depth == 0, additionalCstr, partialMorph)
@@ -352,7 +350,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
 
   def fold(implicit wpo: WellPartialOrdering[P#State]): Self = foldWithWitness._1
 
-  def widenWithWitness(newThreads: Set[V]): (Self, Morphism) = {
+  def widenWithWitness(newThreads: Set[V])(implicit wpo: WellPartialOrdering[P#State]): (Self, Morphism) = {
 
     //rather than hack one more time, I should first write cleanly what I should do.
     //we get the cmp, some of them (nodes) needs to be pushed up (the newThreads).
@@ -423,6 +421,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     //flatten
     val tmp = this morph mapping
     val (result, mapping2) = tmp.flatten
+    Logger.assert(this isSubgraphOf result, "DepthBoundedConf", this + " not a subgraph of " + result)
     val resultMapping = mapping.map[(V,V), Map[V,V]]{ case (a,b) => (a, mapping2.getOrElse(b, b) ) }
     //println("tmp: " + tmp)
     //println("result: " + result)
@@ -433,7 +432,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
 
   }
   
-  def widen(newThreads: Set[V]): Self = widenWithWitness(newThreads)._1
+  def widen(newThreads: Set[V])(implicit wpo: WellPartialOrdering[P#State]): Self = widenWithWitness(newThreads)._1
 
   override def clone: (Self, Morphism) = {
     val m = (Map.empty[V,V] /: vertices){ (acc, v) => acc + (v -> v.clone)}

@@ -331,6 +331,8 @@ extends Traceable[P#V,P#EL] with GraphAlgorithms[PB, P, G] {
     }
     val edgeCstrs = edgeCstrs1.flatten
     //partialMorphism
+    assert(partialMorphism.keySet subsetOf this.vertices)
+    assert(partialMorphism.values forall bigger.vertices)
     val startCstr = for ((p,q) <- partialMorphism) yield clauseConvert(Array(Pos(p, q)))
     //additional constraints
     val mi = (bigger, candidatesF(_), candidatesB(_))
@@ -341,7 +343,8 @@ extends Traceable[P#V,P#EL] with GraphAlgorithms[PB, P, G] {
     solver.newVar(litCounter + 1)
     solver.setExpectedNumberOfClauses(fullMapping.size + injectivity.size + edgeCstrs.size + startCstr.size)
     try {
-      Logger("graph", LogDebug, "SAT clause (fullMapping):\n" + fullMapping.mkString("  ","\n  ","\n") +
+      Logger("graph", LogDebug, "SAT dictionary:\n" + pairToInt.mkString("  ","\n  ","\n") +
+                                "SAT clause (fullMapping):\n" + fullMapping.mkString("  ","\n  ","\n") +
                                 "SAT clause (injectivity):\n" + injectivity.mkString("  ","\n  ","\n") +
                                 "SAT clause (edgeCstrs):\n" + edgeCstrs.mkString("  ","\n  ","\n") +
                                 "SAT clause (startCstr):\n" + startCstr.mkString("  ","\n  ","\n") +
@@ -398,165 +401,6 @@ extends Traceable[P#V,P#EL] with GraphAlgorithms[PB, P, G] {
       }
     }
   }
-
-  /*
-  protected def mkLookup: (Map[V,Int], IndexedSeq[V]) = {
-    val vs: IndexedSeq[V] = vertices.toIndexedSeq
-    val table: Map[V,Int] = (Map.empty[V,Int] /: vs.indices)( (table, i) => table + (vs(i) -> i))
-    (table, vs)
-  }
-
-  type MorphState[Q <: PB] = (Map[P#V,Int], Map[Q#V,Int], IndexedSeq[P#V], IndexedSeq[Q#V], Array[BitSet])
-
-  def lazyMorphisms[Q <: PB](bigger: G[Q], injective : Q#V => Boolean, propagateMore: (MorphState[Q], Int, Int) => Unit, partialMorphism: Map[P#V,Q#V] = Map.empty[P#V,Q#V])
-  (implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Iterator[Map[P#V,Q#V]] = {
-    Logger("graph", LogDebug, "Is\n"+this+"a subgraph of\n"+bigger)
-    //this is a simple and stupid implementation ...
-    
-    val vs: Set[Q#V] = bigger.vertices
-
-    //lookup tables for nodes in this
-    val (tableSmaller, nodesSmaller) = self.mkLookup
-    val sSmaller = nodesSmaller.size
-    //lookup tables for nodes in bigger
-    val (tableBigger, nodesBigger) = bigger.mkLookup
-    val sBigger = nodesBigger.size
-    
-    //initial compatibility matrix (rough initialisation)
-    var compatible = Array.fill(sSmaller){BitSet.empty}
-    for (i <- 0 until sSmaller; j <- 0 until sBigger) {
-      val ns = nodesSmaller(i)
-      val nb = nodesBigger(j)
-      val nodeLabel = lblOrd.lteq(labelOf(ns), bigger.labelOf(nb))
-      def allInjective(k : Q#EL) = bigger(nb,k).forall(injective(_))
-      def biggerOutDegree(s: Map[EL,Int], b: Map[Q#EL,Int]) = {
-        s.keysIterator.forall( k => s(k) <= b.getOrElse(k,0) || !allInjective(k))
-      }
-      val isCompatible = nodeLabel && biggerOutDegree(self.outDegree(ns), bigger.outDegree(nb))
-      if (isCompatible) compatible.update(i, compatible(i) + j)
-    }
-
-    /*
-    def printMatrix : Unit = {
-      print("   ")
-      for (j <-0 until sBigger) {
-        print(j + ":" + bigger.labelOf(nodesBigger(j)) + " ")
-      }
-      println("")
-      for (i <- 0 until sSmaller) {
-        print(i + ":" + labelOf(nodesSmaller(i)) + "| ")
-        for (j <-0 until sBigger) {
-          val e = if (compatible(i)(j)) 1 else 0
-          print(e + " ")
-        }
-        println("")
-      }
-    }*/
-
-    //refinement procedure
-    def refine(i: Int, j: Int): Unit = {
-      //this is about neighbors 'compatibility'
-      //the choices that have been made restrict the future choices
-      val ns = nodesSmaller(i)
-      val succs = adjacencyMap(ns)
-      val nb = nodesBigger(j)
-      val succb = bigger.adjacencyMap(nb)
-      //foreach neighbour, there must be at least one possibility to place it,
-      //the labels on the edges need to agree.
-      val possible = succs.forall( p => {
-        val label = p._1
-        val candidates = succb.getOrElse(label,Set.empty[Q#V])
-        p._2.forall( ss => {
-          candidates.exists( sb => compatible(tableSmaller(ss))(tableBigger(sb)) )
-        })
-      })
-      if (!possible) compatible.update(i, compatible(i) - j)
-    }
-
-    def propagate = {
-      //for all ones in compatible, call refine
-      for (i <- 0 until sSmaller; j <- 0 until sBigger if compatible(i)(j)) refine(i,j)
-      //TODO much parallelism to exploit (can even be done optimistically (modulo volatile))
-      //TODO as a fixpoint
-    }
-    def isValidPartialMapping = compatible.forall(!_.isEmpty)
-    def isValidMapping = compatible.forall( _.size == 1)
-
-    def fixMapping(i: Int, j: Int) {
-      val mask: Seq[Int] = for (rest <- j+1 until sBigger) yield rest
-      compatible.update(i, compatible(i) -- mask)
-      if (injective(nodesBigger(j)))
-        for (rest <- i + 1 until sSmaller)
-          compatible.update(rest, compatible(rest) - j)
-      else propagateMore((tableSmaller, tableBigger, nodesSmaller, nodesBigger, compatible), i, j)
-    }
-
-
-    // fix mappings according to given partial morphism
-    partialMorphism foreach {p => fixMapping(tableSmaller(p._1), tableBigger(p._2))}
-
-    //TODO better: not only forward-propagation, but also backjumping
-    //main search loop with stack for backtracking.
-    propagate
-    val stack = new scala.collection.mutable.Stack[Array[BitSet]]
-
-    
-    def computeHoms(decisionLevel: Int): (Option[Map[P#V,Q#V]], Int) = {
-      //println("DL: " + decisionLevel)
-      //printMatrix
-      if (! isValidPartialMapping) {
-        if (decisionLevel <= 0) (None, decisionLevel)
-        else {
-          compatible = stack.pop
-          val lastTry = compatible(decisionLevel - 1).headOption
-          if(!lastTry.isEmpty) compatible.update(decisionLevel - 1, compatible(decisionLevel - 1) - lastTry.get)
-          computeHoms(decisionLevel - 1)
-        }
-      }
-      else {
-        if (decisionLevel >= sSmaller) {
-          assert(isValidMapping)
-          val hom = Map.empty[V,Q#V] ++ (for (i <- 0 until sSmaller; j <- 0 until sBigger if compatible(i)(j)) yield ( nodesSmaller(i), nodesBigger(j)) )        
-          (Some(hom), decisionLevel)
-        } else {
-          //pick next
-          (0 until sBigger).find( candidate => compatible(decisionLevel)(candidate)) match {
-            case Some(j) => {
-              stack.push(compatible.clone) //TODO should only clone a subarray + index mapping
-              fixMapping(decisionLevel, j)
-              propagate
-              
-              computeHoms(decisionLevel + 1)
-            }
-            case None => Logger.logAndThrow("graph", LogError, "a valid partial mapping must have a candidate.")
-          }
-        }
-      }
-    }
-    
-    new Iterator[Map[P#V,Q#V]] {
-      var (curr, decisionLevel) = computeHoms(0)
-      
-      def hasNext = curr.isDefined
-
-      def next() = {
-        val prev = curr.get
-        val (newCurr, newDL) = {
-          if (decisionLevel <= 0) (None, decisionLevel)
-          else {
-            val lastTry = compatible(decisionLevel - 1).headOption
-            compatible = stack.pop
-            if(!lastTry.isEmpty) compatible.update(decisionLevel - 1, compatible(decisionLevel - 1) - lastTry.get)
-            computeHoms(decisionLevel - 1)
-          }
-        }
-        curr = newCurr
-        decisionLevel = newDL
-        prev
-      }
-    }
-  }
-  */
 
   def morphisms[Q <: PB](bigger: G[Q], injective: Q#V => Boolean, comp: MorphInfo[Q] => Iterable[Clause[(P#V,Q#V)]])
   (implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Iterator[Map[V,Q#V]] = 

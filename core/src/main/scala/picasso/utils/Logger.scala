@@ -19,6 +19,7 @@ case object LogDebug    extends Level("Debug",    1,  Console.RESET)
 /** Simple logger that outputs to stdout. */
 class Logger {
 
+  private var assertive = true
   private var minPriority = LogNotice.priority
   val disallowed = scala.collection.mutable.HashSet.empty[String]
 
@@ -39,6 +40,9 @@ class Logger {
   def setMinPriority(lvl: Int) = minPriority = lvl
   def disallow(str: String) = disallowed += str
   def allow(str: String) = disallowed -= str
+
+  def disableAssert = assertive = false
+  def enableAssert = assertive = true
 
   private def increaseLevel(l: Level): Level = l match {
     case LogCritical => LogError
@@ -100,9 +104,9 @@ class Logger {
   }
 
   def assert(cond: => Boolean, relatedTo: String, content: => String) {
-    if (!cond) {
-      logAndThrow(relatedTo, LogError, content)
-    }
+    if (assertive)
+      if (!cond)
+        logAndThrow(relatedTo, LogError, content)
   }
 
 }

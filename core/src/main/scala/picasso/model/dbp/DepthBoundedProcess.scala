@@ -60,7 +60,16 @@ class DepthBoundedProcess[P <: DBCT](trs: GenSeq[DepthBoundedTransition[P]])(imp
             (w, m)
           }
         case None =>
-          Logger.logAndThrow("DepthBoundedProcess", LogError, "widening returned incomparable graphs:\n" + acc._1 + "\n" + w)
+          Logger(
+            "DepthBoundedProcess",
+            LogWarning,"widening returned incomparable graphs. TODO rewrite DepthBoundedProcess.tryAcceleratePairWithWitness"// +
+            //          "\n smaller = " + smaller +
+            //          "\n bigger = " + bigger +
+            //          "\n acc = " + acc._1 +
+            //          "\n widened = " + w
+          )
+          if (scala.util.Random.nextBoolean()) (w, m)
+          else acc
       }
     })
     val (widened, folding) = widenedUnfolded.foldWithWitness

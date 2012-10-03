@@ -14,7 +14,7 @@ trait WellOrdering[A] extends Ordering[A] with WellPartialOrdering[A] {
 
 object WellPartialOrdering {
   /** canonical well-partial ordering on the Cartesian product of well-partially ordered types <code>T1</code> and <code>T2</code> */
-  implicit def Tuple2[T1, T2](implicit ord1: WellPartialOrdering[T1], ord2: WellOrdering[T2]): WellPartialOrdering[(T1, T2)] = 
+  def Tuple2[T1, T2](implicit ord1: WellPartialOrdering[T1], ord2: WellOrdering[T2]): WellPartialOrdering[(T1, T2)] = 
     new WellPartialOrdering[(T1, T2)]{
       def tryCompare(x: (T1, T2), y: (T1, T2)): Option[Int] = {
         ord1.tryCompare(x._1, y._1) match {

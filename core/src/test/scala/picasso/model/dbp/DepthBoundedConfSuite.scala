@@ -160,14 +160,16 @@ class DepthBoundedConfSuite extends FunSuite {
 
   test("flattening 00") {
     val conf0 = emp + a0 + b1 + c2
-    val (flat0, _) = conf0.flatten
+    val (flat0, map) = conf0.flatten
     val expected0 = emp + a0 + b1 + c1
     //println("conf0:" + conf0)
     //println("flat0:" + flat0)
+    //println("map:\n" + map.mkString("  ", "\n  ", ""))
     assert(flat0 isSubgraphOf expected0)
     assert(expected0 isSubgraphOf flat0)
     assert(!conf0.noUnneededNesting)
     assert(flat0.noUnneededNesting)
+    assert(conf0.morphisms(flat0, map).hasNext)
 
     val conf1 = emp ++ (a0 --> b1) ++ (b1 --> c2) ++ (a0 --> cc2)
     val (flat1, _) = conf1.flatten
@@ -201,13 +203,17 @@ class DepthBoundedConfSuite extends FunSuite {
     //println("map:\n" + map.mkString("  ", "\n  ", ""))
     assert(!graph.noUnneededNesting)
     assert(flat.noUnneededNesting)
+    assert(graph.morphisms(flat, map).hasNext)
+    assert(graph isSubgraphOf flat)
+    assert(flat isSubgraphOf graph)
     assert(map.exists{case (a,b) => a != b})
     //the result of this is what we expect, find out what generates the funny graph in the first place!
   }
   
   test("flattening 02") {
     val conf0 = emp ++ (a2 --> b1)
-    val (flat0, _) = conf0.flatten
+    val (flat0, map) = conf0.flatten
+    assert(conf0.morphisms(flat0, map).hasNext)
     assert(flat0 isSubgraphOf conf0)
     assert(conf0 isSubgraphOf flat0)
     //println("conf0:" + conf0)
@@ -223,9 +229,10 @@ class DepthBoundedConfSuite extends FunSuite {
     val c4 = (c2++)++
     val c5 = c4++
     val conf0 = emp ++ (c4 --> a2) ++ (c4 --> b2) ++ (c5 --> a2) ++ (c5 --> b1)
-    val (flat0, _) = conf0.flatten
+    val (flat0, map) = conf0.flatten
     //println("conf0:" + conf0)
     //println("flat0:" + flat0)
+    assert(conf0.morphisms(flat0, map).hasNext)
     assert(flat0 isSubgraphOf conf0)
     assert(conf0 isSubgraphOf flat0, conf0 + " not a subgraph of " + flat0)
     assert(flat0.noUnneededNesting)
@@ -299,9 +306,15 @@ class DepthBoundedConfSuite extends FunSuite {
     testNotSubgraphFromFiles("widen_error_2_part_1.graph", "widen_error_2_part_2.graph")
   }
 
-  test("subgraph 03"){
-    testNotSubgraphFromFiles("widen_error_3_part_1.graph", "widen_error_3_part_2.graph") //TODO check whether that part is actually Not
+  test("subgraph 03a"){//this one should actually be a subgraph
+    testSubgraphFromFiles("widen_error_3_part_1.graph", "widen_error_3_part_2.graph")
+  }
+
+  test("subgraph 03b"){
     testSubgraphFromFiles("widen_error_3_part_3.graph", "widen_error_3_part_1.graph")
+  }
+
+  test("subgraph 03c"){
     testSubgraphFromFiles("widen_error_3_part_3.graph", "widen_error_3_part_2.graph")
   }
 
