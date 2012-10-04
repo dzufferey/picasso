@@ -24,6 +24,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
   //   -> replicating
   //   -> folding
 
+  //TODO move to Transition2/Program2
 
   protected def variablesForNodes(conf: S): Map[P#V, Variable] = {
     val nodes = conf.vertices.toSeq
@@ -309,39 +310,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
 
   protected val emptyConf = DepthBoundedConf.empty[P]
 
-  protected def initialize(init: S, allVariables: Set[Variable]): Transition = {
-    val (pc0, _) = getPC(emptyConf)
-    val (pc1, map1) = getPC(init)
-    //the inital transition is similar to the widening transitions ... 
-    val components: DiGraph[GT.ULGT{type V = Set[P#V]}] = init.decomposeInDisjointComponents
-    val cmpId = components.vertices.zipWithIndex.toMap
-    val nodeToCmpId = (cmpId.flatMap{ case (seq, id) => seq.map(x => (x, id)) } : Iterable[(P#V, Int)]).toMap
-    val accelerationVariables = cmpId.map{ case (k,v) => (v, Variable("init_" + v)) }
-    //now make the statments
-    val declare = accelerationVariables.values.map( v => Transient(v) )
-    val assumes1 = for ( (_,v) <- accelerationVariables) yield Assume(Leq(Constant(0), v))
-    val edges: Iterable[(Set[P#V],Unit,Set[P#V])] = components.edges
-    val assumes2 = for ( (c1, _, c2) <- edges ) yield {
-      val v1 = accelerationVariables(cmpId(c1))
-      val v2 = accelerationVariables(cmpId(c2))
-      Assume(Leq(v1, v2))
-    }
-    val stmts1 = for (node <- init.vertices) yield {
-       getCardinality(map1, node) match {
-         case v @ Variable(_) =>
-          if (node.depth == 0) Affect(v, Constant(1))
-          else Affect(v, accelerationVariables(nodeToCmpId(node)))
-         case Constant(c) => Skip
-         case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
-       }
-    }
-    val zeroVars = allVariables -- map1.values
-    val stmts2 = for (v <- zeroVars) yield Affect(v, Constant(0))
-    val stmts = (declare ++ assumes1 ++ assumes2 ++ stmts1 ++ stmts2).toSeq
-    new Transition(pc0, pc1, Literal(true), stmts, "initialize")
-  }
-  
-  protected def initialize2(init: S, allVariables: Set[Variable]): Transition2 = {
+  protected def initialize(init: S, allVariables: Set[Variable]): Transition2 = {
     val (pc0, _) = getPC(emptyConf)
     val (pc1, map1) = getPC(init)
     //the inital transition is similar to the widening transitions ... 
@@ -376,49 +345,6 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     Seq(t1, t2, t3, t4).flatten
   }
   
-  //this method assumes that each loc has its own variables (not true after the simplification)
-  protected def simplifyPath(trs: Seq[Transition]): Seq[Transition] = {
-    //reduce the number of #transitions and variables
-    if (trs.size > 1) {
-      //1 -> reduce the number of variables without changing the first and the last part
-      //conflicts are variables that are at one loc, between locs, no conflict
-      val varsAtLoc = trs.map(_.readVariables) //this ignores the last loc
-      val conflicts = (DiGraph.empty[GT.ULGT{type V = Variable}] /: varsAtLoc)( (acc, vs) => {
-        val edges = for (x <- vs; y <- vs if x != y) yield (x, (), y)
-        acc ++ edges
-      })
-      def affinity(v1: Variable, v2: Variable) = Misc.commonPrefix(v1.name, v2.name)
-      val largeClique = varsAtLoc.maxBy(_.size)
-      val coloring = conflicts.smallColoring(affinity, largeClique)
-      val headVariables = varsAtLoc.head //these variables should be preserved
-      val trs2 = (trs /: coloring)( (acc, grp) => {
-        if (grp.size > 1) {
-          val newVar = grp.find(headVariables contains _).getOrElse(grp.head)
-          acc.map( _.mergeVariables(grp, newVar) )
-        } else {
-          acc
-        }
-      })
-      //2 -> compact
-      val trs3 = Transition.compact(trs2)
-      //TODO
-      val trsNew = trs3
-      //3 -> useless split
-      //4 -> prune assume
-      //5 -> loop ?
-      //TODO assert that the variables at both ends are the same
-      Logger("DBPTermination", LogDebug,
-             "Simplifying path:" +
-             "\n=================\n" +
-             trs.mkString("\n") +
-             "\n-----------------\n" +
-             trsNew.mkString("\n"))
-      trsNew
-    } else {
-      trs
-    }
-  }
-
   //assumes the transitions also contains the frame
   protected def simplifyPathByQE(trs: Seq[Transition]): Seq[Transition2] = {
     val tr2s = trs.map(Transition2.apply)
@@ -429,7 +355,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
   //The program//
   ///////////////
 
-  protected def makeTransitions2(tg: EdgeLabeledDiGraph[TransitionsGraphFromCover.TG[P]]): ParIterable[Transition2] = {
+  protected def makeTransitions(tg: EdgeLabeledDiGraph[TransitionsGraphFromCover.TG[P]]): ParIterable[Transition2] = {
     import TransitionsGraphFromCover._
     //TODO the edges should go by pairs: transition + covering
     //the simplification might be more efficient if the first pass simplify both.
@@ -462,82 +388,24 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     })
   }
 
-  //TODO Program2
-  def makeIntegerProgram2(cover: DownwardClosedSet[S]): Program2 = {
-    val tg = TransitionsGraphFromCover(this, cover)
-    val trs = makeTransitions2(tg)
-    val variables = (Set[Variable]() /: trs)(_ ++ _.variables)
-    val initials = for (init <- cover.basis.toSeq.par) yield initialize2(init, variables)
-    val initState = initials.head.sourcePC
-    new Program2(initState, (initials ++ trs): ParSeq[Transition2] )
-  }
-  //TODO generate directly the new transition without going through the old one.
-
-  protected def makeTransitions(tg: EdgeLabeledDiGraph[TransitionsGraphFromCover.TG[P]]): ParIterable[Transition] = {
-    import TransitionsGraphFromCover._
-    //TODO the edges should go by pairs: transition + covering
-    //the simplification might be more efficient if the first pass simplify both.
-    //TODO some check to be sure the graph has the right form ?
-    tg.vertices.toSeq.par.flatMap( v1 => {
-      tg.outEdges(v1).flatMap{
-        case (Transition(witness), succs) =>
-          succs.toSeq.flatMap(v2 => {
-            val out = tg.outEdges(v2)
-            if (out.size == 1) {
-              out.head match {
-                case (Covering(m), targets) => 
-                  Logger.assert(targets.size == 1, "DBPTermination", "Expected single successor: " + targets)
-                  simplifyPath( transitionForWitness(witness) :+ covering(v2, m, targets.head))
-                case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Covering, found: " + other)
-              }
-            } else {
-              val p1 = simplifyPath(transitionForWitness(witness))
-              val p2s = out.map{
-                case (Covering(m), targets) => 
-                  Logger.assert(targets.size == 1, "DBPTermination", "Expected single successor: " + targets)
-                  covering(v2, m, targets.head)
-                case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Covering, found: " + other)
-              }
-              p2s ++ p1
-            }
-          })
-        case _ => None
-      }
-    })
-    //tg.edges.par.flatMap{
-    //  case (a, Transition(b), c) => simplifyPath( transitionForWitness(b) )
-    //  case (a, Covering(b), c) => Some(covering(a, b, c))
-    //}
-  }
-
-  def makeIntegerProgram(cover: DownwardClosedSet[S]): Program = {
+  def makeIntegerProgram(cover: DownwardClosedSet[S]): Program2 = {
     val tg = TransitionsGraphFromCover(this, cover)
     val trs = makeTransitions(tg)
     val variables = (Set[Variable]() /: trs)(_ ++ _.variables)
     val initials = for (init <- cover.basis.toSeq.par) yield initialize(init, variables)
     val initState = initials.head.sourcePC
-    new Program(initState, (initials ++ trs): ParSeq[Transition] )
+    new Program2(initState, (initials ++ trs): ParSeq[Transition2] )
   }
-  
-  def termination2(initState: S) = {
+  //TODO generate directly the new transition without going through the old one.
+
+  def termination(initState: S) = {
     val (cover, tree) = computeTree(initState)
     Logger("DBPTermination", LogNotice, "Extracting numerical abstraction from the cover.")
-    val program1 = makeIntegerProgram2(cover)
+    val program1 = makeIntegerProgram(cover)
     Logger("DBPTermination", LogNotice, "Extraction done. Simplifying ... ")
     val program2 = program1.simplifyForTermination
     //Logger("DBPTermination", LogNotice, "Merging candidates = " + ProgramHeuristics.counterMerging(program2)
     (cover, tree, program2)
   }
   
-  def termination1(initState: S) = {
-    val (cover, tree) = computeTree(initState)
-    Logger("DBPTermination", LogNotice, "Extracting numerical abstraction from the cover.")
-    val program1 = makeIntegerProgram(cover)
-    Logger("DBPTermination", LogNotice, "Extraction done. Simplifying ... ")
-    val program2 = ProgramHeuristics.simplifyMore(program1)
-    //Logger("DBPTermination", LogNotice, "Merging candidates = " + ProgramHeuristics.counterMerging(program2)
-    (cover, tree, program2)
-  }
-
-  def termination(s: S) = termination2(s)
 }
