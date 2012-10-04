@@ -413,36 +413,23 @@ object Transition2 extends PartialOrdering[Transition2] {
       }
      
       //-translate guards and updates to math.hol and make the query
-      val hyp = ssaed.head.guardOverPrePost
-      val hypF = ToMathAst(hyp)
-      val part1 = ssaed.head.updatesOverPrePost
-      val cstr = Application(And, ToMathAst(part1) :: ssaed.tail.map(t => ToMathAst(t.relationOverPrePost)).toList)
-      val query = Application(Implies, List(hypF, cstr))
+      val query = Application(And, ssaed.map(t => ToMathAst(t.relationOverPrePost)).toList)
      
       //-try to quantify away the intermediate variables
-      val univ = dicts.head.values.map(ToMathAst.variable).toSet
-      val exists = dicts.last.values.map(ToMathAst.variable).toSet
+      val existsPre = dicts.head.values.map(ToMathAst.variable).toSet
+      val existsPost = dicts.last.values.map(ToMathAst.variable).toSet
       val toEliminate = dicts.tail.init.flatMap(_.values).map(ToMathAst.variable)
       val f = Exists(toEliminate.toList, query)
-      LIA.qe(univ, exists, f) match {
+      LIA.qe(Set(), existsPre ++ existsPost, f) match {
         case Some(f2) =>
-          //remove the negated assumption that are part of f2 to keep only the new update cstr
-          val disj = collectDijs(f2)
-          //can we make thsi withoug quant alternation ? (divide by 2 the number of princess queries)
-          val valid = disj.filter(d => LIA.valid(univ, exists, Application(Implies, List(hypF, d)) ).getOrElse(true) )
-          val f3 =
-            if (valid.isEmpty) Logger.logAndThrow("model.integer", LogError, "compact, no valid disjunct")
-            else if (valid.size == 1) valid.head
-            else Application(Or, valid.toList)
-          //-back to model.integer.AST
-          val asCond = FromMathAst(f3)
+          val asCond = FromMathAst(f2)
           Logger("model.integer", LogDebug, "compact, QE returned: " + asCond)
           val t2 = new Transition2(
             trs.head.sourcePC,
             trs.last.targetPC,
             dicts.head,
             dicts.last,
-            picasso.model.integer.And(hyp, asCond),
+            asCond,
             trs.map(_.comment).mkString("; ")
           )
           Seq(t2)
