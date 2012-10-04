@@ -60,7 +60,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     val (_, map) = getPC(s)
     val concreteNodes = s.vertices.view.filter(_.depth == 0)
     val cnd = concreteNodes.map(n => Eq(getCardinality(map, n), Constant(1)))
-    (acc /: cnd)(And(_,_))
+    And(acc :: cnd.toList)
   }
 
   protected def coverOrFold(from: S, morph: Map[P#V, P#V], to: S): (String, String, Seq[Statement]) = {
@@ -251,7 +251,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
        }
     }
     //TODO make sure we catch everyone ...
-    val guard = (guardForConcreteNode(from) /: lowerBounds)(And(_,_))
+    val guard = And(guardForConcreteNode(from) :: lowerBounds.toList)
     val stmts = (stmts1.flatten ++ stmts2 ++ variance1 ++ variance2).toSeq
     new Transition(pc1, pc2, guard, stmts, "unfolding")
   }

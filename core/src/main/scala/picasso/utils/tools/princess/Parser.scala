@@ -19,8 +19,8 @@ object Parser extends StandardTokenParsers {
 
   protected def expression: Parser[Formula] = rep1sep(expression1, "<->") ^^ ( lst => lst.reduceLeft(makeEquiv) )
   protected def expression1: Parser[Formula] = rep1sep(expression2, "->") ^^ ( lst => lst.reduceRight( (a,b) => Application(Implies, List(a,b)) ) ) //TODO the grammar says it should be left assoc, but right assoc makes more sense ?
-  protected def expression2: Parser[Formula] = rep1sep(expression3, "|") ^^ ( lst => Application(Or, lst) )
-  protected def expression3: Parser[Formula] = rep1sep(expression4, "&") ^^ ( lst => Application(And, lst) )
+  protected def expression2: Parser[Formula] = rep1sep(expression3, "|") ^^ ( lst => if (lst.size == 1) lst.head else Application(Or, lst) )
+  protected def expression3: Parser[Formula] = rep1sep(expression4, "&") ^^ ( lst => if (lst.size == 1) lst.head else Application(And, lst) )
 
   protected def expression4: Parser[Formula] =
     ( "!" ~> expression4    ^^ ( e1 => Application(Not, List(e1)))

@@ -28,18 +28,18 @@ class Transition2(val sourcePC: String,
   //sanity checks
   Logger.assert(Condition.variables(relation).subsetOf(iVariables), "model.integer", "not closed: " + this)
   Logger.assert((iDomain intersect iRange).isEmpty, "model.integer", "internal variables conflict " + this)
-  Logger.assert(noDisj(relation), "model.integer", "contains disjunction: " + this)
+  Logger.assert(noDisj(relation), "model.integer", "contains disjunction: " + relation)
 
   private def noDisj(c: Condition): Boolean = c match {
-    case Or(_, _) => false
-    case And(l, r) => noDisj(l) && noDisj(r)
+    case Or(_) => false
+    case And(lst) => lst forall noDisj
     case Not(n) => noConj(n)
     case _ => true
   }
   
   private def noConj(c: Condition): Boolean = c match {
-    case And(_, _) => false
-    case Or(l, r) => noDisj(l) && noDisj(r)
+    case And(_) => false
+    case Or(lst) => lst forall noConj
     case Not(n) => noDisj(n)
     case _ => true
   }
@@ -83,14 +83,14 @@ class Transition2(val sourcePC: String,
   def guard: Condition = {
     val clauses = Condition.getTopLevelClauses(relation)
     val onlyPre = clauses.filter(c => Condition.variables(c) subsetOf iDomain)
-    val combined = ((Literal(true): Condition) /: onlyPre)(And(_, _))
+    val combined = And(onlyPre.toList)
     Condition.simplify(combined)
   }
 
   def updates: Condition = {
     val clauses = Condition.getTopLevelClauses(relation)
     val notOnlyPre = clauses.filter(c => !Condition.variables(c).subsetOf(iDomain))
-    val combined = ((Literal(true): Condition) /: notOnlyPre)(And(_, _))
+    val combined = And( notOnlyPre.toList)
     Condition.simplify(combined)
   }
   
@@ -181,23 +181,8 @@ class Transition2(val sourcePC: String,
     }
   }
 
-  protected def keepOnlyPre(v: Variable) = {
-    import picasso.math.hol._
-    import picasso.math.qe._
-    val vars = (iDomain - v).map(ToMathAst.variable)
-    val v2 = ToMathAst.variable(v)
-    val guardF = ToMathAst(guard)
-    val query = Exists(vars.toList, guardF)
-    LIA.qe(Set[Variable](), Set(v2), query) match {
-      case Some(f2) =>
-        val asCond = FromMathAst(f2)
-        Logger("model.interger", LogDebug, "Transition.keepOnlyPre, QE returned: " + asCond)
-        Some(asCond)
-      case None => None
-    }
-  }
-
   protected def checkIfConstant(c: Condition): Map[Variable, Int] = {
+    //TODO can we express the cst var a SMT/QE query ?
     val clauses = Condition.getTopLevelClauses(c).view
     val eqClauses = clauses.flatMap{ case eq @ Eq(_,_) => Some(eq) case _ => None }
     val singleVarClause = eqClauses.filter( c => Condition.variables(c).size == 1 )
@@ -229,25 +214,16 @@ class Transition2(val sourcePC: String,
 
   //variables that have a constsant value
   lazy protected val iConstantVariable: Map[Variable, Int] = {
-    //TODO can we express the cst var a SMT/QE query ?
-
     //for output it is about universally quantifying the input and QE
     val outputCst = quantifyAwayPreVars map checkIfConstant getOrElse Map[Variable, Int]()
-
     //for the input -> renaming and asking whether two version of the same var can be different ?
-    //TODO using call to prover (keepOnlyPre)
-    val inputCst = checkIfConstant(guard)
-
-    //to test for uniqueness of the value it can take:
-    //fresh iDomain -> for each v, isValid: guard /\ guard.alpha -> v = v.alpha
-    //to know that: eliminate all the others variable and look what is left ?
-
-    outputCst ++ inputCst
+    //val inputCst = checkIfConstant(guard)
+    outputCst// ++ inputCst
   }
 
   //returns the post vars that get a constant value
   def constantVariables: Map[Variable, Int] = {
-    val csts = iConstantVariable.filterKeys(iRange)
+    val csts = iConstantVariable//.filterKeys(iRange)
     val outCsts = csts.map{ case (v, c) => (toPost(v), c) }
     Logger("model.interger", LogDebug, "Transition.constantVariables: " + outCsts.mkString(", ") )
     outCsts
@@ -267,7 +243,7 @@ class Transition2(val sourcePC: String,
 
   def propagteOutputConstants(vars: Set[Variable]) = {
     val vars2 = vars.flatMap(postVars.get)
-    val csts = iConstantVariable.filterKeys(v => iRange(v) && vars2(v) )
+    val csts = iConstantVariable.filterKeys(v => /*iRange(v) &&*/ vars2(v) )
     Logger.assert( vars2 subsetOf csts.keySet, "model.integer", "propagting some non-contant terms")
     new Transition2(
       sourcePC,
@@ -305,8 +281,6 @@ class Transition2(val sourcePC: String,
   }
   
   //TODO prune assume, i.e. simplify the relation
-
-
 }
 
 
@@ -358,8 +332,9 @@ object Transition2 extends PartialOrdering[Transition2] {
     val preVars = t.readVariables.iterator.map( v => (v, Variable(Namer("X_")))).toMap
     val postVars = t.updatedVars.iterator.map( v => (v, Variable(Namer("X_")))).toMap
     val t2 = t.alphaPre(preVars).alphaPost(postVars)
+    val guards = Condition.getTopLevelClauses(t2.guard)
     val stmts = t2.updates.map(convertStmt)
-    val relation = Condition.simplify((t2.guard /: stmts)(And(_,_)))
+    val relation = Condition.simplify(And( (guards ++ stmts).toList ))
     val t3 = new Transition2(
       t2.sourcePC,
       t2.targetPC,
@@ -407,11 +382,6 @@ object Transition2 extends PartialOrdering[Transition2] {
       import picasso.math.hol._
       import picasso.math.qe._
      
-      def collectDijs(f: Formula): Seq[Formula] = f match {
-        case Application(Or, args) => args flatMap collectDijs
-        case other => Seq(other)
-      }
-     
       //-translate guards and updates to math.hol and make the query
       val query = Application(And, ssaed.map(t => ToMathAst(t.relationOverPrePost)).toList)
      
@@ -451,7 +421,7 @@ object Transition2 extends PartialOrdering[Transition2] {
       "not the same variables?\n" + pre.keySet.mkString(", ") + "\n" + post.keySet.mkString(", ") + "\n" + cycle.mkString("\n")
     )
     //compose the transitions
-    val composedRelation = ssaed.view.map(_.relationOverPrePost).reduceLeft(And(_,_))
+    val composedRelation = ssaed.view.map(_.relationOverPrePost).toList
 
     val allVars = dicts.flatMap(_.values).toSet.map(ToMathAst.variable)
     
@@ -459,7 +429,7 @@ object Transition2 extends PartialOrdering[Transition2] {
     def decrease(vars: Iterable[Variable]): Boolean = {
       val v1 = vars.map(v => pre(v): Expression).reduceLeft(Plus(_,_))
       val v2 = vars.map(v => post(v): Expression).reduceLeft(Plus(_,_))
-      val query = And(composedRelation, Leq(v1, v2))
+      val query = And( Leq(v1, v2) :: composedRelation)
       picasso.math.qe.LIA.valid(Set(), allVars, ToMathAst(query)) match {
         case Some(b) => b
         case None =>

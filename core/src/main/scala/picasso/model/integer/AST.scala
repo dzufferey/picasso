@@ -308,8 +308,8 @@ abstract class Condition
 case class Eq(l: Expression, r: Expression) extends Condition
 case class Lt(l: Expression, r: Expression) extends Condition
 case class Leq(l: Expression, r: Expression) extends Condition
-case class And(l: Condition, r: Condition) extends Condition
-case class Or(l: Condition, r: Condition) extends Condition
+case class And(lst: List[Condition]) extends Condition
+case class Or(lst: List[Condition]) extends Condition
 case class Not(c: Condition) extends Condition
 case class Literal(b: Boolean) extends Condition
 
@@ -317,8 +317,8 @@ object Condition {
 
   def priority(e: Condition): Int = e match {
     case Eq(_,_) | Lt(_,_) | Leq(_,_) => 30
-    case And(_,_) => 11
-    case Or(_,_) => 10
+    case And(_) => 11
+    case Or(_) => 10
     case Not(_) => 20
     case Literal(_) => 30
   }
@@ -332,8 +332,8 @@ object Condition {
     case Eq(l,r) =>  l + " == " + r
     case Lt(l,r) =>   l + " < " + r
     case Leq(l,r) =>  l + " <= " + r
-    case And(l,r) =>  needParenthesis(priority(e), l) + " && " + needParenthesis(priority(e), r)
-    case Or(l,r) =>  needParenthesis(priority(e), l) + " || " + needParenthesis(priority(e), r)
+    case And(lst) =>  lst.map(needParenthesis(priority(e), _)).mkString(" && ")
+    case Or(lst) =>  lst.map(needParenthesis(priority(e), _)).mkString(" || ")
     case Not(c) =>  "!" + needParenthesis(priority(e), c) 
     case Literal(b) => b.toString
   }
@@ -342,8 +342,8 @@ object Condition {
     case Eq(l,r) => Expression.variables(l) ++ Expression.variables(r)
     case Lt(l,r) => Expression.variables(l) ++ Expression.variables(r)
     case Leq(l,r) => Expression.variables(l) ++ Expression.variables(r)
-    case And(l,r) => variables(l) ++ variables(r)
-    case Or(l,r) => variables(l) ++ variables(r)
+    case And(lst) => (Set[Variable]() /: lst)(_ ++ variables(_))
+    case Or(lst) => (Set[Variable]() /: lst)(_ ++ variables(_))
     case Not(c) => variables(c)
     case Literal(_) => Set()
   }
@@ -353,14 +353,12 @@ object Condition {
       case e @ Eq(_,_) => if (negate) Not(e) else e
       case Lt(l,r) => if (negate) Leq(r,l) else Lt(l,r)
       case Leq(l,r) => if (negate) Lt(r,l) else Leq(l,r)
-      case And(l,r) =>
-        val l2 = process(l, negate)
-        val r2 = process(r, negate)
-        if (negate) Or(l2, r2) else And(l2, r2)
-      case Or(l,r) => 
-        val l2 = process(l, negate)
-        val r2 = process(r, negate)
-        if (negate) And(l2, r2) else Or(l2, r2)
+      case And(lst) =>
+        val lst2 = lst map (process(_, negate))
+        if (negate) Or(lst2) else And(lst2)
+      case Or(lst) => 
+        val lst2 = lst map (process(_, negate))
+        if (negate) And(lst2) else Or(lst2)
       case Not(c) => process(c, !negate)
       case Literal(b) => if (negate) Literal(!b) else Literal(b)
     }
@@ -375,26 +373,20 @@ object Condition {
     case e @ Leq(e1, e2) => if (e1 == e2) Literal(true) else e
     case e @ Lt(Constant(c1), Constant(c2)) => if (c1 < c2) Literal(true) else Literal(false)
     case e @ Lt(e1, e2) => if (e1 == e2) Literal(false) else e
-    case And(c1, c2) =>
-      val c1s = simplify(c1)
-      val c2s = simplify(c2)
-      (c1s, c2s) match {
-        case (Literal(true), c2s) => c2s
-        case (c1s, Literal(true)) => c1s
-        case (Literal(false), _) => Literal(false)
-        case (_, Literal(false)) => Literal(false)
-        case (c1s, c2s) => if (c1s == c2s) c1s else And(c1s, c2s)
-      }
-    case Or(c1, c2) =>
-      val c1s = simplify(c1)
-      val c2s = simplify(c2)
-      (c1s, c2s) match {
-        case (Literal(false), c2s) => c2s
-        case (c1s, Literal(false)) => c1s
-        case (Literal(true), _) => Literal(true)
-        case (_, Literal(true)) => Literal(true)
-        case (c1s, c2s) => if (c1s == c2s) c1s else Or(c1s, c2s)
-      }
+    case And(lst) =>
+      val lst2 = lst.view.map(simplify)
+      val lst3 = lst2 flatMap getTopLevelClauses
+      val lst4 = lst3 filterNot (_ == Literal(true))
+      if (lst4.isEmpty) Literal(true)
+      else if (lst4 contains Literal(false)) Literal(false)
+      else And(lst4.toList) //TODO remove duplicates ?
+    case Or(lst) =>
+      val lst2 = lst.view.map(simplify)
+      val lst3 = lst2 flatMap getTopLevelDisj
+      val lst4 = lst3 filterNot (_ == Literal(false))
+      if (lst4.isEmpty) Literal(false)
+      else if (lst4 contains Literal(true)) Literal(true)
+      else Or(lst4.toList) //TODO remove duplicates ?
     case Not(c1) =>
       nnf(Not(simplify(c1)))
   }
@@ -404,14 +396,19 @@ object Condition {
     case Eq(l,r) => Eq(Expression.alpha(l, subst), Expression.alpha(r, subst))
     case Lt(l,r) => Lt(Expression.alpha(l, subst), Expression.alpha(r, subst))
     case Leq(l,r) => Leq(Expression.alpha(l, subst), Expression.alpha(r, subst))
-    case And(l,r) => And(alpha(l, subst), alpha(r, subst))
-    case Or(l,r) => Or(alpha(l, subst), alpha(r, subst))
+    case And(lst) => And(lst.map(alpha(_, subst)))
+    case Or(lst) => Or(lst.map(alpha(_, subst)))
     case Not(c) => Not(alpha(c, subst))
     case l @ Literal(_) => l
   }
 
   def getTopLevelClauses(c: Condition): Seq[Condition] = c match {
-    case And(c1, c2) => getTopLevelClauses(c1) ++ getTopLevelClauses(c2)
+    case And(lst) => lst flatMap getTopLevelClauses
+    case other => Seq(other)
+  }
+  
+  def getTopLevelDisj(c: Condition): Seq[Condition] = c match {
+    case Or(lst) => lst flatMap getTopLevelDisj
     case other => Seq(other)
   }
 
@@ -421,7 +418,7 @@ object Condition {
       case Eq(Constant(c), v @ Variable(_)) => Seq(v -> c)
       case Leq(Constant(c), v @ Variable(_)) => Seq(v -> c)
       case Lt(Constant(c), v @ Variable(_)) => Seq(v -> (c+1))
-      case And(c1, c2) => process(c1) ++ process(c2)
+      case And(lst) => lst flatMap process
       case _ => Seq()
     }
     (Map[Variable, Int]() /: process(guard))( (acc, lb) => {
@@ -436,7 +433,7 @@ object Condition {
       case Eq(Constant(c), v @ Variable(_)) => Seq(v -> c)
       case Leq(v @ Variable(_), Constant(c)) => Seq(v -> c)
       case Lt(v @ Variable(_), Constant(c)) => Seq(v -> (c-1))
-      case And(c1, c2) => process(c1) ++ process(c2)
+      case And(lst) => lst flatMap process
       case _ => Seq()
     }
     (Map[Variable, Int]() /: process(guard))( (acc, lb) => {

@@ -153,14 +153,8 @@ class Transition(val sourcePC: String,
     }
   }
 
-  protected def mergeInCondition(group: Set[Variable], newVar: Variable, c: Condition): Condition = c match {
-    case Eq(l,r) => Eq(mergeInExpression(group, newVar, l), mergeInExpression(group, newVar, r))
-    case Lt(l,r) => Lt(mergeInExpression(group, newVar, l), mergeInExpression(group, newVar, r))
-    case Leq(l,r) => Leq(mergeInExpression(group, newVar, l), mergeInExpression(group, newVar, r))
-    case And(l,r) => And(mergeInCondition(group, newVar, l), mergeInCondition(group, newVar, r))
-    case Or(l,r) => Or(mergeInCondition(group, newVar, l), mergeInCondition(group, newVar, r))
-    case Not(c) => Not(mergeInCondition(group, newVar, c))
-    case l @ Literal(_) => l
+  protected def mergeInCondition(group: Set[Variable], newVar: Variable, c: Condition): Condition = {
+    sys.error("deprecated")
   }
   
 
@@ -420,8 +414,8 @@ class Transition(val sourcePC: String,
       case Eq(e1, e2) => canProve(Leq(e1, e2)) && canProve(Leq(e2, e1))
       case Leq(e1, e2) => canProveExpr(e1, e2, false)
       case Lt(e1, e2) => canProveExpr(e1, e2, true)
-      case And(c1, c2) => canProve(c1) && canProve(c2)
-      case Or(c1, c2) => canProve(c1) || canProve(c2)
+      case And(lst) => lst forall canProve
+      case Or(lst) => lst exists canProve
       case _ => false
     }
     val updates2 = updates.map( s => s match {
@@ -473,24 +467,7 @@ class Transition(val sourcePC: String,
 
   //try structural equality
   def same(that: Transition): Boolean = {
-    def sameGuard(c1: Condition, c2: Condition): Boolean = (c1, c2) match {
-      case (Eq(l1,r1), Eq(l2, r2)) => (l1 == l2 && r1 == r2) || (l1 == r2 && r1 == l2)
-      case (Lt(l1,r1), Lt(l2,r2)) => l1 == l2 && r1 == r2
-      case (Leq(l1,r1), Leq(l2,r2)) => l1 == l2 && r1 == r2
-      case (And(l1,r1), And(l2,r2))=> (sameGuard(l1,l2) && sameGuard(r1,r2)) || (sameGuard(l1,r2) && sameGuard(r1,l2))
-      case (Or(l1,r1), Or(l2,r2)) =>  (sameGuard(l1,l2) && sameGuard(r1,r2)) || (sameGuard(l1,r2) && sameGuard(r1,l2))
-      case (Not(c1), Not(c2)) => sameGuard(c1,c2)
-      case (Literal(b1), Literal(b2)) => b1 == b2
-      case _ => false
-    }
-    def sameUpdates(u1: Seq[Statement], u2: Seq[Statement]): Boolean = {
-      u1.forall(s1 => u2 exists (s2 => s1 == s2)) &&
-      u2.forall(s2 => u1 exists (s1 => s1 == s2))
-    }
-    sourcePC == that.sourcePC &&
-    targetPC == that.targetPC &&
-    sameGuard(guard, that.guard) &&
-    sameUpdates(updates, that.updates)
+    sys.error("deprecated")
   }
 
 
@@ -506,23 +483,7 @@ object Transition {
   }
 
   private def compactLeft(tr1: Transition, tr2: Transition): Transition = {
-    assert(tr1.targetPC == tr2.sourcePC, "tr1, tr2 are not connected")
-    assert(tr1.sourcePC != tr1.targetPC && tr2.sourcePC != tr2.targetPC, "removing self loop")
-    val updatesMap = tr1.updates.flatMap( s => s match {
-      case Affect(v, e) => Some(v -> e)
-      case Skip => None
-      case other => Logger.logAndThrow("integer.Transition", LogError, "not compactable: " + other)
-    }).toMap
-    val newTr2 = tr2.alphaPre(updatesMap)
-    val frame2 = updatesMap -- newTr2.updatedVars //things to add to the second trs
-    val resultGuard = And(tr1.guard, newTr2.guard)
-    val resultUpdates = newTr2.updates ++ frame2.map{ case (v, e) => Affect(v, e) }
-    //println("compactLeft:" +
-    //        tr1.updates.filter(_ != Skip).mkString("\n","\n","\n---------") +
-    //        tr2.updates.filter(_ != Skip).mkString("\n","\n","\n---------") +
-    //        resultUpdates.filter(_ != Skip).mkString("\n","\n","\n========="))
-    val res = new Transition(tr1.sourcePC, tr2.targetPC, resultGuard, resultUpdates, tr1.comment + "; " + tr2.comment)
-    res.leaner
+    sys.error("deprecated")
   }
   
   //try to remove intermediate state (substitution / constrains propagation) while preserving the termination
@@ -654,22 +615,7 @@ object TransitionHeuristics {
   }
 
   def removeSinks(t: Transition, sinks: Set[Variable]): Transition = {
-    def removeInCond(c: Condition, pos: Boolean = true): Condition = c match {
-      case Eq(l,r) => if ((Expression.variables(l) ++ Expression.variables(r)) exists sinks) Literal(pos) else c
-      case Lt(l,r) => if ((Expression.variables(l) ++ Expression.variables(r)) exists sinks) Literal(pos) else c
-      case Leq(l,r) => if ((Expression.variables(l) ++ Expression.variables(r)) exists sinks) Literal(pos) else c
-      case And(l,r) => And(removeInCond(l, pos), removeInCond(r, pos))
-      case Or(l,r) => Or(removeInCond(l, pos), removeInCond(r, pos))
-      case Not(c) => Not(removeInCond(c, !pos))
-      case Literal(b) => Literal(b)
-    }
-    def removeInStmt(stmt: Statement): Statement = stmt match {
-      case Relation(_new, _old) if (Expression.variables(_new) ++ Expression.variables(_old)) exists sinks => Skip
-      case Variance(_new, _old, _, _) if (sinks(_new) || sinks(_old)) => Skip
-      case Assume(c) => Assume(removeInCond(c))
-      case other => other
-    }
-    new Transition(t.sourcePC, t.targetPC, removeInCond(t.guard), t.updates map removeInStmt, t.comment)
+    sys.error("deprecated")
   }
 
   def transitionPredicates(cycle: Seq[Transition]): Iterable[Set[Variable]] = {

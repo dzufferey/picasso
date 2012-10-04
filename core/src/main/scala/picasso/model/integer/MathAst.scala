@@ -51,8 +51,8 @@ object ToMathAst {
     case Eq(l,r) => hol.Application(hol.Eq, List(apply(l), apply(r)))
     case Lt(l,r) => hol.Application(hol.Lt, List(apply(l), apply(r)))
     case Leq(l,r) => hol.Application(hol.Leq, List(apply(l), apply(r)))
-    case And(l,r) => hol.Application(hol.And, List(apply(l), apply(r)))
-    case Or(l,r) => hol.Application(hol.Or, List(apply(l), apply(r)))
+    case And(lst) => hol.Application(hol.And, lst map apply)
+    case Or(lst) => hol.Application(hol.Or, lst map apply)
     case Not(c) => hol.Application(hol.Not, List(apply(c)))
     case Literal(l) => hol.Literal(l).setType(hol.Bool)
   }
@@ -99,8 +99,8 @@ object FromMathAst {
   def apply(f: hol.Formula): Condition = f match {
     case hol.Application(fct, args) =>
       fct match {
-        case hol.And => (args.iterator map apply).reduceLeft(And(_, _))
-        case hol.Or =>  (args.iterator map apply).reduceLeft(Or(_, _))
+        case hol.And => And((args.iterator map apply).toList)
+        case hol.Or =>  Or(args.iterator.map(apply).toList)
         case hol.Not => 
           Logger.assert( args.size == 1, "integer.MathAst",
             "FromMathAst, Not with " + args )
@@ -108,7 +108,7 @@ object FromMathAst {
         case hol.Implies => 
           Logger.assert( args.size == 2, "integer.MathAst",
             "FromMathAst, Implies with " + args )
-          Or(Not(apply(args(0))), apply(args(1)))
+          Or(List(Not(apply(args(0))), apply(args(1))))
 
         case hol.Eq =>
           Logger.assert( args.size == 2, "integer.MathAst",

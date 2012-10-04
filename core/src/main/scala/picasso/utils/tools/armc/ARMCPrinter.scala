@@ -176,12 +176,12 @@ object ARMCPrinter extends PrologLikePrinter {
   
   protected def r(t: Transition2, idx: Int, vars: Seq[Variable])(implicit writer: BufferedWriter) {
     val vars2 = vars map primeVar
-    val frame = vars.filterNot( t.range(_) )
+    val frame = vars.filterNot( t.range(_) ).toList
     val additionalCstr = frame.map(v => Eq(v, primeVar(v)))
     val pre = vars.iterator.map( v => (v,v) ).toMap
     val post = vars.iterator.map( v => (v,primeVar(v)) ).toMap
     val subst = t.substForRelation(pre, post)
-    val relation = (Condition.alpha(t.relation, subst) /: additionalCstr)(And(_,_))
+    val relation = And(Condition.alpha(t.relation, subst) :: additionalCstr)
     writer.write("% " + t.comment); writer.newLine
     writer.write("r(  ")
     loc(t.sourcePC, vars)
