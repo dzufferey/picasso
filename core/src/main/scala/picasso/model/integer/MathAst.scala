@@ -23,9 +23,6 @@ object ToMathAst {
       "integer.MathAst", "apply works only on SSA."
     )
     s match {
-      case Transient(v) =>
-        Logger("integer.MathAst", LogWarning, "found Transient: " + v)
-        hol.Literal(true).setType(hol.Int)
       case Skip =>
         hol.Literal(true).setType(hol.Int)
 

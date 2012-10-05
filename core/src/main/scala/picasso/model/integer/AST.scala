@@ -165,7 +165,6 @@ object Expression {
 
 //TODO the new vs old variable convention needs to be made cleaner ...
 sealed abstract class Statement 
-case class Transient(v: Variable) extends Statement //declare a local variable (used only in the initialization)
 case class Relation(_new: Expression, _old: Expression) extends Statement //eqality between an expr on new variables and an expr on old variables
 case class Variance(_new: Variable, _old: Variable, greater: Boolean = true, strict: Boolean = false) extends Statement //When a variable change and we need to force a 'direction' (used in the unfolding)
 case object Skip extends Statement
@@ -188,11 +187,6 @@ object Statement {
     case _ => Set()
   }
 
-  def getTransientVariables(s: Statement): Set[Variable] = s match {
-    case Transient(v) => Set(v)
-    case _ => Set()
-  }
-
   def getUpdatedVars(s: Statement): Set[Variable] = s match {
     case Relation(n, _) => Expression.variables(n)
     case Assume(c) => Condition.variables(c)
@@ -207,7 +201,6 @@ object Statement {
   }
 
   def print(s: Statement): String = s match {
-    case Transient(v) => "transient("+v.name+")"
     case Relation(_new, _old) => Expression.print(_new) + "=" + Expression.print(_old)
     case Skip => "skip"
     case Assume(c) => "assume("+Condition.print(c)+")"
@@ -217,7 +210,6 @@ object Statement {
   def alpha(s: Statement, subst: Map[Variable, Expression]): Statement = s match {
     case Relation(n, o) => Relation(Expression.alpha(n, subst), Expression.alpha(o, subst))
     case Assume(c) => Assume(Condition.alpha(c, subst))
-    case tr @ Transient(t) => assert(!subst.contains(t)); tr
     case vr @ Variance(v1, v2, geq, strict) =>
       if (subst.contains(v1)) {
         subst(v1) match {
@@ -250,7 +242,6 @@ object Statement {
 
   def alphaPre(s: Statement, subst: Map[Variable, Expression]): Statement = s match {
     case Relation(n, o) => Relation(n, Expression.alpha(o, subst))
-    case tr @ Transient(t) => assert(!subst.contains(t)); tr
     case vr @ Variance(v3, v, geq, strict) =>
       if (subst.contains(v)) {
         subst(v) match {
@@ -271,7 +262,6 @@ object Statement {
   def alphaPost(s: Statement, subst: Map[Variable, Expression]): Statement = s match {
     case Relation(n, o) => Relation(Expression.alpha(n, subst), o)
     case Assume(c) => Assume(Condition.alpha(c, subst))
-    case tr @ Transient(t) => assert(!subst.contains(t)); tr
     case vr @ Variance(v, v2, geq, strict) =>
       if (subst.contains(v)) {
         subst(v) match {

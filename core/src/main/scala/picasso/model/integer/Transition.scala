@@ -27,8 +27,7 @@ class Transition(val sourcePC: String,
 
   def variables: Set[Variable] = {
     val updatesAll = (Set[Variable]() /: updates)(_ ++ Statement.getAllVariables(_))
-    val updatesTransient = (Set[Variable]() /: updates)(_ ++ Statement.getTransientVariables(_))
-    Condition.variables(guard) ++ updatesAll -- updatesTransient
+    Condition.variables(guard) ++ updatesAll
   }
 
   /** the variables of this transition as a fixed sequence.
@@ -36,10 +35,6 @@ class Transition(val sourcePC: String,
   lazy val sequencedVariable: Seq[Variable] = variables.toSeq
 
   def guardVariables = Condition.variables(guard)
-
-  def transientVariables: Set[Variable] = {
-    (Set[Variable]() /: updates)(_ ++ Statement.getTransientVariables(_))
-  }
 
   def allVariables: Set[Variable] = {
     val updatesAll = (Set[Variable]() /: updates)(_ ++ Statement.getAllVariables(_))
@@ -49,15 +44,11 @@ class Transition(val sourcePC: String,
   lazy val sequencedAllVariables = allVariables.toSeq
 
   def updatedVars: Set[Variable] = {
-    val updated = (Set[Variable]() /: updates)(_ ++ Statement.getUpdatedVars(_))
-    val transient = (Set[Variable]() /: updates)(_ ++ Statement.getTransientVariables(_))
-    updated -- transient
+    (Set[Variable]() /: updates)(_ ++ Statement.getUpdatedVars(_))
   }
 
   def readInUpdates: Set[Variable] = {
-    val read = (Set[Variable]() /: updates)(_ ++ Statement.getReadVariables(_))
-    val transient = (Set[Variable]() /: updates)(_ ++ Statement.getTransientVariables(_))
-    read -- transient
+    (Set[Variable]() /: updates)(_ ++ Statement.getReadVariables(_))
   }
   
   def readVariables: Set[Variable] = {

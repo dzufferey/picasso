@@ -18,9 +18,9 @@ post
   (p, push1) -> (w, _) [H]
 ==>
   p -> p
-  w -> w
   s -> s
 <==
+  w -> w
 
 
 // ****************************************************************
@@ -36,9 +36,9 @@ post
   (s, stack) -> (w, _) [A]
 ==>
   x -> x
-  w -> w
   s -> s
 <==
+  w -> w
 
 transition "push fail"
 pre
@@ -53,9 +53,9 @@ post
 ==>
   x -> x
   p -> p
-  w1 -> w1
   s -> s
 <==
+  w1 -> w1
 
 // ****************************************************************
 // POP
@@ -71,9 +71,9 @@ post
   (p, pop1) -> (w, _) [H]
 ==>
   p -> p
-  w -> w
   s -> s
 <==
+  w -> w
 
 
 
@@ -87,9 +87,9 @@ post
   (s, stack) -> (w1, _) [H]  
 ==>
   p -> p
-  w1 -> w1
   s -> s
 <==
+  w1 -> w1
 
 
 transition "pop success"
@@ -103,10 +103,10 @@ post
   (s, stack) -> (e, emp) [A]
   (s, stack) -> (w2, _) [H]
 ==>
-  w2 -> w2
   s -> s
   e -> e
 <==
+  w2 -> w2
 
 
 transition "pop success2"

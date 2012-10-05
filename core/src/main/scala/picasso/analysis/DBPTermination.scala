@@ -310,11 +310,11 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
 
   protected val emptyConf = DepthBoundedConf.empty[P]
 
-  protected def initialize(init: S, allVariables: Set[Variable]): Transition2 = {
+  protected def initialize(init: S): Transition2 = {
     val (pc0, _) = getPC(emptyConf)
     val (pc1, map1) = getPC(init)
     //the inital transition is similar to the widening transitions ... 
-    val stmts1 = for (node <- init.vertices) yield {
+    val stmts = for (node <- init.vertices) yield {
        getCardinality(map1, node) match {
          case v @ Variable(_) =>
            if (node.depth == 0) Affect(v, Constant(1))
@@ -323,10 +323,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        }
     }
-    val zeroVars = allVariables -- map1.values
-    val stmts2 = for (v <- zeroVars) yield Affect(v, Constant(0))
-    val stmts = (stmts1 ++ stmts2).toSeq
-    Transition2(new Transition(pc0, pc1, Literal(true), stmts, "initialize"))
+    Transition2(new Transition(pc0, pc1, Literal(true), stmts.toSeq, "initialize"))
   }
 
   protected def transitionForWitness(witness: TransitionWitness[P]): Seq[Transition] = {
@@ -392,7 +389,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     val tg = TransitionsGraphFromCover(this, cover)
     val trs = makeTransitions(tg)
     val variables = (Set[Variable]() /: trs)(_ ++ _.variables)
-    val initials = for (init <- cover.basis.toSeq.par) yield initialize(init, variables)
+    val initials = for (init <- cover.basis.toSeq.par) yield initialize(init)
     val initState = initials.head.sourcePC
     new Program2(initState, (initials ++ trs): ParSeq[Transition2] )
   }

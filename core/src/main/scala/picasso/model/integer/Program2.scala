@@ -63,6 +63,9 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
     Logger("integer.Program", LogInfo, "merging variables.")
     val p3 = p2.reduceNumberOfVariables
     Logger("integer.Program", LogDebug, writer => p3.printForARMCnoPreds(writer) )
+    //this.infos
+    //p2.infos
+    //p3.infos
     Logger("integer.Program", LogInfo, "compacting transitions.")
     val p4 = p3.compactPath
     Logger("integer.Program", LogDebug, writer => p4.printForARMCnoPreds(writer) )
@@ -80,12 +83,8 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
    *  not in the map means we don't know
    */
   def constantValueMap: Map[String,Map[Variable,Option[Int]]] = {
-    //TODO variables by location
 
-    def default(s: String) = {
-      if (s == initPC) Map[Variable,Option[Int]]( variables.toSeq.map( _ -> None) :_* )
-      else Map[Variable,Option[Int]]()
-    }
+    def default(s: String) = Map[Variable,Option[Int]]()
 
     def transfer(cstMap: Map[Variable,Option[Int]], t: Transition2): Map[Variable,Option[Int]] = {
       val csts = cstMap.flatMap{ case (v,c) => c.map( v -> _ ) }
@@ -138,6 +137,8 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
   }
 
   def reduceNumberOfVariables = {
+    //TODO this creates unused and unconstrained variables
+    //TODO for some reason, i does no decrease the number of variables ...
     val varsByLocButInit = varsByLoc - initialPC
     Logger("model.integer", LogDebug, "varsByLocButInit ->\n  " + varsByLocButInit.mkString("\n  "))
     //make the conflicts graph with varsByLoc
@@ -230,6 +231,34 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
 //  //try to track what is going where ...
 //  sys.error("TODO")
 //}
+
+  protected def transfers: DiGraph[GT.ULGT{type V = Variable}] = {
+    val base = DiGraph.empty[GT.ULGT{type V = Variable}].addVertices(variables)
+    val edges = for (t <- trs; (v1, vs) <- t.coneOfInfluence; v2 <- vs) yield (v1, (), v2)
+    base ++ edges.seq
+  }
+
+  protected def infos {
+    val lvl = LogInfo
+    Logger("integer.Program", lvl, "#variables = " + variables.size )
+    Logger("integer.Program", lvl, "#transitions = " + transitions.size )
+    Logger("integer.Program", lvl, transfers.toGraphviz("transfers"))
+    for(t <- transitions) {
+      val frame = variables -- t.variables
+      val unused = t.unusedVariable
+      val unconstrained = t.unconstrainedVariables
+      Logger(
+        "integer.Program", lvl,
+        "from " + t.sourcePC + " to " + t.targetPC + ": " + t.comment + "\n" +
+        "frame: " + frame.mkString(", ") + "\n" +
+        "domain: " + t.domain.mkString(", ") + "\n" +
+        "range: " + t.range.mkString(", ") + "\n" +
+        "unused: " + unused.mkString(", ") + "\n" +
+        "unconstrained: " + unconstrained.mkString(", ")
+      )
+    }
+    //Logger("integer.Program", lvl, writer => printForARMCnoPreds(writer) )
+  }
   
   def candidateRankingFcts: Iterable[Set[Variable]] = {
     val cyclesIterator = cfa.enumerateSomeCycles

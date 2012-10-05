@@ -268,6 +268,7 @@ class Transition2(val sourcePC: String,
     iConeOfInfluence.map{ case (k,vs) => (toPre(k), vs.map(toPost)) }
   }
   
+  /*
   protected def iVariablesBounds(pre: Map[Variable,(Option[Int],Option[Int])]): Map[Variable,(Option[Int],Option[Int])] = {
     //TODO how to substitute lower/higher to get correct bounds ?
     //we could use an ILP solver to minimize/maximize ?
@@ -279,8 +280,18 @@ class Transition2(val sourcePC: String,
     val bounds = iVariablesBounds(pre2)
     bounds.map{ case (a, b) => (toPost(a), b) }
   }
+  */
   
   //TODO prune assume, i.e. simplify the relation
+
+  def unusedVariable: Set[Variable] = {
+    (iDomain -- Condition.variables(relation)) map toPre
+  }
+
+  def unconstrainedVariables: Set[Variable] = {
+    (iRange -- Condition.variables(relation)) map toPost
+  }
+
 }
 
 
@@ -318,7 +329,6 @@ object Transition2 extends PartialOrdering[Transition2] {
   }
 
   protected def convertStmt(s: Statement): Condition = s match {
-    case Transient(v) => Logger.logAndThrow("model.integer", LogError, "convertStmt -> found Transient -> TODO \\exists " + v.name)
     case Relation(_new, _old) => Eq(_new, _old)
     case Skip => Literal(true)
     case Assume(c) => c
