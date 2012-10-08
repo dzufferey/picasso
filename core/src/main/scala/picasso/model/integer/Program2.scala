@@ -147,7 +147,7 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
       val edges = for (x <- grp; y <- grp if x != y) yield (x, (), y)
       acc ++ edges
     })
-    //use the tranitions to compute the affinity: sum of variables CoI
+    //use the tranitions to compute the affinity: sum of variables CoI + name likenes
     val varToIdx = variables.toSeq.zipWithIndex.toMap
     val affinityArray = Array.ofDim[Int](variables.size, variables.size)
     for(t <- trs;
@@ -156,10 +156,13 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
       affinityArray(varToIdx(v1))(varToIdx(v2)) += 1
       affinityArray(varToIdx(v2))(varToIdx(v1)) += 1
     }
-    def affinity(v1: Variable, v2: Variable) = affinityArray(varToIdx(v1))(varToIdx(v2))
-    //def affinity(v1: Variable, v2: Variable): Int = Misc.commonPrefix(v1.name, v2.name)
+    def affinity(v1: Variable, v2: Variable) = {
+      affinityArray(varToIdx(v1))(varToIdx(v2)) +
+      Misc.commonPrefix(v1.name, v2.name)
+    }
     //small coloring of conflict graph
     val largeClique = varsByLocButInit.values.maxBy(_.size)
+    Logger("integer.Program", LogDebug, "reduceNumberOfVariables: largeClique has size = " + largeClique.size )
     val coloring = conflicts.smallColoring(affinity, largeClique)
     Logger("model.integer", LogDebug, "coloring ->\n  " + coloring.mkString("\n  "))
     //rename variables
