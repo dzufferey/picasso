@@ -43,6 +43,7 @@ object ARMCPrinter extends PrologLikePrinter {
   }
 
   protected def transPreds(vars: Seq[Variable], prog: Program2)(implicit writer: BufferedWriter) {
+    //TODO namedTPreds
     val vars2 = vars map primeVar
     writer.write("trans_preds(")
     writer.newLine
@@ -55,16 +56,37 @@ object ARMCPrinter extends PrologLikePrinter {
     writer.write(",  ")
     writer.newLine
     writer.write("  [")
-    val preds = prog.candidateRankingFcts
-    val predsStr = preds.iterator.flatMap( varSet => {
-      val sum1 = varSet.reduceLeft[Expression](Plus(_,_))
-      val sum2 = varSet.map(primeVar).reduceLeft[Expression](Plus(_,_))
-      val c1 = printCondition( Lt(sum2, sum1) )
-      val c2 = printCondition( Eq(sum2, sum1) )
-      Seq(c1, c2)
-    } )
-    val varBoundsStr = preds.flatten.toSet[Variable].map( v => printCondition( Leq(Constant(0), primeVar(v)) ) )
-    writer.write((predsStr ++ varBoundsStr).mkString(" ",",\n    ","\n"))
+    //automatically generated preds
+    val genreatedPreds =
+      if (Config.makeTPreds) {
+        val preds = prog.candidateRankingFcts
+        preds.iterator.flatMap( varSet => {
+          val sum1 = varSet.reduceLeft[Expression](Plus(_,_))
+          val sum2 = varSet.map(primeVar).reduceLeft[Expression](Plus(_,_))
+          val c1 = printCondition( Lt(sum2, sum1) )
+          val c2 = printCondition( Eq(sum2, sum1) )
+          Seq(c1, c2)
+        } )
+      } else {
+        Nil.iterator
+      }
+    //preds given by user
+    val namedPreds = 
+      Config.namedTPreds.iterator.flatMap( prefixes => {
+        val needed = vars.filter(v => prefixes exists v.name.startsWith)
+        if (!needed.isEmpty) {
+          val sum1 = needed.reduceLeft[Expression](Plus(_,_))
+          val sum2 = needed.map(primeVar).reduceLeft[Expression](Plus(_,_))
+          val c1 = printCondition( Lt(sum2, sum1) )
+          val c2 = printCondition( Eq(sum2, sum1) )
+          Seq(c1, c2)
+        } else Nil
+      })
+    //generic TPreds about individual variables
+    val varPreds = vars.iterator.flatMap( v => Seq(printCondition( Leq(Constant(0), primeVar(v)) ),printCondition( Lt(primeVar(v), v) ), printCondition( Eq(primeVar(v), v) )))
+    //all preds
+    val allPreds = genreatedPreds ++ namedPreds ++ varPreds
+    writer.write(allPreds.mkString(" ",",\n    ","\n"))
     writer.write("  ]).")
     writer.newLine
   }
@@ -98,7 +120,8 @@ object ARMCPrinter extends PrologLikePrinter {
   protected def r(t: Transition2, idx: Int, vars: Seq[Variable])(implicit writer: BufferedWriter) {
     val vars2 = vars map primeVar
     val frame = vars.filterNot( t.range(_) ).toList
-    val additionalCstr = frame.map(v => Eq(v, primeVar(v)))
+    //val additionalCstr = frame.map(v => Eq(v, primeVar(v)))
+    val additionalCstr = frame.map(v => Eq(primeVar(v), Constant(0) ))
     val pre = vars.iterator.map( v => (v,v) ).toMap
     val post = vars.iterator.map( v => (v,primeVar(v)) ).toMap
     val subst = t.substForRelation(pre, post)

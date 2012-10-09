@@ -57,8 +57,11 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
   def simplifyForTermination = {
     Logger("integer.Program", LogDebug, "unsimplified program:")
     Logger("integer.Program", LogDebug, writer => printForARMCnoPreds(writer) )
+    Logger("integer.Program", LogInfo, "eliminating variables: " + Config.eliminateVar.mkString(", "))
+    val p1 = this.eliminateVariables(Config.eliminateVar)
+    Logger("integer.Program", LogDebug, writer => p1.printForARMCnoPreds(writer) )
     Logger("integer.Program", LogInfo, "propagating constants.")
-    val p2 = this.propagateCst
+    val p2 = p1.propagateCst
     Logger("integer.Program", LogDebug, writer => p2.printForARMCnoPreds(writer) )
     Logger("integer.Program", LogInfo, "merging variables.")
     val p3 = p2.reduceNumberOfVariables
@@ -74,6 +77,16 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
     Logger("integer.Program", LogDebug, writer => p5.printForARMCnoPreds(writer) )
     p5
     //TODO sinks, ...
+  }
+  def eliminateVariables(prefixes: Iterable[String]) = {
+    if (prefixes.isEmpty) {
+      this
+    } else {
+      val trs2 = trs.map(_.eliminateVariables(prefixes))
+      val p2 = new Program2(initialPC, trs2)
+      Logger("integer.Program", LogInfo, "eliminateVariables: #variables before = " + variables.size + ", after = " + p2.variables.size)
+      p2
+    }
   }
 
   /** Returns a map of which variable has a cst value at some location

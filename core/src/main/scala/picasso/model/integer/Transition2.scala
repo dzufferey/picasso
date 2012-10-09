@@ -267,6 +267,32 @@ class Transition2(val sourcePC: String,
   def coneOfInfluence: Map[Variable,Set[Variable]] = {
     iConeOfInfluence.map{ case (k,vs) => (toPre(k), vs.map(toPost)) }
   }
+
+  def eliminateVariables(prefixes: Iterable[String]) = {
+    val (toElim, toKeep) = variables.partition(v => prefixes exists v.name.startsWith)
+    val iToElim = toElim.flatMap( v => List(preVars.get(v), postVars.get(v)).flatten)
+    val iToKeep = toKeep.flatMap( v => List(preVars.get(v), postVars.get(v)).flatten)
+    import picasso.math.hol._
+    import picasso.math.qe._
+    val query = ToMathAst(relation)
+    val f = Exists(iToElim.map(ToMathAst.variable).toList, query)
+    LIA.qe(Set(), iToKeep.map(ToMathAst.variable), f) match {
+      case Some(f2) =>
+        val asCond = FromMathAst(f2)
+        Logger("model.integer", LogDebug, "eliminateVar, QE returned: " + asCond)
+        val t2 = new Transition2(
+          sourcePC,
+          targetPC,
+          preVars -- toElim,
+          postVars -- toElim,
+          asCond,
+          comment
+        )
+        t2
+      case None =>
+        this
+    }
+  }
   
   /*
   protected def iVariablesBounds(pre: Map[Variable,(Option[Int],Option[Int])]): Map[Variable,(Option[Int],Option[Int])] = {
