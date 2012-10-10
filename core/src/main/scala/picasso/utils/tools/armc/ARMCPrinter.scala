@@ -83,7 +83,7 @@ object ARMCPrinter extends PrologLikePrinter {
         } else Nil
       })
     //generic TPreds about individual variables
-    val varPreds = vars.iterator.flatMap( v => Seq(printCondition( Leq(Constant(0), primeVar(v)) ),printCondition( Lt(primeVar(v), v) ), printCondition( Eq(primeVar(v), v) )))
+    val varPreds = vars.iterator.flatMap( v => Seq( Eq(Constant(0), primeVar(v)), Leq(Constant(0), primeVar(v)), Lt(primeVar(v), v), Eq(primeVar(v), v) ) map printCondition)
     //all preds
     val allPreds = genreatedPreds ++ namedPreds ++ varPreds
     writer.write(allPreds.mkString(" ",",\n    ","\n"))
