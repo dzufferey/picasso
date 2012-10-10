@@ -64,6 +64,9 @@ class Solver(th: Theory, cmd: String, options: Iterable[String], implicitDeclara
   def exit = {
     toSolver("(exit)")
     solver.waitFor
+    solverInput.close
+    solverOutput.close
+    solverError.close
   }
   
   def declare(t: Type) = t match {
