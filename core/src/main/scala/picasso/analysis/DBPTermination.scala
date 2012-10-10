@@ -27,8 +27,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
   //TODO move to Transition2/Program2
 
   protected def variablesForNodes(conf: S): Map[P#V, Variable] = {
-    val nodes = conf.vertices.toSeq
-    val needed = if (Config.noCC) nodes.filter(_.depth > 0) else nodes
+    val needed = conf.vertices.toSeq
     val pairs = needed.map( x => (x -> Variable(Namer(x.state.toString))))
     pairs.toMap
   }
@@ -48,12 +47,7 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
   }
 
   protected def getCardinality(map: Map[P#V, Variable], node: P#V): Expression = {
-    if (map contains node) {
-      map(node)
-    } else {
-      assert(node.depth == 0, node)
-      Constant(1)
-    }
+    map(node)
   }
 
   //TODO guardForConcreteNode: just the nodes we care about ...
@@ -83,7 +77,6 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
        var rhs = lst.map(getCardinality(map1, _)).reduceLeft(Plus(_, _))
        getCardinality(map2, node) match {
          case v @ Variable(_) => Affect(v, rhs)
-         case Constant(c) => assert(rhs == Constant(c)); Skip
          case other =>
            Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        }
@@ -92,14 +85,12 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     val stmts2 = for ( node <- morph1.keys ) yield {
       getCardinality(map1, node) match {
          case v @ Variable(_) => Affect(v, Constant(0))
-         case Constant(c) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
       }
     }
     val stmts3 = for (node <- frame) yield {
       getCardinality(map2, node) match {
          case v @ Variable(_) => Affect(v, Constant(0))
-         case Constant(c) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
       }
     }
@@ -157,14 +148,12 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
       assert(to contains node2)
       getCardinality(map2, node2) match {
          case v @ Variable(_) => Affect(v, getCardinality(map1, node1))
-         case Constant(1) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
       }
     }
     val stmts2 = for ( node <- from.vertices ) yield {
       getCardinality(map1, node) match {
          case v @ Variable(_) => Affect(v, Constant(0))
-         case Constant(1) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
       }
     }
@@ -194,14 +183,12 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
        val (concrete, abstr) = lst.partition(_.depth == 0)
        val concreteUpd = concrete.map( getCardinality(map2, _) match {
          case v @ Variable(_) => Affect(v, Constant(1))
-         case Constant(1) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        })
        val abstrUpd = if (!abstr.isEmpty) {
          val lhs = abstr.map(getCardinality(map2, _)).foldLeft(Constant(concrete.size): Expression)(Plus(_, _))
          getCardinality(map1, node) match {
            case v @ Variable(_) => Relation(lhs, v)
-           //case Constant(1) => assert(lhs == Constant(1)); Skip
            case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
          }
        } else Skip
@@ -210,7 +197,6 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     val stmts2 = for ( node <- backwardUnFolding.keys ) yield {
       getCardinality(map1, node) match {
          case v @ Variable(_) => Affect(v, Constant(0))
-         case Constant(1) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
       }
     }
@@ -227,7 +213,6 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     val variance1 = increases.map( n => {
       getCardinality(map2, n) match {
          case v1 @ Variable(_) => Assume(Leq(Constant(0), v1))
-         case Constant(c) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
       }
     })
@@ -238,7 +223,6 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
              case v2 @ Variable(_) => Seq( Assume(Leq(Constant(0), v1)), Variance(v1, v2, false, false) )
              case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
            }
-         case Constant(c) => Seq()
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
       }
     }
@@ -247,7 +231,6 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
        val concrete = lst.filter(_.depth == 0)
        getCardinality(map1, node) match {
          case v @ Variable(_) => Leq(Constant(concrete.size), v)
-         case Constant(c) => assert(c == concrete.size); Literal(true)
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        }
     }
@@ -279,21 +262,18 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
     val stmts1 = for (n <- disappearing) yield {
        getCardinality(map1, n) match {
          case v @ Variable(_) => Affect(v, Constant(0))
-         case Constant(c) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        }
     }
     val stmts2 = for (n <- appearing) yield {
        getCardinality(map2, n) match {
          case v @ Variable(_) => if (n.depth == 0) Affect(v, Constant(1)) else Assume(Leq(Constant(0), v))
-         case Constant(c) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        }
     }
     val stmts3 = for ((n1,n2) <- frame) yield {
        getCardinality(map2, n2) match {
          case v @ Variable(_) => Affect(v, getCardinality(map1, n1))
-         case Constant(c) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        }
     }
@@ -319,7 +299,6 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
          case v @ Variable(_) =>
            if (node.depth == 0) Affect(v, Constant(1))
            else Assume(Leq(Constant(0),v))
-         case Constant(c) => Skip
          case other => Logger.logAndThrow("DBPTermination", LogError, "Expected Variable, found: " + other)
        }
     }

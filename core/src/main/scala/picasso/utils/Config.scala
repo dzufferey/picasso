@@ -151,7 +151,7 @@ class Config {
   var termination = false
   var armcCmd = "armc"
   var princessCmd = "princess"
-  var noCC = false
+  var solverCmd = Array("z3", "-smt2", "-in")
   var makeTPreds = false
   var cyclesBound = -1
   var dumpArmc = ""
@@ -161,7 +161,7 @@ class Config {
   newOption("--termination", Arg.Unit(() => termination = true), "Compute the termination of the system.")
   newOption("--armc", Arg.String(str => armcCmd = str), "The command to call ARMC.")
   newOption("--princess", Arg.String(str => princessCmd = str), "The command to call princess.")
-  newOption("--noCC", Arg.Unit(() => noCC = true), "Do not generate counters for concrete nodes.")
+  newOption("--smtSolver", Arg.String(str => solverCmd = str.split(" ")), "The smt sovler (+ options) to use (default: \"z3 -smt2 -in\").")
   newOption("--makeTPreds", Arg.Unit(() => makeTPreds = true), "Generate (many) transition predicates for ARMC.")
   newOption("--cyclesBound", Arg.Int(i => cyclesBound = i), "bound for the number of cycles to consider when generating the transition predicates")
   newOption("--dump", Arg.String(str => dumpArmc = str), "save the ARMC file in the given location rather than run ARMC.")

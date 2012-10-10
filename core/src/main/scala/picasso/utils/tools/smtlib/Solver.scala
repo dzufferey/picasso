@@ -138,3 +138,11 @@ class Solver(th: Theory, cmd: String, options: Iterable[String], implicitDeclara
   }
 
 }
+
+object Solver {
+
+  def apply(th: Theory, implicitDeclaration: Boolean = true) = {
+    new Solver(th, Config.solverCmd.head, Config.solverCmd.tail, implicitDeclaration)
+  }
+
+}

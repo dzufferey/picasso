@@ -46,7 +46,6 @@ abstract class AnalysisCommon[P <: picasso.model.dbp.DBCT](
           report.add(new PreformattedText("Input", content))
      
           Logger("dbpGraph", LogInfo, process.toString) 
-          //Logger("dbpGraph", LogInfo, Misc.docToString(process.toGraphviz("DBPGraph")) )
           addProcessToReport(process, init)
 
           analysis(process, init, target)

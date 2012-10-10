@@ -104,12 +104,12 @@ object LIA {
 
   def qfSolver: smtlib.Solver = {
     import smtlib._
-    new Solver(QF_LIA, "z3", Array("-smt2", "-in"))
+    Solver(QF_LIA)
   }
 
   def solver: smtlib.Solver = {
     import smtlib._
-    new Solver(smtlib.LIA, "z3", Array("-smt2", "-in"))
+    Solver(smtlib.LIA)
   }
 
 }
