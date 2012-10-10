@@ -221,7 +221,7 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
   }
   
   protected def compactPath = {
-    val trs2 = cfa.simplePaths.flatMap( path => {
+    val trs2 = cfa.simplePaths.toSeq.par.flatMap( path => {
       Transition2.compact(path.labels)
     })
     val p2 = new Program2(initPC, trs2)
