@@ -1,16 +1,71 @@
 package picasso.utils.report
 
+import picasso.utils._
+
 class Table(title: String, headers: => Iterable[String], rows: => Iterable[Iterable[String]]) extends Item(title) {
 
+  var tbl: Array[Array[String]] = null
+
+  protected def mkTbl {
+    if (tbl == null) {
+      val width = headers.size
+      val height = 1 + rows.size
+      tbl = Array.ofDim[Array[String]](height)
+      tbl(0) = headers.toArray
+      rows.zipWithIndex.map{ case (row, idx) =>
+        Logger.assert(row.size == width, "report", "Table rows are not uniform.")
+        tbl(idx + 1) = row.toArray
+      }
+    }
+  }
+
   def toText(writer: java.io.BufferedWriter) {
-    //TODO pretty printing
-    sys.error("TODO")
-    //writer.write(txt); writer.newLine
+    mkTbl
+    val widths = Array.ofDim[Int](tbl(0).size)
+    for (i <- 0 until tbl.size;
+         j <- 0 until tbl(i).size) {
+       widths(j) = math.max(widths(j), tbl(i)(j).length)
+    }
+    def printCell(i: Int, j: Int) {
+      val content = tbl(i)(j)
+      val fill = widths(j) - content.size
+      writer.write(content)
+      for (_ <- 0 until fill) writer.write(' ')
+      writer.write('|')
+    }
+    for (i <- 0 until tbl(0).size) {
+      printCell(0, i)
+    }
+    writer.newLine
+    for (_ <- 0 until widths.reduceLeft(_ + _) + widths.size - 1) {
+      writer.write('-')
+    }
+    writer.write('|')
+    writer.newLine
+    for (i <- 1 until tbl.size) {
+      for (j <- 0 until tbl(i).size) {
+        printCell(i, j)
+      }
+      writer.newLine
+    }
   }
 
   def toHtmlInner(writer: java.io.BufferedWriter) = {
-    sys.error("TODO")
-    //writer.write(html); writer.newLine
+    mkTbl
+    writer.write("<table>"); writer.newLine
+    writer.write("  <tr>"); writer.newLine
+    for (i <- 0 until tbl(0).size) {
+      writer.write("    <th>" + tbl(0)(i) + "</th>"); writer.newLine
+    }
+    writer.write("  </tr>"); writer.newLine
+    for (i <- 1 until tbl.size) {
+      writer.write("  <tr>"); writer.newLine
+      for (j <- 0 until tbl(i).size) {
+        writer.write("      <td>" + tbl(i)(j) + "</td>"); writer.newLine
+      }
+      writer.write("  </tr>"); writer.newLine
+    }
+    writer.write("</table>"); writer.newLine
   }
 
 }
