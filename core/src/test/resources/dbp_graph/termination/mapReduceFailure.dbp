@@ -163,6 +163,7 @@ pre
 post
     (m, _) -> (k, key)* [inter]
     (k, key)* -> (v, value)**
+    node (f, failure)*
 ==>
 <==
     m -> m
@@ -187,6 +188,7 @@ pre
 post
     (m, _) -> (k2, key) [result]
     (k2, key) -> (v1, value)
+    node (f, failure)*
 ==>
 <==
     m -> m
