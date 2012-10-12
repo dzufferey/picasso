@@ -2,7 +2,10 @@ package picasso.utils.report
 
 class Text(title: String, content: String) extends Item(title) {
 
-  def toText(writer: java.io.BufferedWriter) = sys.error("TODO")
+  def toText(writer: java.io.BufferedWriter) = {
+    writer.write(content)
+    writer.newLine
+  }
 
   def toHtmlInner(writer: java.io.BufferedWriter) = {
     writer.write("<p>")

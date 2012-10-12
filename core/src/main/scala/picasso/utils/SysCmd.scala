@@ -56,5 +56,24 @@ object SysCmd {
     Logger("Utils", LogInfo, "Executing "+ cmds.mkString(""," ",""))
     withInput ! processLogger
   }
+  
+  def execOutputAndLog(cmds: Array[String], input: Option[String], prefix: String, lvl: Level, addToEnv: (String,String)*): ExecResult = {
+    val process = Process(cmds, None, addToEnv:_*)
+    val withInput = input match {
+      case Some(str) => process #< ( new java.io.ByteArrayInputStream(str.getBytes) )
+      case None => process
+    }
+
+    val bufferOut = new StringBuilder()
+    val bufferErr = new StringBuilder()
+    val processLogger =
+      ProcessLogger(
+        line => {Logger(prefix, lvl, line); bufferOut append line; bufferOut append "\n"},
+        line => {Logger(prefix, LogWarning, line); bufferErr append line; bufferErr append "\n"}
+      )
+    Logger("Utils", LogInfo, "Executing "+ cmds.mkString(""," ",""))
+    val exitCode = withInput ! processLogger
+    (exitCode, bufferOut.toString, bufferErr.toString)
+  }
 
 }

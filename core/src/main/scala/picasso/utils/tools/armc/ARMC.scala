@@ -5,19 +5,27 @@ import picasso.utils._
 
 object ARMC {
 
-  def apply(prog: Program2) {
+  protected def exec[A](prog: Program2, execFct: String => A): A = {
     val (code, file, err) = SysCmd(Array("mktemp"))
     if (code == 0) {
       try {
         val armcProg = prog.printForARMC
         Logger("ARMC", LogInfo, "program:\n" + armcProg)
         IO.writeInFile(file, armcProg)
-        SysCmd.execRedirectToLogger(Array(Config.armcCmd, "live", file), None, "ARMC", LogNotice)
+        execFct(file)
       } finally {
         SysCmd(Array("rm", file))
       }
     } else {
       Logger.logAndThrow("ARMC", LogError, "cannot create temp file ("+code+"): " + err)
     }
+  }
+
+  def withOutput(prog: Program2) = {
+    exec(prog, file => SysCmd.execOutputAndLog(Array(Config.armcCmd, "live", file), None, "ARMC", LogNotice))
+  }
+
+  def apply(prog: Program2) {
+    exec(prog, file => SysCmd.execRedirectToLogger(Array(Config.armcCmd, "live", file), None, "ARMC", LogNotice))
   }
 }

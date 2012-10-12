@@ -8,13 +8,10 @@ class Table(title: String, headers: => Iterable[String], rows: => Iterable[Itera
 
   protected def mkTbl {
     if (tbl == null) {
-      val width = headers.size
-      val height = 1 + rows.size
-      tbl = Array.ofDim[Array[String]](height)
-      tbl(0) = headers.toArray
-      rows.zipWithIndex.map{ case (row, idx) =>
-        Logger.assert(row.size == width, "report", "Table rows are not uniform.")
-        tbl(idx + 1) = row.toArray
+      tbl = Array(headers.toArray) ++ rows.map(_.toArray)
+      val width = tbl(0).size
+      for (i <- 1 until tbl.size) {
+        Logger.assert(tbl(i).size == width, "report", "Table rows are not uniform.")
       }
     }
   }

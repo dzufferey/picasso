@@ -127,9 +127,11 @@ class Config {
   //general reporting option
   var report = false
   var reportOutput: Option[String] = None
+  var stats = false
 
   newOption("-r", Arg.Unit(() => report = true), "output a report (with a default name).")
   newOption("--report", Arg.String(str => { report = true; reportOutput = Some(str) } ), "output a report with given name.")
+  newOption("--stats", Arg.Unit(() => stats = true), "print statistics about the execution.")
 
   //about the KM tree analysis
   var KM_showTree = false

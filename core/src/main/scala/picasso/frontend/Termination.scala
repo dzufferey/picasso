@@ -17,8 +17,8 @@ class Termination[P <: picasso.model.dbp.DBCT](
   protected def analysis(_process: DepthBoundedProcess[P], init: DepthBoundedConf[P], target: Option[DepthBoundedConf[P]]): Unit = {
     assert(target.isEmpty, "Termination analysis does not expect a target state")
 
-    val process = new DepthBoundedProcess( _process) with DBPTermination[P]
-    val (cover, tree, intProgram) = process.termination(init)
+    val process = new DepthBoundedProcess( _process) with KarpMillerTree with DBPTermination[P]
+    val (cover, tree) = Stats("cover computation", process.computeTree(init))
      
     val coverReport = new List("Cover")
     for ((c, i) <- cover.zipWithIndex) {
@@ -30,11 +30,16 @@ class Termination[P <: picasso.model.dbp.DBCT](
     }
     report.add(coverReport)
 
+    val intProgram = Stats("extracting numerical abstraction", process.termination(cover))
+    Stats.comment("numerical abstraction has " +
+                  intProgram.pcs.size + " locations, " +
+                  intProgram.variables.size + " variables, " +
+                  intProgram.transitions.size + " transitions.")
     report.add(new PreformattedText("Numerical Abstraction", intProgram.printForARMC))
 
     if (Config.dumpArmc == "") {
-      //TODO save ARMC output in the report ??
-      ARMC(intProgram)
+      val (code, out, err) = Stats("proving termination with ARMC", ARMC.withOutput(intProgram))
+      report.add(new PreformattedText("ARMC output", out))
     } else {
       Logger("Termination", LogInfo, "saving ARMC program in " + Config.dumpArmc)
       IO.writeInFile(Config.dumpArmc, intProgram.printForARMC(_))

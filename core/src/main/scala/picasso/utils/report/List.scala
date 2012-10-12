@@ -10,7 +10,12 @@ class List(title: String) extends Item(title) {
     _children += element
   }
 
-  def toText(writer: java.io.BufferedWriter) = sys.error("TODO")
+  def toText(writer: java.io.BufferedWriter) = {
+    for (c <- children) {
+      writer.write("-> ")
+      c.toText(writer)
+    }
+  }
 
   def toHtmlInner(writer: java.io.BufferedWriter) = {
     writer.write("<ul>"); writer.newLine

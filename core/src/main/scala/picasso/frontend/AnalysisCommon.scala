@@ -49,6 +49,11 @@ abstract class AnalysisCommon[P <: picasso.model.dbp.DBCT](
           addProcessToReport(process, init)
 
           analysis(process, init, target)
+
+          if (Config.stats) {
+            report.add(Stats.report)
+            Logger("dbpGraph", LogNotice, Stats.toString) 
+          }
      
           if (Config.report) {
             val woDir = (new java.io.File(fileName)).getName()

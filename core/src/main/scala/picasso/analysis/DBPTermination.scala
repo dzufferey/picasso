@@ -7,7 +7,7 @@ import picasso.math.DownwardClosedSet
 import picasso.model.integer._
 import scala.collection.parallel.{ParIterable, ParSeq}
 
-trait DBPTermination[P <: DBCT] extends KarpMillerTree {
+trait DBPTermination[P <: DBCT] {
   self: DepthBoundedProcess[P] =>
 
   //what are the states: configuration, not KMTree
@@ -374,14 +374,11 @@ trait DBPTermination[P <: DBCT] extends KarpMillerTree {
   }
   //TODO generate directly the new transition without going through the old one.
 
-  def termination(initState: S) = {
-    val (cover, tree) = computeTree(initState)
+  def termination(cover: DownwardClosedSet[S]) = {
     Logger("DBPTermination", LogNotice, "Extracting numerical abstraction from the cover.")
     val program1 = makeIntegerProgram(cover)
     Logger("DBPTermination", LogNotice, "Extraction done. Simplifying ... ")
-    val program2 = program1.simplifyForTermination
-    //Logger("DBPTermination", LogNotice, "Merging candidates = " + ProgramHeuristics.counterMerging(program2)
-    (cover, tree, program2)
+    program1.simplifyForTermination
   }
   
 }
