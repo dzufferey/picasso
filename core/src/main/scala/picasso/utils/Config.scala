@@ -133,6 +133,10 @@ class Config {
   newOption("--report", Arg.String(str => { report = true; reportOutput = Some(str) } ), "output a report with given name.")
   newOption("--stats", Arg.Unit(() => stats = true), "print statistics about the execution.")
 
+  //general config stuff
+  var maxChildren = -1
+  newOption("--maxChildren", Arg.Int ( i => maxChildren = i), "limit the number of children that can be spawed at the same time (default: no limit).")
+
   //about the KM tree analysis
   var KM_showTree = false
   var KM_fullTree = false

@@ -5,6 +5,21 @@ import scala.sys.process._
 /** executing command as children process */
 object SysCmd {
 
+  private val limiter = {
+    if (Config.maxChildren >= 0)
+      new java.util.concurrent.Semaphore(Config.maxChildren, true)
+    else
+      null
+  }
+
+  def acquire {
+    if (limiter != null) limiter.acquire
+  }
+  
+  def release {
+    if (limiter != null) limiter.release
+  }
+
   type ExecResult = (Int, String, String)
   
   //TODO add an option for timeout
@@ -23,8 +38,13 @@ object SysCmd {
         line => {bufferErr append line; bufferErr append "\n"}
       )
     Logger("Utils", LogInfo, "Executing "+ cmds.mkString(""," ",""))
-    val exitCode = withInput ! processLogger
-    (exitCode, bufferOut.toString, bufferErr.toString)
+    try {
+      acquire
+      val exitCode = withInput ! processLogger
+      (exitCode, bufferOut.toString, bufferErr.toString)
+    } finally {
+      release
+    }
   }
   
   def apply(cmds: Array[String], input: String, addToEnv: (String,String)*): ExecResult =
@@ -41,7 +61,12 @@ object SysCmd {
       case None => process
     }
     Logger("Utils", LogInfo, "Executing "+ cmds.mkString(""," ",""))
-    withInput ! 
+    try {
+      acquire
+      withInput ! 
+    } finally {
+      release
+    }
   }
   
   def execRedirectToLogger(cmds: Array[String], input: Option[String], prefix: String, lvl: Level, addToEnv: (String,String)*): Int = {
@@ -54,7 +79,12 @@ object SysCmd {
       out => Logger(prefix, lvl, out),
       err => Logger(prefix, LogWarning, err))
     Logger("Utils", LogInfo, "Executing "+ cmds.mkString(""," ",""))
-    withInput ! processLogger
+    try {
+      acquire
+      withInput ! processLogger
+    } finally {
+      release
+    }
   }
   
   def execOutputAndLog(cmds: Array[String], input: Option[String], prefix: String, lvl: Level, addToEnv: (String,String)*): ExecResult = {
@@ -72,8 +102,13 @@ object SysCmd {
         line => {Logger(prefix, LogWarning, line); bufferErr append line; bufferErr append "\n"}
       )
     Logger("Utils", LogInfo, "Executing "+ cmds.mkString(""," ",""))
-    val exitCode = withInput ! processLogger
-    (exitCode, bufferOut.toString, bufferErr.toString)
+    try {
+      acquire
+      val exitCode = withInput ! processLogger
+      (exitCode, bufferOut.toString, bufferErr.toString)
+    } finally {
+      release
+    }
   }
 
 }

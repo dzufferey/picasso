@@ -17,6 +17,9 @@ class Solver(th: Theory, cmd: String, options: Iterable[String], implicitDeclara
 
   protected var stackCounter = 0
 
+  SysCmd.acquire
+  protected var released = false
+
   protected val solver = java.lang.Runtime.getRuntime.exec(Array(cmd) ++ options, null, null)
   protected val solverInput = new BufferedWriter(new OutputStreamWriter(solver.getOutputStream()))
   protected val solverOutput = new BufferedReader(new InputStreamReader(solver.getInputStream()))
@@ -36,6 +39,11 @@ class Solver(th: Theory, cmd: String, options: Iterable[String], implicitDeclara
     } catch {
       case _: java.lang.IllegalThreadStateException =>
         solver.destroy
+    } finally {
+      if (!released) {
+        SysCmd.release
+        released = true
+      }
     }
   }
 
@@ -63,10 +71,17 @@ class Solver(th: Theory, cmd: String, options: Iterable[String], implicitDeclara
 
   def exit = {
     toSolver("(exit)")
-    solver.waitFor
-    solverInput.close
-    solverOutput.close
-    solverError.close
+    try {
+      solver.waitFor
+      solverInput.close
+      solverOutput.close
+      solverError.close
+    } finally {
+      if (!released) {
+        SysCmd.release
+        released = true
+      }
+    }
   }
   
   def declare(t: Type) = t match {
