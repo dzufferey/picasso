@@ -25,7 +25,7 @@ object Princess {
     if (success == 0) {
       processOutput(stdout, stderr)
     } else {
-      Logger.logAndThrow("princess", LogError, "princess failed ("+success+"):\n" + stderr)
+      Logger.logAndThrow("princess", LogError, "princess failed ("+success+"):\n" + stdout + stderr)
       None
     }
   }
