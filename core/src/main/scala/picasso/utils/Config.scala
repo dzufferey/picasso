@@ -135,7 +135,7 @@ class Config {
 
   //general config stuff
   var maxChildren = -1
-  newOption("--maxChildren", Arg.Int ( i => maxChildren = i), "limit the number of children that can be spawed at the same time (default: no limit).")
+  newOption("--maxChildren", Arg.Int ( i => maxChildren = i), "limit the number of children that can be spawned at the same time (default: no limit).")
 
   //about the KM tree analysis
   var KM_showTree = false
