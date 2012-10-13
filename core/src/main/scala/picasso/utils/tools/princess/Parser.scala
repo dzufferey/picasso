@@ -66,12 +66,17 @@ object Parser extends StandardTokenParsers {
     )
 
   def parseExpression(str: String) = {
-    val tokens = new lexical.Scanner(str)
-    val result = phrase(expression)(tokens)
-    if (result.successful) {
-      Some(result.get)
-    } else {
-      Logger("princess", LogError, "parsing error: " + result.toString)
+    try {
+      val tokens = new lexical.Scanner(str)
+      val result = phrase(expression)(tokens)
+      if (result.successful) {
+        Some(result.get)
+      } else {
+        Logger("princess", LogError, "parsing error: " + result.toString)
+        None
+      }
+    } catch { case err =>
+      Logger("princess", LogError, "exception throw during parsing: " + err)
       None
     }
   }
