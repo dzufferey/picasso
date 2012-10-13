@@ -76,7 +76,11 @@ object Parser extends StandardTokenParsers {
         None
       }
     } catch { case err =>
-      Logger("princess", LogError, "exception throw during parsing: " + err)
+      if (str == null) {
+        Logger("princess", LogError, "cannot parse null.")
+      } else {
+        Logger("princess", LogError, "exception throw during parsing: " + str + "\n  " + err)
+      }
       None
     }
   }
