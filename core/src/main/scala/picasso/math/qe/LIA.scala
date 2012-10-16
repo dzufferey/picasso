@@ -66,10 +66,12 @@ object LIA {
   def qe(universalConstants: Set[Variable], existentialConstants: Set[Variable], f: Formula): Option[Formula] = {
     Logger.assert(isLIA(f), "LIA", f + " not in LIA.")
     //use the Princess thm prover
-    princess.Princess.eliminateQuantifiers(
-      universalConstants,
-      existentialConstants,
-      f
+    Stats("LIA: QE query",
+      princess.Princess.eliminateQuantifiers(
+        universalConstants,
+        existentialConstants,
+        f
+      )
     )
   }
   
@@ -87,11 +89,11 @@ object LIA {
         sat(Application(Not,List(f))).map(b => !b)
       }
     } else {
-      princess.Princess.isValid( univ, exist, f)
+      Stats("LIA: sat query", princess.Princess.isValid( univ, exist, f))
     }
   }
 
-  protected def sat(f: Formula): Option[Boolean] = {
+  protected def sat(f: Formula): Option[Boolean] = Stats("LIA: QF sat query", {
     Logger.assert(isQFLIA(f), "LIA", f + " not in LIA.")
     val solver = qfSolver
     //val fv = f.freeVariables
@@ -100,7 +102,7 @@ object LIA {
     val res = solver.checkSat
     solver.exit
     res
-  }
+  })
 
   def qfSolver: smtlib.Solver = {
     import smtlib._

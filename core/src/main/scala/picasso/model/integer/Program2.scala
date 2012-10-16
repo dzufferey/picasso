@@ -284,11 +284,3 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
   }
 
 }
-
-object Program2 {
-
-  def apply(p: Program): Program2 = {
-    new Program2(p.initialPC, p.transitions.map(Transition2.apply))
-  }
-
-}

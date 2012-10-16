@@ -2,7 +2,7 @@ package picasso.graph
 
 import scala.collection.immutable.{Map, Stream, Set, BitSet}
 import scala.text.Document
-import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger, Misc}
+import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, LogDebug, Logger, Misc, Stats}
 
 
 //TODO refactor to split this file into multiple components (easier to read an maintains)
@@ -285,7 +285,7 @@ extends Traceable[P#V,P#EL] with GraphAlgorithms[PB, P, G] {
     injective : Q#V => Boolean,
     additionalCstr: MorphInfo[Q] => Iterable[Clause[(P#V,Q#V)]],
     partialMorphism: Map[P#V,Q#V] = Map.empty[P#V,Q#V]
-  )(implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Iterator[Map[P#V,Q#V]] = {
+  )(implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Iterator[Map[P#V,Q#V]] = Stats("lazyMorphismsBySat.encoding", {
     Logger("graph", LogDebug, "Is\n"+this+"a subgraph of\n"+bigger)
     ///////////////////////////////////////////////////
     import org.sat4j.specs.ContradictionException
@@ -380,9 +380,11 @@ extends Traceable[P#V,P#EL] with GraphAlgorithms[PB, P, G] {
         def hasNext = nextTmp match {
           case Some(_) => true
           case None =>
-            if(!isFalse && solver.isSatisfiable()) {
-              extractModel; true
-            } else false
+            Stats("lazyMorphismsBySat.solving", 
+              if(!isFalse && solver.isSatisfiable()) {
+                extractModel; true
+              } else false
+            )
         }
 
         def next() = nextTmp match {
@@ -400,7 +402,7 @@ extends Traceable[P#V,P#EL] with GraphAlgorithms[PB, P, G] {
         def next() = throw new java.util.NoSuchElementException("next on empty iterator")
       }
     }
-  }
+  })
 
   def morphisms[Q <: PB](bigger: G[Q], injective: Q#V => Boolean, comp: MorphInfo[Q] => Iterable[Clause[(P#V,Q#V)]])
   (implicit lblOrd: PartialOrdering[VL], ev0: Q#VL =:= P#VL, ev1: P#EL =:= Q#EL) : Iterator[Map[V,Q#V]] = 

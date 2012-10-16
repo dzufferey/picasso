@@ -4,7 +4,6 @@ import picasso.utils._
 import picasso.utils.report._
 import picasso.utils.tools.armc._
 import picasso.model.dbp._
-import picasso.model.integer.Program
 import picasso.analysis._
 
 class Termination[P <: picasso.model.dbp.DBCT](
