@@ -42,7 +42,7 @@ object ARMCPrinter extends PrologLikePrinter {
     writer.newLine
   }
 
-  protected def transPreds(vars: Seq[Variable], prog: Program2)(implicit writer: BufferedWriter) {
+  protected def transPreds(vars: Seq[Variable], prog: Program)(implicit writer: BufferedWriter) {
     //TODO namedTPreds
     val vars2 = vars map primeVar
     writer.write("trans_preds(")
@@ -91,7 +91,7 @@ object ARMCPrinter extends PrologLikePrinter {
     writer.newLine
   }
 
-  protected def cutpoints(p: Program2)(implicit writer: BufferedWriter) {
+  protected def cutpoints(p: Program)(implicit writer: BufferedWriter) {
     val trs = p.transitions
     //find all the cycles in the graph (induced cycles generate the complete cycle space)
     //then set hitting problem (combinatorial optimisation) (can we do is as linear algebra in the cycle space or only as ILP ?)
@@ -117,7 +117,7 @@ object ARMCPrinter extends PrologLikePrinter {
     }
   }
 
-  protected def r(t: Transition2, idx: Int, vars: Seq[Variable])(implicit writer: BufferedWriter) {
+  protected def r(t: Transition, idx: Int, vars: Seq[Variable])(implicit writer: BufferedWriter) {
     val vars2 = vars map primeVar
     val frame = vars.filterNot( t.range(_) ).toList
     //val additionalCstr = frame.map(v => Eq(v, primeVar(v)))
@@ -143,7 +143,7 @@ object ARMCPrinter extends PrologLikePrinter {
   }
 
 
-  def apply(implicit writer: BufferedWriter, prog: Program2, withPreds: Boolean = true) {
+  def apply(implicit writer: BufferedWriter, prog: Program, withPreds: Boolean = true) {
     val vars = prog.variables.toSeq
     writer.write(preamble); writer.newLine
     var2names(vars); writer.newLine

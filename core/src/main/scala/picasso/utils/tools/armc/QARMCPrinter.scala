@@ -16,9 +16,9 @@ object QARMCPrinter extends PrologLikePrinter {
   */
 
   protected val namer = new Namer
-  protected val tNames = new java.util.concurrent.ConcurrentHashMap[Transition2, String]()
-  protected val tNamesReversed = new java.util.concurrent.ConcurrentHashMap[String, Transition2]()
-  protected def getName(t: Transition2): String = {
+  protected val tNames = new java.util.concurrent.ConcurrentHashMap[Transition, String]()
+  protected val tNamesReversed = new java.util.concurrent.ConcurrentHashMap[String, Transition]()
+  protected def getName(t: Transition): String = {
     if (tNames.containsKey(t)) {
       tNames.get(t)
     } else {
@@ -29,7 +29,7 @@ object QARMCPrinter extends PrologLikePrinter {
     }
   }
 
-  protected def singleTransition(t: Transition2)(implicit writer: BufferedWriter) {
+  protected def singleTransition(t: Transition)(implicit writer: BufferedWriter) {
     val name = getName(t)
     sys.error("TODO")
     /*
@@ -52,7 +52,7 @@ object QARMCPrinter extends PrologLikePrinter {
     */
   }
 
-  protected def publicPrivateVariablesOfPath(path: Seq[Transition2]): (Set[Variable], Set[Variable]) = {
+  protected def publicPrivateVariablesOfPath(path: Seq[Transition]): (Set[Variable], Set[Variable]) = {
     assert(!path.isEmpty)
     sys.error("TODO")
     /*
@@ -70,7 +70,7 @@ object QARMCPrinter extends PrologLikePrinter {
   /** Make a predicate for a simple path.
    *  Returns the name of the predicate and the list of variables it uses.
    */
-  protected def simplePath(path: Seq[Transition2])(implicit writer: BufferedWriter): (String, Seq[Variable]) = {
+  protected def simplePath(path: Seq[Transition])(implicit writer: BufferedWriter): (String, Seq[Variable]) = {
     //assumptions about the variables:
     //  the variables of the first and the last state are the only variables
     //  that are modified by other transitions not in this path.
@@ -117,7 +117,7 @@ object QARMCPrinter extends PrologLikePrinter {
   }
 
   /** Check that the path respects the condition on the variables needed b simplePath. */
-  protected def checkVariablesGoodForPath(path: Seq[Transition2], other: Seq[Transition2]) {
+  protected def checkVariablesGoodForPath(path: Seq[Transition], other: Seq[Transition]) {
     val (publicVars, privateVars) = publicPrivateVariablesOfPath(path)
     for (t <- other; v <- t.variables if privateVars(v)) {
       Logger.logAndThrow("integer.QARMCPrinter", LogError, "path: " + path + "\nconflict: " + v + " in " + t)
@@ -131,12 +131,12 @@ object QARMCPrinter extends PrologLikePrinter {
     "at_" + asLit(pc) + (pre ++ post).mkString("(",",",")")
   }
 
-  protected def transitionRelation(prog: Program2)(implicit writer: BufferedWriter) {
+  protected def transitionRelation(prog: Program)(implicit writer: BufferedWriter) {
     //connect the transition, figure out what are the variables to use ...
     //  decompose in simple paths
     //  print the paths
     //  connect the paths
-    val trs: Seq[Transition2] = prog.transitions.seq
+    val trs: Seq[Transition] = prog.transitions.seq
     val emp = EdgeLabeledDiGraph.empty[GT.ELGT{type V = String; type EL = String}]
     val cfa = emp ++ (trs.map(t => (t.sourcePC, getName(t), t.targetPC)).seq)
     val simpleTraces = cfa.simplePaths
@@ -195,7 +195,7 @@ object QARMCPrinter extends PrologLikePrinter {
     
   }
 
-  def apply(implicit writer: BufferedWriter, prog: Program2) {
+  def apply(implicit writer: BufferedWriter, prog: Program) {
     prog.transitions.seq foreach singleTransition
     writer.newLine
     transitionRelation(prog)

@@ -16,34 +16,6 @@ object ToMathAst {
     hol.Variable(v.name).setType(hol.Int)
   }
   
-  //works only on SSA statements
-  def apply(s: Statement): hol.Formula = {
-    Logger.assert(
-      Statement.getReadVariables(s).intersect(Statement.getUpdatedVars(s)).isEmpty,
-      "integer.MathAst", "apply works only on SSA."
-    )
-    s match {
-      case Skip =>
-        hol.Literal(true).setType(hol.Int)
-
-      case Relation(_new, _old) =>
-        hol.Application(hol.Eq, List(apply(_old), apply(_new)))
-
-      case Assume(c) =>
-        apply(c)
-
-      case Variance(_new, _old, geq, strict) =>
-        val fct = if (geq) {
-          if (strict) hol.Gt
-          else hol.Geq
-        } else {
-          if (strict) hol.Lt
-          else hol.Leq
-        }
-        hol.Application(fct, List(apply(_new), apply(_old)))
-    }
-  }
-  
   def apply(c: Condition): hol.Formula = c match {
     case Eq(l,r) => hol.Application(hol.Eq, List(apply(l), apply(r)))
     case Lt(l,r) => hol.Application(hol.Lt, List(apply(l), apply(r)))

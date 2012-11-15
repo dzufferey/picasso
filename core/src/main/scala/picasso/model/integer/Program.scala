@@ -9,12 +9,12 @@ import picasso.utils.tools.armc._
  *  Integer program are use during the termination proof of DBP.
  *  Right now their purpose is just these termination check (not safety).
  */
-class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.TransitionSystem {
+class Program(initPC: String, trs: GenSeq[Transition]) extends picasso.math.TransitionSystem {
   
   type S = State
   
   //transition type
-  type T = Transition2
+  type T = Transition
 
   def initialPC = initPC
 
@@ -83,7 +83,7 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
       this
     } else {
       val trs2 = trs.map(_.eliminateVariables(prefixes))
-      val p2 = new Program2(initialPC, trs2)
+      val p2 = new Program(initialPC, trs2)
       Logger("integer.Program", LogInfo, "eliminateVariables: #variables before = " + variables.size + ", after = " + p2.variables.size)
       p2
     }
@@ -99,7 +99,7 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
 
     def default(s: String) = Map[Variable,Option[Int]]()
 
-    def transfer(cstMap: Map[Variable,Option[Int]], t: Transition2): Map[Variable,Option[Int]] = {
+    def transfer(cstMap: Map[Variable,Option[Int]], t: Transition): Map[Variable,Option[Int]] = {
       val csts = cstMap.flatMap{ case (v,c) => c.map( v -> _ ) }
       val t2 = t.propagteInputConstants(csts)
       val outCst = t2.constantVariables
@@ -144,7 +144,7 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
       //Logger("integer.Program", LogDebug, "eliminating: " + postSubst.mkString(", ") + "\nin " + t + "\ngives " + t2)
       t2
     })
-    val p2 = new Program2(initPC, trs2)
+    val p2 = new Program(initPC, trs2)
     Logger("integer.Program", LogInfo, "propagateCst: #variables before = " + variables.size + ", after = " + p2.variables.size)
     p2
   }
@@ -201,7 +201,7 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
       val postVars2 = woFrame.postVars ++ newPostVars.iterator.map( v => (v, Variable(Namer("NewPostVar"))) )
       //val cstr = newPostVars.iterator.map( v => Eq(preVars2(v), postVars2(v)) )
       //val allCstr = (woFrame.relation /: cstr)(And(_,_))
-      new Transition2(
+      new Transition(
         woFrame.sourcePC,
         woFrame.targetPC,
         preVars2,
@@ -210,21 +210,21 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
         woFrame.comment
       )
     }
-    val p2 = new Program2(initialPC, trs2)
+    val p2 = new Program(initialPC, trs2)
     Logger("integer.Program", LogInfo, "reduceNumberOfVariables: #variables before = " + variables.size + ", after = " + p2.variables.size)
     p2
   }
   
-  def cfa: EdgeLabeledDiGraph[GT.ELGT{type V = String; type EL = Transition2}] = {
-    val emp = EdgeLabeledDiGraph.empty[GT.ELGT{type V = String; type EL = Transition2}]
+  def cfa: EdgeLabeledDiGraph[GT.ELGT{type V = String; type EL = Transition}] = {
+    val emp = EdgeLabeledDiGraph.empty[GT.ELGT{type V = String; type EL = Transition}]
     emp ++ (transitions.map(t => (t.sourcePC, t, t.targetPC)).seq)
   }
   
   protected def compactPath = {
     val trs2 = cfa.simplePaths.toSeq.par.flatMap( path => {
-      Transition2.compact(path.labels)
+      Transition.compact(path.labels)
     })
-    val p2 = new Program2(initPC, trs2)
+    val p2 = new Program(initPC, trs2)
     Logger("integer.Program", LogInfo, "compactPath: #transitions before = " + transitions.size + ", after = " + p2.transitions.size)
     p2
   }
@@ -232,13 +232,13 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
   protected def duplicateTransitions = {
     val grouped = trs.groupBy(_.sourcePC).map(_._2).flatMap(_.groupBy(_.targetPC).map(_._2))
     val pruned = grouped.map( ts => {
-      (List[Transition2]() /: ts.seq)( (acc, t) => {
-        val acc1 = acc.filter(t2 => !Transition2.lteq(t2,t))
-        if (acc1 exists (Transition2.lteq(t, _))) acc1 else t :: acc1
+      (List[Transition]() /: ts.seq)( (acc, t) => {
+        val acc1 = acc.filter(t2 => !Transition.lteq(t2,t))
+        if (acc1 exists (Transition.lteq(t, _))) acc1 else t :: acc1
       })
     })
     val trs2 = pruned.seq.flatten.toSeq.par
-    val p2 = new Program2(initPC, trs2)
+    val p2 = new Program(initPC, trs2)
     Logger("integer.Program", LogInfo, "duplicateTransitions: #transitions before = " + transitions.size + ", after = " + p2.transitions.size)
     p2
   }
@@ -279,7 +279,7 @@ class Program2(initPC: String, trs: GenSeq[Transition2]) extends picasso.math.Tr
   def candidateRankingFcts: Iterable[Set[Variable]] = {
     val cyclesIterator = cfa.enumerateSomeCycles
     val boundedIterator = if (Config.cyclesBound >= 0) cyclesIterator.take(Config.cyclesBound) else cyclesIterator
-    val candidates = boundedIterator.flatMap(c => Transition2.candidateRankingFcts(c.labels))
+    val candidates = boundedIterator.flatMap(c => Transition.candidateRankingFcts(c.labels))
     candidates.toSet
   }
 

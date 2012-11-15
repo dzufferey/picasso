@@ -45,8 +45,4 @@ class PrologLikePrinter {
     case Literal(b) => if (b) "0 = 0" else "1 = 0"
   }
 
-  protected def transitionConstraints(t: Transition, frame: Seq[Statement] = Seq()): Seq[Condition] = {
-    sys.error("deprecated")
-  }
-
 }
