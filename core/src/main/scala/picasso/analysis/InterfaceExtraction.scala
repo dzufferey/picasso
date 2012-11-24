@@ -198,6 +198,7 @@ object InterfaceExtraction {
     val trs = new List("Transitions")
     for ( (id, title, graph) <- trsGraphs ) {
       val gv = Misc.docToString(graph)
+      Logger("InterfaceExtraction", LogDebug, "trs: " + gv)
       trs.add(new GenericItem(id + ": " + title, gv, Misc.graphvizToSvgDot(gv)))
     }
     top.add(trs)
