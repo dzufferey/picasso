@@ -8,6 +8,7 @@ import TransitionsGraphFromCover._
 
 object InterfaceExtraction {
 
+  //TODO depth or way of telling which obj are replicated (+ nesting)
   type ObjType = String
   type Field = String
   type UnaryPredicates = Map[String, Boolean]
@@ -307,10 +308,10 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
     //for the binary preds, keep only the pred if the other guy is a neighbor
     val keep = neighbors ++ preds + node
     val restricted = graph filterNodes keep
-    //flatten to keep a single object.
+    //flatten to keep a single object. TODO does not work correctly
     val height = node.depth
     if (height > 0) {
-      val withLower = restricted.vertices.map(v => (v, (v /: (0 until math.max(0, v.depth - height)))( (v,_) => v-- ) ) )
+      val withLower = restricted.vertices.map(v => (v, (v /: (0 until math.max(height, v.depth)))( (v,_) => v-- ) ) )
       val morphing = withLower.toMap[P#V,P#V]
       (morphing(node), restricted morph morphing)
     } else {
@@ -350,14 +351,16 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
 
   protected def findClassOf(conf: DP, obj: P#V): DPV = {
     val extracted = extractDPV(conf, obj)
-    val candidate = eqClassesInGraph.find( dpv => sameDPV(dpv, extracted))
+    val candidate = eqClassesInGraph.find( dpv => sameDPV(dpv, extracted) )
     Logger.assert(
         candidate.isDefined,
         "InterfaceExtraction",
         "findClassOf: no candidate found for " + obj + "\n" + conf + extracted._1 + "\n" + extracted._2
+        + "in\n" + eqClassesMap.keys.mkString("\n")
       )
     candidate.get
   }
+  
 
 
   protected def simpleTracking(curr: (Changes[P#V], List[P#V]), mapping: Map[P#V,P#V]) = {
@@ -369,7 +372,40 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
     (goesToPrime, newsPrime)
   }
 
-  protected def track(curr: (Changes[P#V], List[P#V]), edge: TGEdges[P]): (Changes[P#V], List[P#V]) = edge match {
+  protected def backwardTracking(curr: (Changes[P#V], List[P#V]), mapping: Map[P#V, Seq[P#V]]) = {
+    val (becomes, news) = curr
+    val becomesPrime = becomes.map[(P#V, Iterable[(Multiplicity, P#V)]), Map[P#V, Iterable[(Multiplicity, P#V)]]]{ case (k,vs) =>
+      (k, vs flatMap { case (m, v) =>
+        val target = mapping(v)
+        if (target.isEmpty) {
+          Logger.logAndThrow("InterfaceExtraction", LogError, v.label + " disappears during the unfolding.")
+        } else if (target.size == 1) {
+          Seq(m -> target.head)
+        } else {
+          val highest = target.maxBy(_.depth)
+          val (concrete, between) = target.view.filterNot(_ ==highest).partition(_.depth == 0)
+          Logger.assert(between.forall(_.depth < highest.depth), "InterfaceExtraction", "multiple nodes with highest depth.")
+          val highestM = m match {
+            case Rest => Rest
+            case Part => Part 
+            case _ => Logger.logAndThrow("InterfaceExtraction", LogError, "unfolding of concrete node !?")
+          }
+          val betweenM: Seq[(Multiplicity, P#V)] = between.map( Part -> _ )
+          val concreteM: Seq[(Multiplicity, P#V)] = concrete.map ( One -> _ )
+          val res: Seq[(Multiplicity, P#V)] = Seq(highestM -> highest) ++ betweenM ++ concreteM
+          res
+        }
+      })
+    }
+    val newsPrime = news flatMap mapping
+    (becomesPrime, newsPrime)
+  }
+
+  /* Adapting the tracking to get the unfolded version
+     first -> unfolded in the base of the tracking
+     last -> stops before the folding
+  */
+  protected def trackAux(curr: (Changes[P#V], List[P#V]), edge: TGEdges[P], first: Boolean = false, last: Boolean = false): (Changes[P#V], List[P#V]) = edge match {
     case Transition(witness) => 
       //println("following transition: " + witness.transition.id)
       /// just in case ///
@@ -380,36 +416,8 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
       //unfolding (this one is reversed)
       val curr2 =
         if (witness.isUnfoldingTrivial) curr
-        else {
-          val mapping = witness.reversedUnfolding
-          //node of highest depth is Rest, concrete is One, in between Part
-          val (becomes, news) = curr
-          val becomesPrime = becomes.map[(P#V, Iterable[(Multiplicity, P#V)]), Map[P#V, Iterable[(Multiplicity, P#V)]]]{ case (k,vs) =>
-            (k, vs flatMap { case (m, v) =>
-              val target = mapping(v)
-              if (target.isEmpty) {
-                Logger.logAndThrow("InterfaceExtraction", LogError, v.label + " disappears during the unfolding.")
-              } else if (target.size == 1) {
-                Seq(m -> target.head)
-              } else {
-                val highest = target.maxBy(_.depth)
-                val (concrete, between) = target.view.filterNot(_ ==highest).partition(_.depth == 0)
-                Logger.assert(between.forall(_.depth < highest.depth), "InterfaceExtraction", "multiple nodes with highest depth.")
-                val highestM = m match {
-                  case Rest => Rest
-                  case Part => Part 
-                  case _ => Logger.logAndThrow("InterfaceExtraction", LogError, "unfolding of concrete node !?")
-                }
-                val betweenM: Seq[(Multiplicity, P#V)] = between.map( Part -> _ )
-                val concreteM: Seq[(Multiplicity, P#V)] = concrete.map ( One -> _ )
-                val res: Seq[(Multiplicity, P#V)] = Seq(highestM -> highest) ++ betweenM ++ concreteM
-                res
-              }
-            })
-          }
-          val newsPrime = news flatMap mapping
-          (becomesPrime, newsPrime)
-        }
+        else if (first) initialTracking(witness.unfolded)
+        else backwardTracking( curr, witness.reversedUnfolding)
       //inhibiting
       val curr3 =
         if (witness.isInhibitingTrivial) curr2
@@ -424,21 +432,39 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
       val curr4 = (changed, newTracked ++ newNew)
       //folding
       val curr5 =
-        if (witness.isFoldingTrivial) curr4
+        if (witness.isFoldingTrivial || last) curr4
         else simpleTracking(curr4, witness.folding)
       curr5
     case Covering(mapping) =>
+      Logger.assert(!(first || last), "InterfaceExtraction", "track: Covering edge for first or last")
       //println("following covering")
       simpleTracking(curr, mapping)
   }
   
-  protected def follows(from: DP, trs: Seq[TGEdges[P]], to: DP): (Changes[P#V], Iterable[P#V]) = {
-    //step 1: identify the objects in from
+  protected def track(curr: (Changes[P#V], List[P#V]), edge: TGEdges[P]) =
+    trackAux(curr, edge, false, false)
+
+  protected def trackFirst(curr: (Changes[P#V], List[P#V]), edge: TGEdges[P]) =
+    trackAux(curr, edge, true, false)
+  
+  protected def trackLast(curr: (Changes[P#V], List[P#V]), edge: TGEdges[P]) =
+    trackAux(curr, edge, false, true)
+  
+  protected def trackFirstLast(curr: (Changes[P#V], List[P#V]), edge: TGEdges[P]) =
+    trackAux(curr, edge, true, true)
+
+  /** identify the objects in a DP and make a map to self */
+  protected def initialTracking(from: DP) = {
     val objsNode: Set[P#V] = from.vertices.filter(isObj)
     val iter: Iterator[(P#V, Seq[(Multiplicity, P#V)])] = objsNode.iterator.map(n => (n, Seq( (if (n.depth == 0) One else Rest) -> n)))
     val objsMap: Changes[P#V] = Map[P#V, Seq[(Multiplicity, P#V)]]() ++ iter
-    val initTracking = (objsMap, List[P#V]())
+    (objsMap, List[P#V]())
+  }
+  
+  protected def follows(from: DP, trs: Seq[TGEdges[P]], to: DP): (Changes[P#V], Iterable[P#V]) = {
+    val initTracking = initialTracking(from)
     //step 2: follows that transition and keep track of the object identified in step 1 and the new objects
+    //TODO more complicated to skip the (un)folding
     val (goesTo, news) = (initTracking /: trs)(track)
     Logger.assert(goesTo.forall{ case (k,vs) => from.contains(k) && vs.forall(to contains _._2) },
                   "InterfaceExtraction",
@@ -525,7 +551,7 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
   type MethodCallWithMaps = ( MethodCall, Map[P#V, EqClass], Map[P#V, EqClass])
   
   /* on top of the method call, it also returns srcMap and dstMap */
-  protected def pathToMethodCall2(path: (DP, Seq[TGEdges[P]], DP)): MethodCallWithMaps = {
+  protected def pathToMethodCall(path: (DP, Seq[TGEdges[P]], DP)): MethodCallWithMaps = {
     //MethodCall = (G, EqClass, String, Changes[EqClass], Iterable[EqClass], G)
     //(1) parse the comment from the transition to get the method name and the type/id of the caller
     val (obj, method, createdTpe) = parseTransition(path._2.head)
@@ -549,12 +575,142 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
     (call, srcMap, dstMap)
   }
 
+  protected def composeTracking( t1: (Changes[P#V], List[P#V]),
+                                 t2: (Changes[P#V], List[P#V])
+                               ): (Changes[P#V], List[P#V])= {
+    val (t1Changes, t1News) = t1
+    val (t2Changes, t2News) = t2
+    val resChanges = t1Changes.map[(P#V, Iterable[(Multiplicity, P#V)]), Changes[P#V]]{ case (a, bs) =>
+        (a, bs.flatMap{ case (m, b) =>
+          t2Changes(b).map{ case (m2, b2) => (composeMultiplicities(m, m2), b2) }
+      })
+    }
+    val resNews = t1News.flatMap( n => t2Changes(n).map(_._2) )
+    (resChanges, resNews)
+  }
+  /* a trace should start in a non-transient cover location,
+   *  end in a non-transient cover location, and includes the transient loops. */
+  protected def traceToMethodCall(trace: Trace[DP, TGEdges[P]]): (DP, MethodCall, DP) = {
+    //get the differents parts of the trace:
+    // the first transition -> track after the unfolding
+    val ((s1, transition1), tail1) = trace.step
+    val ((s2, cover1), tail2) = tail1.step
+    // the loops -> accelerate and track
+    val (loops, tail3) = tail2.splitAfter(tail2.length - 2)
+    // sanity checks
+    Logger.assert(!isTransient(s1), "InterfaceExtraction", "traceToMethodCall: transient start")
+    Logger.assert(loops.states.dropRight(1).forall(isTransient), "InterfaceExtraction", "non-transient middle")
+    //
+    //parse the comment from the transition to get the method name and the type/id of the caller
+    val (obj, method, createdTpe) = parseTransition(transition1) //TODO obj is a reference to the folded version
+    //follows ....
+    val initTracking = initialTracking(s1)
+    val (goesTo, news, last) = if (loops.isEmpty) {
+      val last = transition1 match {
+        case Transition(witness) => witness.unfoldedAfterPost
+        case _ => Logger.logAndThrow("InterfaceExtraction", LogError, "expected Transition")
+      }
+      val (a,b) = trackFirstLast(initTracking, transition1)
+      (a,b,last)
+    } else {
+      // the last transition -> stops tracking before the unfolding
+      val ((endOfLoop, lastTransition), end) = tail3.step
+      val last = lastTransition match {
+        case Transition(witness) => witness.unfoldedAfterPost
+        case _ => Logger.logAndThrow("InterfaceExtraction", LogError, "expected Transition")
+      }
+      //the prefix
+      val firstChange = track(trackFirst(initTracking, transition1), cover1)
+      //the loop
+      val loopTracking = initialTracking(loops.start)
+      val (loopChanges, loopNews) = (loopTracking /: loops.labels)(track)
+      Logger.assert(loopNews.isEmpty, "InterfaceExtraction", "TODO new object and acceleration")
+      val accelerated = loopAcceleration(loopChanges) //, (x: EqClass, y: EqClass) => x.obj == y.obj)
+      //the suffix
+      val lastTracking = initialTracking(endOfLoop)
+      val lastChange = trackLast(lastTracking, lastTransition)
+      //compose ...
+      val (a, b) = List(firstChange, (accelerated, loopNews), lastChange) reduceLeft composeTracking
+      (a, b, last)
+    }
+    Logger.assert(!isTransient(last), "InterfaceExtraction", "traceToMethodCall: transient stop")
+    val (src, srcMap) = transition1 match {
+      case Transition(witness) => removePreds(witness.unfolded)
+      case _ => Logger.logAndThrow("InterfaceExtraction", LogError, "expected Transition")
+    }
+    val (dst, dstMap) = removePreds(last)
+    val becomesObj = simplify(goesTo.map{ case (k,vs) =>
+        (srcMap(k), vs map { case (m, cl) =>
+            (m, dstMap(cl)) } ) })
+    val newsObj = news map dstMap 
+    val call = (src, obj map srcMap, method, becomesObj, newsObj, dst)
+    (trace.start, call, trace.stop)
+  }
+
+  protected def makeNormalTraces: Iterable[Trace[DP, TGEdges[P]]] = {
+    //normal traces
+    val paths = tg.simplePaths
+    Logger.assert(paths.forall(p => cover.contains(p.start) && cover.contains(p.stop)),
+                  "InterfaceExtraction",
+                  "TODO makeTraces: a more complex way of spliting the paths ...")
+    val paths2 = paths.view.flatMap(p => p.split(loc => cover.basis.contains(loc)))
+    val paths3 = paths2.filter(p => !isTransient(p.start) && !isTransient(p.stop) )
+    paths3.force
+  }
+
+  protected def makeTransientTraces: Iterable[Trace[DP, TGEdges[P]]] = {
+    // tg: EdgeLabeledDiGraph[TG[P]]
+    val revTG = tg.reverse
+    val transientStates = cover.basis.seq.filter(isTransient)
+    
+    //includes the self loops
+    def mkTransientPath(t: DP): Iterable[Trace[DP, TGEdges[P]]] = {
+      val prefixes = for( (preLabel, preDest) <- revTG.outEdges(t);
+                          pre <- preDest if !isTransient(pre))
+                     yield (pre, preLabel)
+      def recurse(current: DP, seen: Set[DP]): Iterable[Trace[DP, TGEdges[P]]] = {
+        if (cover.basis.contains(current) && !isTransient(current)) {
+          Seq(new Trace[DP, TGEdges[P]](current, Nil))
+        } else {
+          val seen2 = seen + current
+          val after = for ((label, nexts) <- tg.outEdges(current);
+               next <- nexts if !seen2(next);
+               suffix <- recurse(next, seen2) ) yield {
+            suffix.prepend(current, label)
+          }
+          val selfLoop = tg.edgesBetween(current,current)
+          after.map(trc => (trc /: selfLoop)( (acc, loop) => acc.prepend(current, loop) ) )
+        }
+      }
+      val suffixes = recurse(t, Set[DP]())
+      prefixes.flatMap{ case (start, call) => suffixes.map(_.prepend(start, call)) }
+    }
+
+    transientStates.iterator.flatMap( mkTransientPath ).toIterable
+  }
+
+  protected def makeTraces = makeNormalTraces ++ makeTransientTraces
+
   private def checkChangesDomains(what: String, from: G, c: Changes[EqClass], to: G) {
     Logger.assert(c.keys.forall(from contains _), "InterfaceExtraction", what + ": src not in graph")
     Logger.assert(c.values.forall(_.forall(to contains _._2)), "InterfaceExtraction", what + ": dest not in graph")
   }
   
-  protected def composeTransition(t1: MethodCallWithMaps, middle: DP, t2: MethodCallWithMaps): MethodCallWithMaps = {
+  protected def composeChanges( t1Changes: Changes[EqClass], t1News: Iterable[EqClass],
+                                t1Dest: Map[P#V, EqClass], t2Src: Map[P#V, EqClass],
+                                t2Changes: Changes[EqClass], t2News: Iterable[EqClass]): (Changes[EqClass], Iterable[EqClass]) = {
+    //need to compute: x => t2Src(t1Dest^{-1}(x))
+    val t1DestInverse = t1Dest.map[(EqClass,P#V), Map[EqClass, P#V]]{ case (a,b) => (b,a) }
+    def t1ToT2(x: EqClass) = t2Src(t1DestInverse(x))
+    val resChanges = t1Changes.map{ case (a, bs) => (a, bs.flatMap{ case (m, b) =>
+        t2Changes(t1ToT2(b)).map{ case (m2, b2) => (composeMultiplicities(m, m2), b2) }
+      })
+    }
+    val resNews = t1News.flatMap( n => t2Changes(t1ToT2(n)).map(_._2) )
+    (resChanges, resNews)
+  }
+
+  protected def composeTransition(t1: MethodCallWithMaps, t2: MethodCallWithMaps): MethodCallWithMaps = {
     //println("composeTransition ...")
     val ((t1From, t1Caller, t1Method, t1Changes, t1News, t1To), t1Src, t1Dest) = t1
     //checkChangesDomains("composeTransition.t1", t1From, t1Changes, t1To)
@@ -564,36 +720,25 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
     //checkChangesDomains("composeTransition.t2", t2From, t2Changes, t2To)
     //Logger.assert(t2Src.values.forall(t2From contains _), "InterfaceExtraction", "pathToMethodCall.t2Src")
     //Logger.assert(t2Dest.values.forall(t2To contains _), "InterfaceExtraction", "pathToMethodCall.t2Dest")
-    //need to compute: x => t2Src(t1Dest^{-1}(x))
-    val t1DestInverse = t1Dest.map[(EqClass,P#V), Map[EqClass, P#V]]{ case (a,b) => (b,a) }
-    //Logger.assert(t1DestInverse.keys.forall(t1To contains _), "InterfaceExtraction", "pathToMethodCall.t1DestInverse")
-    def t1ToT2(x: EqClass) = t2Src(t1DestInverse(x))
-    //val t2SrcInverse = t2Src.map[(EqClass,P#V), Map[EqClass, P#V]]{ case (a,b) => (b,a) }
-    //val t2ToT1(x: EqClass) = t2Dest(t2SrcInverse(x))
-    //and compose with t2 
-    val resChanges = t1Changes.map{ case (a, bs) => (a, bs.flatMap{ case (m, b) =>
-        t2Changes(t1ToT2(b)).map{ case (m2, b2) => (composeMultiplicities(m, m2), b2) }
-      })
-    }
-    //assert(t2Changes.keys.forall(k => t1Changes.values.exists(_.exists(c => t1ToT2(c._2) == k))))
-    //val t1Range = t1Changes.values.flatMap(_.map(_._2)).toSet.map(t1ToT2)
-    //val newChanges = t2Changes.filterNot(t1Range)
-    //val resChangesPart2 =  newChanges.map{ case (a, bs) => (t1DstToSrc(a), bs) }
-    //val resChanges =
-    val resNews = t1News.flatMap( n => t2Changes(t1ToT2(n)).map(_._2) )
-    checkChangesDomains("composeTransition.resChanges", t1From, resChanges, t2To)
+    val (resChanges, resNews) = composeChanges(t1Changes, t1News, t1Dest, t2Src, t2Changes, t2News)
+    //checkChangesDomains("composeTransition.resChanges", t1From, resChanges, t2To)
     Logger.assert(resNews.forall(t2To contains _), "InterfaceExtraction", "composeTransition: news not in graph")
     ((t1From, t1Caller, t1Method, resChanges, resNews, t2To), t1Src, t2Dest)
   }
 
+  protected def accelerate(call: MethodCall): MethodCall = {
+    val (from, caller, method, changes, news, to) = call
+    Logger.assert(news.isEmpty, "InterfaceExtraction", "TODO new object and acceleration")
+    val accelerated = loopAcceleration(changes, (x: EqClass, y: EqClass) => x.obj == y.obj)
+    Logger.assert(accelerated.keys.forall(from contains _), "InterfaceExtraction", "accelerated: src not in graph")
+    Logger.assert(accelerated.values.forall(_.forall(to contains _._2)), "InterfaceExtraction", "accelerated: dest not in graph")
+    (from, caller, method, accelerated, news, to)
+  }
+
   protected def accelerateIfNeeded(start: DP, call: MethodCallWithMaps, end: DP): MethodCallWithMaps = {
     if (start == end) {
-      val ((from, caller, method, changes, news, to), src, dest) = call
-      Logger.assert(news.isEmpty, "InterfaceExtraction", "TODO new object and acceleration")
-      val accelerated = loopAcceleration(changes, (x: EqClass, y: EqClass) => x.obj == y.obj)
-      Logger.assert(accelerated.keys.forall(from contains _), "InterfaceExtraction", "accelerated: src not in graph")
-      Logger.assert(accelerated.values.forall(_.forall(to contains _._2)), "InterfaceExtraction", "accelerated: dest not in graph")
-      ((from, caller, method, accelerated, news, to), src, dest)
+      val (c, src, dest) = call
+      (accelerate(c), src, dest)
     } else {
       call
     }
@@ -606,7 +751,7 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
     val call = accelerateIfNeeded(trace.start, fstCall, middle)
     val (finalCall, _) = ((call, middle) /: trace.tail)( (acc, step) => {
       val aCall = accelerateIfNeeded(acc._2, step._1, step._2)
-      (composeTransition(acc._1, acc._2, aCall), step._2)
+      (composeTransition(acc._1, /*acc._2,*/ aCall), step._2)
     })
     val (start, end) = trace.extremities
     (start, finalCall, end)
@@ -634,7 +779,7 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
       Logger("InterfaceExtraction", LogDebug, Misc.docToString(structure))
     }
 
-    val edges: Iterable[(DP, MethodCallWithMaps, DP)] = makePaths.map(path => (path._1, pathToMethodCall2(path), path._3) )
+    val edges: Iterable[(DP, MethodCallWithMaps, DP)] = makePaths.map(path => (path._1, pathToMethodCall(path), path._3) )
     val withTransient = EdgeLabeledDiGraph[GT.ELGT{type V = DP; type EL = MethodCallWithMaps}](edges).addVertices(cover.basis.seq)
     val transientStates = withTransient.vertices.filter(isTransient)
     val revWithTransient = withTransient.reverse
@@ -677,4 +822,20 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
 
     interface
   }
+  
+  def interface2: Interface = {
+    Logger("InterfaceExtraction", LogNotice, "Extracting interface ...")
+    Logger( "InterfaceExtraction", LogDebug, Misc.docToString(
+        TransitionsGraphFromCover.structureToGraphviz(cover, tg) ) )
+
+    val dict = cover.basis.seq.iterator.map( c => (c, removePreds(c)._1) ).toMap
+    val edges: Iterable[(G, MethodCall, G)] = makeTraces.map( t => {
+      val (a,b,c) = traceToMethodCall(t)
+      (dict(a), pruneCall(b), dict(c))
+    })
+    val nodes = cover.basis.seq.filter(x => !isTransient(x)).map(dict)
+    EdgeLabeledDiGraph[IGT2](edges).addVertices(nodes)
+
+  }
+
 }

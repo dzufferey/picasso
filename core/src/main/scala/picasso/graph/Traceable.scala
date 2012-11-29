@@ -12,6 +12,14 @@ class Trace[A,B](val start: A, val transitions: List[(B,A)]) extends Iterable[(B
   
   def stop = if (transitions.length == 0) start else transitions.last._2
 
+  def step = {
+     if (transitions.isEmpty) {
+       throw new java.util.NoSuchElementException("step called on an empty trace")
+     }
+     val (t,b) = transitions.head
+     ((start, t), new Trace(b, transitions.tail))
+  }
+
   override def iterator = transitions.iterator
 
   private def mkTriple(acc: List[(A,B,A)], current: A, rest: List[(B,A)]): List[(A,B,A)] = rest match {
@@ -52,6 +60,13 @@ class Trace[A,B](val start: A, val transitions: List[(B,A)]) extends Iterable[(B
   }
 
   def split(at: A): List[Trace[A,B]] = split(_ == at)
+
+  def splitAfter(n: Int): (Trace[A,B],Trace[A,B]) = {
+    val (t1, t2) = transitions.splitAt(n)
+    val part1 = new Trace(start, t1)
+    val part2 = new Trace(part1.stop, t2)
+    (part1, part2)
+  }
 
   override def toString = start + transitions.map( p => (p._1 + " => "+p._2)).mkString(" => ", " => ", "")
 

@@ -25,7 +25,7 @@ class TransitionWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
   /** unfolding maps the unfolded nodes to their origin */
   var unfolding: Morphism = null
   /** 'from' after unfolding */
-  var unfolded: DepthBoundedConf[P] = null
+  var unfolded: Conf = null
   /** firstMorhism after unfolding */
   //var unfoldedMorphism: Morphism = null
 
@@ -33,7 +33,7 @@ class TransitionWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
   /** nodes removed due to the inhibitor */
   var inhibitedNodes: Set[P#V] = Set[P#V]()
   var inhibitedFlattening: Morphism = null
-  var inhibited: DepthBoundedConf[P] = null
+  var inhibited: Conf = null
 
   /** what happened during the post.
    *  For the moment this contains only the frame, since it is
@@ -73,7 +73,7 @@ class TransitionWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
     folding = addFrame(unfoldedAfterPost, folding, to)
   }
 
-  protected def addFrame(src: DepthBoundedConf[P], map: Morphism, trg: DepthBoundedConf[P]): Morphism = {
+  protected def addFrame(src: Conf, map: Morphism, trg: Conf): Morphism = {
     val frame = src.vertices -- map.keys
     Logger.assert(
       frame.forall(trg contains _),
@@ -82,12 +82,20 @@ class TransitionWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
     )
     (map /: frame)( (acc, f) => acc + (f -> f) )
   }
+  
+  protected def reverseMapping(from: Conf, map: Morphism, to: Conf): Map[P#V, Seq[P#V]] = {
+    val frame = from.vertices -- map.keys
+    assert(frame forall (to contains _) )
+    val revMorph2 = map ++ frame.map(x => (x,x))
+    revMorph2.toSeq.map{ case (a,b) => (b,a) }.groupBy( _._1 ).mapValues( _ map (_._2) )
+  }
 
   def reversedUnfolding: Map[P#V, Seq[P#V]] = {
-    val frame = unfolded.vertices -- unfolding.keys
-    assert(frame forall (from contains _) )
-    val revMorph2 = unfolding ++ frame.map(x => (x,x))
-    revMorph2.toSeq.map{ case (a,b) => (b,a) }.groupBy( _._1 ).mapValues( _ map (_._2) )
+    reverseMapping(unfolded, unfolding, from)
+  }
+  
+  def reversedFolding: Map[P#V, Seq[P#V]] = {
+    reverseMapping(unfoldedAfterPost, folding, to)
   }
   
   def isUnfoldingTrivial = {
@@ -198,18 +206,5 @@ class WideningWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
 
   var unfoldedResult: Conf = null
   var folding: Morphism = null
-
-}
-
-class WideningWitnessSeq[P <: DBCT]
-{
-  
-  type Conf = DepthBoundedConf[P]
-
-  var from: Conf = null
-
-  var to: Conf = null
-
-  var sequence: List[WideningWitness[P]] = Nil
 
 }

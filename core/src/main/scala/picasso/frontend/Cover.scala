@@ -44,6 +44,7 @@ class Cover[P <: picasso.model.dbp.DBCT](
     if (Config.interfaceExtraction) {
       val iExtractor = new InterfaceExtraction(process, cover)
       val interface = iExtractor.interface
+      //val interface = iExtractor.interface2
       report.add(InterfaceExtraction.report(interface))
     }
 
