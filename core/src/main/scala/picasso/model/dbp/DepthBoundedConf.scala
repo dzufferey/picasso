@@ -42,6 +42,89 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     toStringWithIds("DepthBoundedConf", nodeIds)
   }
 
+  import scala.text.Document
+  def toGraphvizWithNesting( name: String,
+                             prefix: String = "digraph",
+                             inBody: Document = Document.empty,
+                             idPrefix: String = "",
+                             nodeProps: V => List[(String,String)] = _ => Nil,
+                             edgeProps: EL => List[(String,String)] = _ => Nil
+                           ): (Document, Map[V, String]) = {
+
+    import Document._
+
+    //Begin Ctrl+C Ctrl+V from Digraph.scala
+    val (id, _) = vertices.foldLeft((Map.empty[V,String],0))((acc, v) => (acc._1 + (v -> Misc.quoteIfFancy(idPrefix + acc._2)), acc._2 + 1))
+    def docOfProps(lst: List[(String,String)]) = lst.map{ case (p,s) => text(p) :: "=" :: text(s) }.reduceRight(_ :: "," :: _)
+    def nodeProps2(v: V) = {
+      val p1 = nodeProps(v)
+      if (p1.find(_._1 == "label").isDefined) p1
+      else ("label", Misc.quote(if (labelOf(v)==()) v.toString else labelOf(v).toString)) :: p1
+    }
+    def nodeToDoc(v: V) = id(v).toString :: " [":: docOfProps(nodeProps2(v)) :: text("];")
+    def edgeProps2(e: EL) = {
+      val p1 = edgeProps(e)
+      if (p1.find(_._1 == "label").isDefined || e == ()) p1
+      else ("label", Misc.quote(e.toString)) :: p1
+    }
+    def edgeToDoc(a:V, b:EL, c: V) = {
+      val props = edgeProps2(b)
+      val body = if (props.isEmpty) text(";") else " [":: docOfProps(props) :: text("];")
+      id(a).toString :: " -> " :: id(c).toString :: body
+    }
+    val header = if (inBody == empty) empty else (empty :/: inBody)
+    //End Ctrl+C Ctrl+V from Digraph.scala
+
+    var clusterCount = 0
+    //decomposeInDisjointComponents: DiGraph[GT.ULGT{type V = Set[P#V]}] // Edges from x to y iff y is part of x. 
+    var cmpts = decomposeInDisjointComponents
+    val clusters = cmpts.topologicalSort.reverse
+
+    def mkCluster(cluster: Set[P#V],
+                  children: Map[Set[P#V], Document]
+                 ): Document = {
+      //nodes
+      val nodesDoc = cluster map nodeToDoc
+      val nodes = if (nodesDoc.isEmpty) empty: Document else nodesDoc.reduceRight((v, acc) => v :/: acc)
+      //edges
+      val allNodes = (cluster /: cmpts(cluster))(_ ++ _)
+      val restricted = this.filterNodes(allNodes)
+      val edgesDoc = restricted.edges map { case (a,b,c) => edgeToDoc(a, b, c) }
+      val edgesStr = if(edgesDoc.isEmpty) empty else edgesDoc.reduceRight((e, acc) => e :/: acc )
+      //subgraphs
+      val childrenNeeded = cmpts(cluster).map(children)
+      val childrenStr = if (childrenNeeded.isEmpty) empty else childrenNeeded.reduceRight(_ :/: _)
+      //
+      if (cluster exists (_.depth > 0)) {
+        clusterCount += 1
+        "subgraph " :: Misc.quoteIfFancy("cluster_" + name + "_" + clusterCount) :: " {" ::
+          nest(4, "label = \"*\";" :/: nodes :/: edgesStr :/: childrenStr) :/: text("}")
+      } else {
+        prefix :: " " :: Misc.quoteIfFancy(name) :: " {" ::
+          nest(4, header :/: nodes :/: edgesStr :/: childrenStr) :/: text("}")
+      }
+    }
+    
+    val map = (Map.empty[Set[P#V], Document] /: clusters)( (acc, cluster) => {
+      acc + (cluster -> mkCluster(cluster, acc))
+    })
+
+    val revCmpts = cmpts.reverse
+    val bottom = cmpts.vertices.filter(v => revCmpts(v).isEmpty )
+
+    if (bottom.size == 0) {
+      (prefix :: " " :: Misc.quoteIfFancy(name) :: " {" :: nest(4, header) :/: text("}"), id)
+    } else if (bottom.size == 1) {
+      (map(bottom.head), id)
+    } else {
+      val dummy = Set[P#V]()
+      cmpts = (cmpts /: bottom)( (acc, v) => acc + (dummy, (), v))
+      (mkCluster(dummy, map), id)
+    }
+
+
+  }
+
   // use def instead of val if caching requires too much space
   lazy val undirectedAdjacencyMap = this.undirect
 

@@ -132,6 +132,12 @@ class TransitionWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
 
   protected def postChanging: Morphism = post.filter{ case (a,b) => a != b } //TODO not sure about the wildcards
 
+  def modifiedUnfolded: Set[P#V] = {
+    val before = postChanging.keySet
+    val revInh = inhibitedFlattening.map[(P#V,P#V), Morphism]{ case (a,b) => (b,a) }
+    before.map(n => revInh.getOrElse(n,n) )
+  }
+
   /** returns the nodes that are matched by the LHR. */
   def modifiedPre: Set[P#V] = {
     //println("unfolded = " + unfolded)
@@ -139,9 +145,10 @@ class TransitionWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
     //println("postChanging = " + postChanging.mkString(", "))
     val before = postChanging.keySet
     val revInh = inhibitedFlattening.map[(P#V,P#V), Morphism]{ case (a,b) => (b,a) }
-    val beforeInhibit = before.map(n => revInh.getOrElse(n,n) )
+    val beforeInhibit = modifiedUnfolded
     beforeInhibit.map(n => unfolding.getOrElse(n,n))
   }
+
   
   /** returns the nodes that are matched by the RHS. */
   def modifiedPost: Set[P#V] = {

@@ -125,7 +125,7 @@ extends Traceable[P#V,P#EL] with GraphAlgorithms[PB, P, G] {
   def toGraphvizFull(name: String, prefix: String, inBody: Document, idPrefix: String): (Document, Map[V, String]) =
     toGraphvizExplicit(name, prefix, inBody, idPrefix, _ => Nil, _ => Nil)
   def toGraphvizFull(name: String, prefix: String, inBody: String, idPrefix: String): (Document, Map[V, String]) =
-    toGraphvizFull(name, prefix, Document.text(inBody), idPrefix)
+    toGraphvizFull(name, prefix, if (inBody == "") Document.empty else Document.text(inBody), idPrefix)
 
   def toGraphvizDoc(name: String = toStringPrefix, prefix: String = "digraph"): Document = 
     toGraphvizFull(name, prefix, "", "")._1

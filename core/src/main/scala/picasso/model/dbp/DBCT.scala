@@ -9,6 +9,7 @@ extends VertexLike[Thread[State]] {
   override def clone = Thread[State](state, depth)
   def ++ = Thread[State](state, depth + 1)
   def -- = Thread[State](state, depth - 1)
+  def setDepth(d: Int) = Thread[State](state, d)
   def label = (state, depth)
 }
 

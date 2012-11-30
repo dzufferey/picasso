@@ -11,8 +11,12 @@ import scala.text.Document._
 object TransitionsGraphFromCover {
 
   sealed abstract class TGEdges[P <: DBCT]
-  case class Transition[P <: DBCT](witness: TransitionWitness[P]) extends TGEdges[P]
-  case class Covering[P <: DBCT](morph: Map[P#V, P#V]) extends TGEdges[P]
+  case class Transition[P <: DBCT](witness: TransitionWitness[P]) extends TGEdges[P] {
+    override def toString = witness.transition.id
+  }
+  case class Covering[P <: DBCT](morph: Map[P#V, P#V]) extends TGEdges[P] {
+    override def toString = "covering"
+  }
 
   trait TG[P <: DBCT] extends GT {
     type V = DepthBoundedConf[P]
