@@ -35,10 +35,9 @@ class TransitionWitness[P <: DBCT]( implicit wpo: WellPartialOrdering[P#State])
   var inhibitedFlattening: Morphism = null
   var inhibited: Conf = null
 
-  /** what happened during the post.
-   *  For the moment this contains only the frame, since it is
-   *  the only part that matter to update the counters
-   */
+  var lhsIDs: Map[P#V, String] = null
+
+  /** what happened during the post. */
   var post: Morphism = null
 
   /** conf after the removal of inhibited nodes and applying the transition */

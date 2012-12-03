@@ -77,7 +77,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
 
     var clusterCount = 0
     //decomposeInDisjointComponents: DiGraph[GT.ULGT{type V = Set[P#V]}] // Edges from x to y iff y is part of x. 
-    var cmpts = decomposeInDisjointComponents
+    var cmpts = decomposeInDisjointComponentsWithSingleLvl0
     val clusters = cmpts.topologicalSort.reverse
 
     def mkCluster(cluster: Set[P#V],
@@ -89,7 +89,8 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
       //edges
       val allNodes = (cluster /: cmpts(cluster))(_ ++ _)
       val restricted = this.filterNodes(allNodes)
-      val edgesDoc = restricted.edges map { case (a,b,c) => edgeToDoc(a, b, c) }
+      val edgesDoc = restricted.edges.flatMap { case (a,b,c) =>
+            if (cluster(a) || cluster(c)) Some(edgeToDoc(a, b, c)) else None }
       val edgesStr = if(edgesDoc.isEmpty) empty else edgesDoc.reduceRight((e, acc) => e :/: acc )
       //subgraphs
       val childrenNeeded = cmpts(cluster).map(children)
@@ -109,9 +110,9 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
       acc + (cluster -> mkCluster(cluster, acc))
     })
 
+
     val revCmpts = cmpts.reverse
     val bottom = cmpts.vertices.filter(v => revCmpts(v).isEmpty )
-
     if (bottom.size == 0) {
       (prefix :: " " :: Misc.quoteIfFancy(name) :: " {" :: nest(4, header) :/: text("}"), id)
     } else if (bottom.size == 1) {
@@ -322,6 +323,26 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     val allVertices = cmps.map(trim)
     DiGraph[GT.ULGT{type V = Set[P#V]}](trimedEdges).addVertices(allVertices)
   }
+  
+  lazy val decomposeInDisjointComponentsWithSingleLvl0: DiGraph[GT.ULGT{type V = Set[P#V]}] = {
+
+    val lvl0 = decomposeInDisjointComponents.vertices.filter(_.exists(_.depth == 0))
+
+    val (zero, g) = if (lvl0.size == 0) {
+      val dummy = Set[P#V]()
+      (dummy, (decomposeInDisjointComponents /: lvl0)( (acc, v) => acc + (dummy, (), v)))
+    } else if (lvl0.size == 1) {
+      (lvl0.head, decomposeInDisjointComponents)
+    } else {
+      val single = lvl0.reduceLeft(_ ++ _)
+      val m = (Map.empty[Set[P#V], Set[P#V]] /: lvl0)( (acc, v) => acc + (v -> single))
+      (single, decomposeInDisjointComponents.morph(m))
+    }
+    
+    val revG = g.reverse
+    val bottom = g.vertices.filter(v => revG(v).isEmpty ) - zero
+    (g /: bottom)( (acc, v) => acc + (zero, (), v))
+  } 
 
   /** Unfold the nodes in this graph which are replicated and in the codomain of the morphism.
    *  @param smaller the LHS of a transition

@@ -62,7 +62,8 @@ object DBPGraphParser extends StandardTokenParsers {
           val map3 = map2.map{ case (k,v) => (nodeInGraph(k, lhs), nodeInGraph(v, inh))}
           (inh, map3)
         }
-        DepthBoundedTransition[DBCGraph](id, lhs, rhs, hr, hk, inhibitory2)
+        val lhsId = lhs.vertices.iterator.map[(DBCGraph#V, String)]( n => (n, n.state._1) ).toMap
+        DepthBoundedTransition[DBCGraph](id, lhs, rhs, hr, hk, inhibitory2, lhsId)
     }
 
   def system: Parser[(DepthBoundedConf[DBCGraph], List[DepthBoundedTransition[DBCGraph]], Option[DepthBoundedConf[DBCGraph]])] =

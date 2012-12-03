@@ -11,7 +11,8 @@ class DepthBoundedTransition[P <: DBCT](val id: String,
                                         val rhs: DepthBoundedConf[P],
                                         val hr: Map[P#V, P#V],
                                         val hk: Map[P#V, P#V],
-                                        val inh: Option[(DepthBoundedConf[P], Map[P#V, P#V])] = None)
+                                        val inh: Option[(DepthBoundedConf[P], Map[P#V, P#V])] = None,
+                                        val lhsID: Map[P#V, String] = Map.empty[P#V, String])
                                        (implicit wpo: WellPartialOrdering[P#State])
 extends Transition[DepthBoundedConf[P]] 
 {
@@ -137,6 +138,7 @@ extends Transition[DepthBoundedConf[P]]
         witness.inhibitedNodes = removedByInhibitor
         witness.inhibitedFlattening = flattening
         witness.inhibited = conf1
+        witness.lhsIDs = lhsID.map[(P#V, String), Map[P#V, String]]{ case (k, v) => (g1(k), v) }
         witness.post = postMorphism
         witness.unfoldedAfterPost = postUnfolded
         witness.folding = folding
@@ -214,8 +216,9 @@ object DepthBoundedTransition {
                         rhs: DepthBoundedConf[P],
                         h: Map[P#V, P#V],
                         hk: Map[P#V, P#V] = Map.empty[P#V, P#V],
-                        inh: Option[(DepthBoundedConf[P], Map[P#V,P#V])] = None )
+                        inh: Option[(DepthBoundedConf[P], Map[P#V,P#V])] = None,
+                        lhsID: Map[P#V, String] = Map.empty[P#V, String])
                       ( implicit wpo: WellPartialOrdering[P#State]): DepthBoundedTransition[P] = {
-    new DepthBoundedTransition[P](id, lhs, rhs, h, hk, inh)(wpo)
+    new DepthBoundedTransition[P](id, lhs, rhs, h, hk, inh, lhsID)(wpo)
   }
 }

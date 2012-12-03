@@ -32,13 +32,13 @@ object InterfaceExtraction {
 
   /** What happens each time a method is called.
    *  Src: the input
-   *  Obj: the callee
+   *  Role: maps some nodes to their role in the fct call (callee, args, ...)
    *  String: the method name
    *  Become: what an object becomes / might become
    *  Iterable[Obj]: the newly created objects [one in the list]
    *  Dest: the output
    */
-  type MethodCall = (G, Option[G#V], String, Changes[G#V], Iterable[G#V], G)
+  type MethodCall = (G, Map[G#V, String], String, Changes[G#V], Iterable[G#V], G)
 
   type IGT2 = GT.ELGT{type V = G; type EL = MethodCall}
   type Interface = EdgeLabeledDiGraph[IGT2]
@@ -110,6 +110,30 @@ object InterfaceExtraction {
     }
     simplify(a2 ++ onlyB)
   }
+ 
+
+  /** methodName(thisType {, argType}* )[: newObj] [; comment]
+   *  returns (thisType, methodName, argsTypes, [newObj])
+   */
+  def parseTransitionName(str: String): Option[(ObjType, String, Seq[ObjType], Option[ObjType])] = {
+    val woComment =
+      if (str.indexOf(";") == -1) str
+      else str.substring(0, str.indexOf(";"))
+    try {
+      val lparen = woComment.indexOf("(")
+      val rparen = woComment.indexOf(")")
+      val methodName = woComment.substring(0, lparen)
+      val tpes = woComment.substring(lparen + 1, rparen).split(",").map(_.trim)
+      val rest = woComment.substring(rparen + 1)
+      val created =
+        if (rest contains ":") Some(rest.substring(rest.indexOf(":") + 1).trim)
+        else None
+      Some((tpes.head, methodName, tpes.tail, created))
+    } catch {
+      case e: java.lang.StringIndexOutOfBoundsException =>
+        None
+    }
+  }
 
   import picasso.utils.report._
   //pretty print the Interface
@@ -122,12 +146,12 @@ object InterfaceExtraction {
     val idsForCover = interface.vertices.iterator.zipWithIndex.map{ case (o, idx) => (o, "cover_"+idx) }.toMap
     val idsForTransitions = interface.edges.iterator.zipWithIndex.map{ case (t, idx) => (t._2, "t_"+idx) }.toMap
 
-    def gToGv(g: G, id: String, kind: String = "digraph", misc: Document = empty, callee: Option[G#V] = None): (Document, Map[G#V, String]) = {
+    def gToGv(g: G, id: String, kind: String = "digraph", misc: Document = empty, roles: Map[G#V, String] = Map.empty): (Document, Map[G#V, String]) = {
       def idsForObj(obj: G#V) = {
         val (tpe, ptsTo, unary, binary) = obj.state
         val flatBinary = for ( (p, fb) <- binary; (f,b) <- fb) yield (p,f,b)
         val name = 
-          if (callee.isDefined && callee.get == obj) "callee: " + tpe
+          if (roles.contains(obj)) roles(obj) + ": " + tpe
           else tpe
         Misc.quote(
           "{ " + name + " | " +
@@ -144,6 +168,21 @@ object InterfaceExtraction {
       )
     }
 
+    def mkTitle(method: String, roles: Map[G#V, String]): String = {
+        val objByRole = roles.map[(String, G#V), Map[String, G#V]]{ case (a, b) => (b, a) }
+        val calleeName = objByRole.get("callee") match {
+          case Some(cl) => objToString(cl.state)
+          case None => "???"
+        }
+        val args = for (i <- 0 until roles.size -1) yield {
+          objByRole.get("arg" + i) match {
+            case Some(cl) => objToString(cl.state)
+            case None => "???"
+          }
+        }
+        calleeName + "." + method + args.mkString("(", ", ", ")")
+    }
+
     //a few graph to print:
     //-the structure of the automaton: give unique name to node and transition
     val outline = interface.toGraphvizExplicit(
@@ -157,16 +196,12 @@ object InterfaceExtraction {
     //-the content of the nodes
     val nodesGraphs = idsForCover.map{ case (g, id) => (id, gToGv(g, id)._1) }
     //-the transitions
-    val trsGraphs = interface.edges.map{ case (coverFrom , el @ (from, callee, method, changes, news, to), coverTo) =>
+    val trsGraphs = interface.edges.map{ case (coverFrom , el @ (from, roles, method, changes, news, to), coverTo) =>
         val id = idsForTransitions(el)
-        val calleeName = callee match {
-          case Some(cl) => objToString(cl.state)
-          case None => "---"
-        }
-        val title = calleeName + "." + method
-        val (fromGv, fromNodesToId) = gToGv(from, "cluster_" + id + "_src", "subgraph", text("label = \"LHS("+idsForCover(coverFrom)+")\";"), callee)
-        val calleeAfter = callee flatMap ( c => changes.get(c).map(_.head._2) ) //TODO some assertion
-        val (toGv, toNodesToId) = gToGv(to, "cluster_" + id + "_to", "subgraph", text("label = \"RHS("+idsForCover(coverTo)+")\";"), calleeAfter)
+        val title = mkTitle(method, roles)
+        val (fromGv, fromNodesToId) = gToGv(from, "cluster_" + id + "_src", "subgraph", text("label = \"LHS("+idsForCover(coverFrom)+")\";"), roles)
+        val rolesAfter = roles.flatMap[(G#V, String),Map[G#V, String]]{ case (n, r) => changes.get(n).map(_.head._2 -> r) } //TODO some assertion
+        val (toGv, toNodesToId) = gToGv(to, "cluster_" + id + "_to", "subgraph", text("label = \"RHS("+idsForCover(coverTo)+")\";"), rolesAfter)
         val changesEdges = changes.iterator.flatMap{ case (a, bs) => bs.map{ case (m, b) =>
             text( fromNodesToId(a) + " -> " + toNodesToId(b) + " [label=\""+ multiplicityToString(m) +"\",color=\"#0000FF\"];")
           }
@@ -455,65 +490,57 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
     val objsMap: Changes[P#V] = Map[P#V, Seq[(Multiplicity, P#V)]]() ++ iter
     (objsMap, List[P#V]())
   }
-  
-  /** decompose the transition graph into simple path going from cover location to cover location */
-  protected def makePaths: Seq[(DP, Seq[TGEdges[P]], DP)] = {
-    //the simple version
-    val paths = tg.simplePaths
-    Logger.assert(paths.forall(p => cover.contains(p.start) && cover.contains(p.stop)),
-                  "InterfaceExtraction",
-                  "TODO makePaths: a more complex way of spliting the paths ...")
-    val paths2 = paths.view.flatMap(p => p.split(loc => cover.basis.contains(loc)))
-    val paths3 = paths2.map(p => (p.start, p.labels, p.stop) )
-    paths3.force
+
+  protected def withType(nodes: Iterable[P#V], tpe: ObjType, role: String): Option[P#V] = {
+    val candidates = nodes.filter(n => typeOf(n) == tpe)
+    if (candidates.isEmpty) {
+      Logger("InterfaceExtraction", LogWarning, "pathToMethodCall: no candidates for " + role)
+      None
+    } else {
+      if (candidates.size > 1) {
+        Logger( "InterfaceExtraction",
+                LogWarning,
+                "pathToMethodCall: more than one candidate for " + role + ": " + candidates.mkString(", ")
+              )
+      }
+      Some(candidates.head)
+    }
   }
 
-  /** methodName(thisType)[: newObj] [, comment]
-   *  returns (thisType, methodName, [newObj])
-   */
-  protected def parseName(str: String): Option[(String,String,Option[String])] = {
-    val woComment =
-      if (str.indexOf(",") == -1) str
-      else str.substring(0, str.indexOf(","))
-    try {
-      val lparen = woComment.indexOf("(")
-      val rparen = woComment.indexOf(")")
-      val methodName = woComment.substring(0, lparen)
-      val tpe = woComment.substring(lparen + 1, rparen)
-      val rest = woComment.substring(rparen + 1)
-      val created =
-        if (rest contains ":") Some(rest.substring(rest.indexOf(":") + 1).trim)
-        else None
-      Some((tpe, methodName, created))
-    } catch {
-      case e: java.lang.StringIndexOutOfBoundsException =>
+  protected def nodeWithID(witness: TransitionWitness[P], conf: DP, id: String): Option[P#V] = {
+    witness.lhsIDs.find{ case (a,b) => b == id } match {
+      case Some((n,_)) =>
+         Logger.assert(conf contains n, "InterfaceExtraction", id + " in lhsIDs but not conf.")
+         Some(n)
+      case None =>
+        Logger("InterfaceExtraction", LogWarning, "pathToMethodCall: no candidates for " + id)
         None
     }
   }
 
   // parse the comment from the transition to get the method name and the type/id of the callee
-  protected def parseTransition(edge: TGEdges[P]): (Option[P#V], String, Option[ObjType]) = edge match {
+  protected def parseTransition(edge: TGEdges[P]): (Map[P#V, String], String, Option[ObjType]) = edge match {
     case Transition(witness) =>
       Logger("InterfaceExtraction", LogInfo, "making edge for: " + witness.transition.id)
-      parseName(witness.transition.id) match {
-        case Some((tpe, call, created)) =>
+      parseTransitionName(witness.transition.id) match {
+        case Some((tpe, call, args, created)) =>
           //println("looking for candidate of type " + tpe + " in " + witness.modifiedPre.map(typeOf).mkString(", "))
-          val candidates = witness.modifiedUnfolded.filter(n => n.depth == 0 && typeOf(n) == tpe)
-          if (candidates.isEmpty) {
-            Logger("InterfaceExtraction", LogWarning, "pathToMethodCall: no candidates")
-            (None, call, created)
-          } else {
-            if (candidates.size > 1) {
-              Logger( "InterfaceExtraction",
-                      LogWarning,
-                      "pathToMethodCall: more than one candidate for \""+witness.transition.id+"\": " + candidates.mkString(", ")
-                    )
-            }
-            (Some(candidates.head), call, created)
-          }
+          val concreteNodes = witness.modifiedUnfolded.filter(n => n.depth == 0)
+          val callee: Option[P#V] = nodeWithID(witness, witness.unfolded, "callee")
+          val indexed: Iterable[(ObjType, Int)] = args.zipWithIndex
+          val initRole: Map[P#V, String] =
+            if(callee.isDefined) Map[P#V, String](callee.get -> "callee")
+            else Map.empty[P#V, String]
+          val roles: Map[P#V, String] = (initRole /: indexed)( (acc, a) => {
+            val role = "arg" + a._2
+            val candidate: Option[P#V] = nodeWithID(witness, witness.unfolded, role)
+            if (candidate.isDefined) acc + (candidate.get -> role)
+            else acc
+          })
+          (roles, call, created)
         case None =>
           Logger("InterfaceExtraction", LogWarning, "pathToMethodCall: cannot parse \""+witness.transition.id+"\"")
-          (None, "---", None)
+          (Map.empty[P#V, String], "---", None)
       }
     case _ => Logger.logAndThrow("InterfaceExtraction", LogError, "pathToMethodCall: expected Transition")
   }
@@ -552,7 +579,7 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
     Logger.assert(loops.states.dropRight(1).forall(isTransient), "InterfaceExtraction", "non-transient middle")
     //
     //parse the comment from the transition to get the method name and the type/id of the callee
-    val (obj, method, createdTpe) = parseTransition(transition1)
+    val (roles, method, createdTpe) = parseTransition(transition1)
     //follows ....
     val initTracking = initialTracking(s1)
     val (goesTo, news, last) = if (loops.isEmpty) {
@@ -593,7 +620,8 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
         (srcMap(k), vs map { case (m, cl) =>
             (m, dstMap(cl)) } ) })
     val newsObj = news map dstMap 
-    val call = (src, obj map srcMap, method, becomesObj, newsObj, dst)
+    val roles2 = roles.map[(G#V, String), Map[G#V, String]]{ case (node, role) => (srcMap(node), role) }
+    val call = (src, roles2, method, becomesObj, newsObj, dst)
     (trace.start, call, trace.stop)
   }
 
@@ -663,18 +691,18 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
   }
 
   def pruneCall(call: MethodCall): MethodCall = {
-    val (src, callee, method, changes, news, dst) = call
+    val (src, roles, method, changes, news, dst) = call
     val changes2 = changes.filterNot{ case (a,bs) => 
-      if (a != callee && bs.size == 1) {
+      if (!roles.contains(a) && bs.size == 1) {
         val (m, b) = bs.head
         (m == Rest && b.state == a.state)
       } else false
     }
-    val src2 = src.filterNodes(n => n == callee || changes2.keySet(n))
+    val src2 = src.filterNodes(n => roles.contains(n) || changes2.keySet(n))
     val changesRange = changes2.values.flatMap(_.map(_._2)).toSet
     val newsSet = news.toSet
     val dst2 = dst.filterNodes(n => newsSet(n) || changesRange(n) )
-   (src2, callee, method, changes2, news, dst2)
+   (src2, roles, method, changes2, news, dst2)
   }
   
   def interface: Interface = {
