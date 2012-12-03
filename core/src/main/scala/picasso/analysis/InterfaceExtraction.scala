@@ -165,7 +165,8 @@ object InterfaceExtraction {
         }
         val title = calleeName + "." + method
         val (fromGv, fromNodesToId) = gToGv(from, "cluster_" + id + "_src", "subgraph", text("label = \"LHS("+idsForCover(coverFrom)+")\";"), callee)
-        val (toGv, toNodesToId) = gToGv(to, "cluster_" + id + "_to", "subgraph", text("label = \"RHS("+idsForCover(coverTo)+")\";"), callee)
+        val calleeAfter = callee flatMap ( c => changes.get(c).map(_.head._2) ) //TODO some assertion
+        val (toGv, toNodesToId) = gToGv(to, "cluster_" + id + "_to", "subgraph", text("label = \"RHS("+idsForCover(coverTo)+")\";"), calleeAfter)
         val changesEdges = changes.iterator.flatMap{ case (a, bs) => bs.map{ case (m, b) =>
             text( fromNodesToId(a) + " -> " + toNodesToId(b) + " [label=\""+ multiplicityToString(m) +"\",color=\"#0000FF\"];")
           }
