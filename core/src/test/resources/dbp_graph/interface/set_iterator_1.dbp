@@ -1,12 +1,13 @@
 init
   node (s, safe)
+/*
   (set, Set) -> (emp, empty)
   (set, Set) -> (syn, sync)
   (set, Set) -> (nsyn, not_sync)
   (set, Set) -> (mov, mover)
   (set, Set) -> (nmov, not_mover)
+*/
 
-/*
 transition "newSet(): Set"
 pre
   node (s, safe)
@@ -20,7 +21,6 @@ post
 ==>
   s -> s
 <==
-*/
 
 transition "newIter(Set): Iter; on emp"
 pre

@@ -183,6 +183,22 @@ object InterfaceExtraction {
         calleeName + "." + method + args.mkString("(", ", ", ")")
     }
 
+    def multiplicityToEdgeProp(m: Multiplicity) = m match {
+      case One => "color=\"#00FF00\""
+      case May => "color=\"#00FF00\",style=\"dashed\""
+      case Part => "color=\"#0000FF\""
+      case Rest => "color=\"#0000FF\""
+    }
+
+    def completeRoleWithScope(g: G, roles: Map[G#V, String]): Map[G#V, String] = {
+      val scope = g.vertices.filter(_.depth == 0) -- roles.keys
+      (roles /: scope.zipWithIndex)( (acc, s) => acc + (s._1 -> ("s" + s._2)))
+    }
+
+    def keepRelevantEdges(changes: Changes[G#V]): Changes[G#V] = {
+      changes.filter{ case (k, v) => v.size != 1 || k.depth > 0 }
+    }
+
     //a few graph to print:
     //-the structure of the automaton: give unique name to node and transition
     val outline = interface.toGraphvizExplicit(
@@ -199,14 +215,15 @@ object InterfaceExtraction {
     val trsGraphs = interface.edges.map{ case (coverFrom , el @ (from, roles, method, changes, news, to), coverTo) =>
         val id = idsForTransitions(el)
         val title = mkTitle(method, roles)
-        val (fromGv, fromNodesToId) = gToGv(from, "cluster_" + id + "_src", "subgraph", text("label = \"LHS("+idsForCover(coverFrom)+")\";"), roles)
-        val rolesAfter = roles.flatMap[(G#V, String),Map[G#V, String]]{ case (n, r) => changes.get(n).map(_.head._2 -> r) } //TODO some assertion
+        val rolesWithScope = completeRoleWithScope(from, roles)
+        val (fromGv, fromNodesToId) = gToGv(from, "cluster_" + id + "_src", "subgraph", text("label = \"LHS("+idsForCover(coverFrom)+")\";"), rolesWithScope)
+        val newsRole =  news.zipWithIndex.map{ case (n,i) => (n, "new"+i) }
+        val rolesAfter = rolesWithScope.flatMap[(G#V, String),Map[G#V, String]]{ case (n, r) => changes.get(n).map(_.head._2 -> r) } ++ newsRole //TODO some assertion
         val (toGv, toNodesToId) = gToGv(to, "cluster_" + id + "_to", "subgraph", text("label = \"RHS("+idsForCover(coverTo)+")\";"), rolesAfter)
-        val changesEdges = changes.iterator.flatMap{ case (a, bs) => bs.map{ case (m, b) =>
-            text( fromNodesToId(a) + " -> " + toNodesToId(b) + " [label=\""+ multiplicityToString(m) +"\",color=\"#0000FF\"];")
+        val changesEdges = keepRelevantEdges(changes).iterator.flatMap{ case (a, bs) => bs.map{ case (m, b) =>
+            text( fromNodesToId(a) + " -> " + toNodesToId(b) + " ["+ multiplicityToEdgeProp(m) +"];")
           }
         }
-        //TODO news
         val graphs = fromGv :/: toGv
         val body = (graphs /: changesEdges)(_ :/: _)
         val gv = "digraph " :: id :: " {" :/: nest(4, body) :/: text("}")

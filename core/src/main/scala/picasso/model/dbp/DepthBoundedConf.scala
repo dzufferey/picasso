@@ -101,7 +101,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
       val doc = if (cluster exists (_.depth > 0)) {
         clusterCount += 1
         "subgraph " :: Misc.quoteIfFancy("cluster_" + name + "_" + clusterCount) :: " {" ::
-          nest(4, "label = \"*\";" :/: nodes :/: edgesStr :/: childrenStr) :/: text("}")
+          nest(4, "label = \"*\";" :/: "graph [style = \"dashed\"];" :/: nodes :/: edgesStr :/: childrenStr) :/: text("}")
       } else {
         prefix :: " " :: Misc.quoteIfFancy(name) :: " {" ::
           nest(4, header :/: nodes :/: edgesStr :/: childrenStr) :/: text("}")
