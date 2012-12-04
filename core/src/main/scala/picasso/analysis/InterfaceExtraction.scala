@@ -349,10 +349,13 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
     }
   }
 
-  protected def sameDPV(d1: DPV, d2: DPV): Boolean = {
+  protected def inDPV(d1: DPV, d2: DPV): Boolean = {
     //check whether there is a morphism between d1 and d2 (compatible with the main obj)
-    d1._2.morphisms(d2._2, Map(d1._1 -> d2._1))(proc.stateOrdering).hasNext &&
-    d2._2.morphisms(d1._2, Map(d2._1 -> d1._1))(proc.stateOrdering).hasNext
+    d1._2.morphisms(d2._2, Map(d1._1 -> d2._1))(proc.stateOrdering).hasNext
+  }
+
+  protected def sameDPV(d1: DPV, d2: DPV): Boolean = {
+    inDPV(d1, d2) && inDPV(d2, d1)
   }
 
   protected lazy val eqClassesInGraph: Set[DPV] = {
@@ -381,7 +384,7 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
 
   protected def findClassOf(conf: DP, obj: P#V): DPV = {
     val extracted = extractDPV(conf, obj)
-    val candidate = eqClassesInGraph.find( dpv => sameDPV(dpv, extracted) )
+    val candidate = eqClassesInGraph.find( dpv => inDPV(extracted, dpv) )
     Logger.assert(
         candidate.isDefined,
         "InterfaceExtraction",

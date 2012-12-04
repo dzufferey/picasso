@@ -81,8 +81,9 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     val clusters = cmpts.topologicalSort.reverse
 
     def mkCluster(cluster: Set[P#V],
+                  seen: Set[Set[P#V]],
                   children: Map[Set[P#V], Document]
-                 ): Document = {
+                 ): (Document, Iterable[Set[P#V]]) = {
       //nodes
       val nodesDoc = cluster map nodeToDoc
       val nodes = if (nodesDoc.isEmpty) empty: Document else nodesDoc.reduceRight((v, acc) => v :/: acc)
@@ -93,10 +94,11 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
             if (cluster(a) || cluster(c)) Some(edgeToDoc(a, b, c)) else None }
       val edgesStr = if(edgesDoc.isEmpty) empty else edgesDoc.reduceRight((e, acc) => e :/: acc )
       //subgraphs
-      val childrenNeeded = cmpts(cluster).map(children)
-      val childrenStr = if (childrenNeeded.isEmpty) empty else childrenNeeded.reduceRight(_ :/: _)
+      val childrenNeeded = cmpts(cluster).filterNot(seen)
+      val childrenDoc = childrenNeeded.map(children)
+      val childrenStr = if (childrenDoc.isEmpty) empty else childrenDoc.reduceRight(_ :/: _)
       //
-      if (cluster exists (_.depth > 0)) {
+      val doc = if (cluster exists (_.depth > 0)) {
         clusterCount += 1
         "subgraph " :: Misc.quoteIfFancy("cluster_" + name + "_" + clusterCount) :: " {" ::
           nest(4, "label = \"*\";" :/: nodes :/: edgesStr :/: childrenStr) :/: text("}")
@@ -104,26 +106,26 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
         prefix :: " " :: Misc.quoteIfFancy(name) :: " {" ::
           nest(4, header :/: nodes :/: edgesStr :/: childrenStr) :/: text("}")
       }
+      //
+      (doc, childrenNeeded)
     }
     
-    val map = (Map.empty[Set[P#V], Document] /: clusters)( (acc, cluster) => {
-      acc + (cluster -> mkCluster(cluster, acc))
+    val acc0 = (Map.empty[Set[P#V], Document], Set.empty[Set[P#V]])
+    val (map, seen) = (acc0 /: clusters)( (acc, cluster) => {
+      val (doc, seen) = mkCluster(cluster, acc._2, acc._1)
+      (acc._1 + (cluster -> doc), acc._2 ++ seen)
     })
+    Logger.assert(seen.size >= cmpts.vertices.size - 1, "DBP", "not every children used.")
 
 
     val revCmpts = cmpts.reverse
     val bottom = cmpts.vertices.filter(v => revCmpts(v).isEmpty )
     if (bottom.size == 0) {
       (prefix :: " " :: Misc.quoteIfFancy(name) :: " {" :: nest(4, header) :/: text("}"), id)
-    } else if (bottom.size == 1) {
-      (map(bottom.head), id)
     } else {
-      val dummy = Set[P#V]()
-      cmpts = (cmpts /: bottom)( (acc, v) => acc + (dummy, (), v))
-      (mkCluster(dummy, map), id)
+      Logger.assert(bottom.size == 1, "DBP", "more that one lvl 0 cmpt.")
+      (map(bottom.head), id)
     }
-
-
   }
 
   // use def instead of val if caching requires too much space
@@ -341,7 +343,8 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     
     val revG = g.reverse
     val bottom = g.vertices.filter(v => revG(v).isEmpty ) - zero
-    (g /: bottom)( (acc, v) => acc + (zero, (), v))
+    val result = (g /: bottom)( (acc, v) => acc + (zero, (), v))
+    result
   } 
 
   /** Unfold the nodes in this graph which are replicated and in the codomain of the morphism.
