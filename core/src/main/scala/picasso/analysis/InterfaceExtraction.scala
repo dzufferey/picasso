@@ -711,8 +711,40 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
   }
 
   def pruneCall(call: MethodCall): MethodCall = {
-    //TODO connected component rather than changed.
     val (src, roles, method, changes, news, dst) = call
+    val lhsSeeds = roles.flatMap{ case (v,r) =>
+      if (r == "callee" || r.startsWith("arg")) Some(v) else None }.toSet
+    val changed = changes.filterNot{ case (a,bs) => 
+      if (bs.size == 1) {
+        val (m, b) = bs.head
+        ((m == Rest || m == One) && b.state == a.state)
+      } else false
+    }.keySet
+    val srcClosed = src.transitiveClosure( (a,_) => a )
+    val reachFromSeed = lhsSeeds.flatMap(x => srcClosed(x) )
+    val toKeep = src.vertices.filter(x => changed(x) || lhsSeeds(x) || srcClosed(x).exists(changed)) ++ reachFromSeed
+    val src2 = src.filterNodes(toKeep)
+    val changes2 = changes.filterKeys(toKeep)
+    val changesRange = changes2.values.flatMap(_.map(_._2)).toSet
+    val newsSet = news.toSet
+    val dst2 = dst.filterNodes(n => newsSet(n) || changesRange(n) )
+    (src2, roles, method, changes2, news, dst2)
+
+    /*
+    //transitively reachable
+    val lhsSeeds = roles.keySet
+    val srcClosed = src.transitiveClosure( (a,_) => a )
+    val toKeep = src.vertices.filter(x => lhsSeeds(x) || srcClosed(x).exists(lhsSeeds))
+    val src2 = src.filterNodes(toKeep)
+    val changes2 = changes.filterKeys(toKeep)
+    val changesRange = changes2.values.flatMap(_.map(_._2)).toSet
+    val newsSet = news.toSet
+    val dst2 = dst.filterNodes(n => newsSet(n) || changesRange(n) )
+    (src2, roles, method, changes2, news, dst2)
+    */
+
+    //connected component rather than changed.
+    /*
     val lhsSeeds = roles.keySet
     val toKeep = (Set.empty[G#V] /: src.CC)( (acc, cc) => if (cc exists lhsSeeds) acc ++ cc else acc )
     val src2 = src.filterNodes(toKeep)
@@ -721,6 +753,7 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
     val newsSet = news.toSet
     val dst2 = dst.filterNodes(n => newsSet(n) || changesRange(n) )
     (src2, roles, method, changes2, news, dst2)
+    */
 
     /*
     val changes2 = changes.filterNot{ case (a,bs) => 
