@@ -711,7 +711,18 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
   }
 
   def pruneCall(call: MethodCall): MethodCall = {
+    //TODO connected component rather than changed.
     val (src, roles, method, changes, news, dst) = call
+    val lhsSeeds = roles.keySet
+    val toKeep = (Set.empty[G#V] /: src.CC)( (acc, cc) => if (cc exists lhsSeeds) acc ++ cc else acc )
+    val src2 = src.filterNodes(toKeep)
+    val changes2 = changes.filterKeys(toKeep)
+    val changesRange = changes2.values.flatMap(_.map(_._2)).toSet
+    val newsSet = news.toSet
+    val dst2 = dst.filterNodes(n => newsSet(n) || changesRange(n) )
+    (src2, roles, method, changes2, news, dst2)
+
+    /*
     val changes2 = changes.filterNot{ case (a,bs) => 
       if (!roles.contains(a) && bs.size == 1) {
         val (m, b) = bs.head
@@ -722,7 +733,8 @@ class InterfaceExtraction[P <: DBCT](proc: DepthBoundedProcess[P], cover: Downwa
     val changesRange = changes2.values.flatMap(_.map(_._2)).toSet
     val newsSet = news.toSet
     val dst2 = dst.filterNodes(n => newsSet(n) || changesRange(n) )
-   (src2, roles, method, changes2, news, dst2)
+    (src2, roles, method, changes2, news, dst2)
+    */
   }
   
   def interface: Interface = {

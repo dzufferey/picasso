@@ -171,6 +171,8 @@ trait GraphAlgorithms[PB <: GT, P <: PB, G[P1 <: PB] <: GraphLike[PB, P1, G]] {
   def SCC: List[Set[V]] = SCC(false)
   /** scc or single node from which you cannot escape */
   def bottomSCC = SCC(true).filter(cc => cc.forall( x => apply(x).forall(  y => cc.contains(y) )))
+
+  def CC = (this ++ this.reverse).SCC(true)
   
   /** Returns a decomposition of the graphs into simple pathes.
    *  A simple spath is a path without loop. Furthermore, the decomposition
