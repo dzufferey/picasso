@@ -1,5 +1,6 @@
 init
   node (s, safe)
+/*
   (con, Con) -> (actc, activeCon)
   (con, Con) -> (acts, activeStmt)
   (con, Con) -> (nacts, not_activeStmt)
@@ -7,22 +8,23 @@ init
   (con, Con) -> (nopen, not_open)
   (con, Con) -> (hr, has_result)
   (con, Con) -> (nr, not_has_result)
+*/
 
-/*
-transition "newSet(): Set"
+transition "newConn(): Con"
 pre
   node (s, safe)
 post
   node (s, safe)
-  (set, Set) -> (emp, empty)
-  (set, Set) -> (syn, sync)
-  (set, Set) -> (nsyn, not_sync)
-  (set, Set) -> (mov, mover)
-  (set, Set) -> (nmov, not_mover)
+  (con, Con) -> (actc, activeCon)
+  (con, Con) -> (acts, activeStmt)
+  (con, Con) -> (nacts, not_activeStmt)
+  (con, Con) -> (open, open)
+  (con, Con) -> (nopen, not_open)
+  (con, Con) -> (hr, has_result)
+  (con, Con) -> (nr, not_has_result)
 ==>
   s -> s
 <==
-*/
 
 transition "newStmt(Con): Stmt; on active"
 pre

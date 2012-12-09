@@ -263,7 +263,7 @@ post
 
 // ERRORS
 
-transition "next(Iter); error "
+transition "next(Iter); error unsynced"
 pre
   node (s, safe)
   (set, Set) -> (nsync, not_sync)
@@ -271,14 +271,29 @@ pre
   (callee, Iter) -> (set, Set)
 post
   (set, Set) -> (nsync, not_sync)
-  (callee, IterError) -> (nsync, not_sync)
-  (callee, IterError) -> (set, Set)
+  (callee, IterErrorSync) -> (nsync, not_sync)
+  (callee, IterErrorSync) -> (set, Set)
 ==>
   set -> set
   callee -> callee
   nsync -> nsync
 <==
 
+transition "next(Iter), error non-mover"
+pre
+  node (s, safe)
+  (set, Set) -> (nmov, not_mover)
+  (callee, Iter) -> (nmov, not_mover)
+  (callee, Iter) -> (set, Set)
+post
+  (set, Set) -> (nmov, not_mover)
+  (callee, IterErrorMover) -> (nmov, not_mover)
+  (callee, IterErrorMover) -> (set, Set)
+==>
+  set -> set
+  callee -> callee
+  nmov -> nmov
+<==
 
 transition "remove(Iter); error"
 pre
@@ -288,8 +303,8 @@ pre
   (callee, Iter) -> (set, Set)
 post
   (set, Set) -> (nsync, not_sync)
-  (callee, IterError) -> (nsync, not_sync)
-  (callee, IterError) -> (set, Set)
+  (callee, IterErrorSync) -> (nsync, not_sync)
+  (callee, IterErrorSync) -> (set, Set)
 ==>
   set -> set
   callee -> callee

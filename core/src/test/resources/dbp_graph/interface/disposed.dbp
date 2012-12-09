@@ -4,26 +4,32 @@
 //  in OOPSLA 05
 
 /*
-class A {
-  C f;
-  void run() {
+class V {
+  L f;
+  public void V() {
+    f := null;
+  }
+  public void run() {
     if (f != null) f.run();
   }
-  void done() {
+  public void done() {
     if (f != null) f.dispose();
   }
-  void set(C i) {
+  public void set(L l) {
     if (f != null) f.dispose();
-    f = i;
+    f = l;
   }
 }
 
-class C {
+class L {
   boolean disposed;
-  void run() {
+  public void L() {
+    disposed := false;
+  }
+  protected void run() {
     if (disposed) throw new Error();
   }
-  void dispose() {
+  protected void dispose() {
     if (disposed) throw new Error();
     disposed = true;
   }
@@ -33,121 +39,121 @@ class C {
 init
   node (s, safe)
 
-transition "newA(): A"
+transition "newV(): V"
 pre
   node (s, safe)
 post
   node (s, safe)
-  (a, A) -> (n, Null) [f]
+  (v, V) -> (n, Null) [f]
 ==>
   s -> s
 <==
 
 
-transition "newC(): C"
+transition "newL(): L"
 pre
   node (s, safe)
 post
   node (s, safe)
-  (c, C) -> (d, not_disposed)
+  (l, L) -> (d, not_disposed)
 ==>
   s -> s
 <==
 
-transition "run(A), null"
+transition "run(V), null"
 pre
   node (s, safe)
-  (callee, A) -> (n, Null) [f]
+  (callee, V) -> (n, Null) [f]
 post
   node (s, safe)
-  (callee, A) -> (n, Null) [f]
-==>
-  s -> s
-  callee -> callee
-  n -> n
-<==
-
-transition "run(A); not null & not disposed"
-pre
-  node (s, safe)
-  (callee, A) -> (c, C) [f]
-  (c, C) -> (d, not_disposed)
-post
-  node (s, safe)
-  (callee, A) -> (c, C) [f]
-  (c, C) -> (d, not_disposed)
-==>
-  s -> s
-  callee -> callee
-  c -> c
-  d -> d
-<==
-
-transition "run(A); not null & disposed"
-pre
-  node (s, safe)
-  (callee, A) -> (c, C) [f]
-  (c, C) -> (d, disposed)
-post
-  (callee, A) -> (c, CError) [f]
-  (c, CError) -> (d, disposed)
-==>
-  callee -> callee
-  c -> c
-  d -> d
-<==
-
-transition "done(A); null"
-pre
-  node (s, safe)
-  (callee, A) -> (n, Null) [f]
-post
-  node (s, safe)
-  (callee, A) -> (n, Null) [f]
+  (callee, V) -> (n, Null) [f]
 ==>
   s -> s
   callee -> callee
   n -> n
 <==
 
-transition "done(A); not null & not disposed"
+transition "run(V); not null & not disposed"
 pre
   node (s, safe)
-  (callee, A) -> (c, C) [f]
-  (c, C) -> (d, not_disposed)
+  (callee, V) -> (l, L) [f]
+  (l, L) -> (d, not_disposed)
 post
   node (s, safe)
-  (callee, A) -> (c, C) [f]
-  (c, C) -> (d, disposed)
+  (callee, V) -> (l, L) [f]
+  (l, L) -> (d, not_disposed)
 ==>
   s -> s
   callee -> callee
-  c -> c
+  l -> l
   d -> d
 <==
 
-transition "done(A); not null & disposed"
+transition "run(V); not null & disposed"
 pre
   node (s, safe)
-  (callee, A) -> (c, C) [f]
-  (c, C) -> (d, disposed)
+  (callee, V) -> (l, L) [f]
+  (l, L) -> (d, disposed)
 post
-  (callee, A) -> (c, CError) [f]
-  (c, CError) -> (d, disposed)
+  (callee, V) -> (l, LError) [f]
+  (l, LError) -> (d, disposed)
 ==>
   callee -> callee
-  c -> c
+  l -> l
   d -> d
 <==
 
-transition "set(A, C); null"
+transition "done(V); null"
 pre
   node (s, safe)
-  (callee, A) -> (n, Null) [f]
-  node (arg0, C)
+  (callee, V) -> (n, Null) [f]
 post
   node (s, safe)
-  (callee, A) -> (arg0, C) [f]
+  (callee, V) -> (n, Null) [f]
+==>
+  s -> s
+  callee -> callee
+  n -> n
+<==
+
+transition "done(V); not null & not disposed"
+pre
+  node (s, safe)
+  (callee, V) -> (l, L) [f]
+  (l, L) -> (d, not_disposed)
+post
+  node (s, safe)
+  (callee, V) -> (l, L) [f]
+  (l, L) -> (d, disposed)
+==>
+  s -> s
+  callee -> callee
+  l -> l
+  d -> d
+<==
+
+transition "done(V); not null & disposed"
+pre
+  node (s, safe)
+  (callee, V) -> (l, L) [f]
+  (l, L) -> (d, disposed)
+post
+  (callee, V) -> (l, LError) [f]
+  (l, LError) -> (d, disposed)
+==>
+  callee -> callee
+  l -> l
+  d -> d
+<==
+
+transition "set(V, L); null"
+pre
+  node (s, safe)
+  (callee, V) -> (n, Null) [f]
+  node (arg0, L)
+post
+  node (s, safe)
+  (callee, V) -> (arg0, L) [f]
   node (n, Null)
 ==>
   s -> s
@@ -156,33 +162,33 @@ post
   arg0 -> arg0
 <==
 
-transition "set(A, C); not null & not disposed & not aliased"
+transition "set(V, L); not null & not disposed & not aliased"
 pre
   node (s, safe)
-  (callee, A) -> (c, C) [f]
-  (c, C) -> (d, not_disposed)
-  node (arg0, C)
+  (callee, V) -> (l, L) [f]
+  (l, L) -> (d, not_disposed)
+  node (arg0, L)
 post
   node (s, safe)
-  (callee, A) -> (arg0, C) [f]
-  (c, C) -> (d, disposed)
+  (callee, V) -> (arg0, L) [f]
+  (l, L) -> (d, disposed)
 ==>
   s -> s
   callee -> callee
-  c -> c
+  l -> l
   arg0 -> arg0
   d -> d
 <==
 
-transition "set(A, C); not null & not disposed & aliased"
+transition "set(V, L); not null & not disposed & aliased"
 pre
   node (s, safe)
-  (callee, A) -> (arg0, C) [f]
-  (arg0, C) -> (d, not_disposed)
+  (callee, V) -> (arg0, L) [f]
+  (arg0, L) -> (d, not_disposed)
 post
   node (s, safe)
-  (callee, A) -> (arg0, C) [f]
-  (arg0, C) -> (d, disposed)
+  (callee, V) -> (arg0, L) [f]
+  (arg0, L) -> (d, disposed)
 ==>
   s -> s
   callee -> callee
@@ -190,17 +196,17 @@ post
   d -> d
 <==
 
-transition "set(A, C); not null & disposed"
+transition "set(V, L); not null & disposed"
 pre
   node (s, safe)
-  (callee, A) -> (c, C) [f]
-  (c, C) -> (d, disposed)
+  (callee, V) -> (l, L) [f]
+  (l, L) -> (d, disposed)
 post
-  (callee, A) -> (c, CError) [f]
-  (c, CError) -> (d, disposed)
+  (callee, V) -> (l, LError) [f]
+  (l, LError) -> (d, disposed)
 ==>
   callee -> callee
-  c -> c
+  l -> l
   d -> d
 <==
 
