@@ -5,22 +5,7 @@ import picasso.transform.DBPWrapper
 import picasso.model.dbp.DepthBoundedProcess
 import picasso.analysis._
 
-class Analysis(_agents: Seq[AgentDefinition[Actors.PC]], _init: picasso.ast.Expression) extends DBPWrapper[Actors.PC](_agents, _init) {
-  
-  //TODO: check for covering of a given pattern
-    
-  //compute cover
-  def computeCover = {
-    val procSimpleForward = new DepthBoundedProcess[DBC](system) with KarpMillerTree
-    procSimpleForward.computeCover(initConf)
-  }
-
-  //check for assertion failure and other standard errors
-  def testForError = {
-    val errorConf = emptyConf + DBCN_Error
-    val procSimpleForward = new DepthBoundedProcess[DBC](system) with KarpMillerTree
-    procSimpleForward.forwardCoveringWithTrace(initConf, errorConf)
-  }
+class Analysis(_agents: Seq[AgentDefinition[Actors.PC]], _init: picasso.ast.Expression) extends DBPWrapper(_agents, _init) {
 
   //definitions to extends DBPWrapper
   def DBCN[T](l : picasso.math.hol.Literal[T]) = DBCN(l.toString)

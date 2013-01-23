@@ -41,9 +41,11 @@ abstract class AnalysisCommon[P <: picasso.model.dbp.DBCT](
     if (done) {
       report
     } else {
+      Report.set(report)
+      report.add(new PreformattedText("Input", content))
+
       parse(content) match {
         case Some((process, init, target)) =>
-          report.add(new PreformattedText("Input", content))
      
           Logger("dbpGraph", LogInfo, process.toString) 
           addProcessToReport(process, init)
@@ -65,6 +67,7 @@ abstract class AnalysisCommon[P <: picasso.model.dbp.DBCT](
             report.makeHtmlReport(woSuffix + "-report.html")
           }
 
+          Report.reset
           report
      
         case None =>

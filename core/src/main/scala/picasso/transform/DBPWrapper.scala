@@ -10,8 +10,7 @@ import picasso.utils.{LogCritical, LogError, LogWarning, LogNotice, LogInfo, Log
 //TODO from AgentDefinition (a set of them) to a set of transition for DBP
 //TODO from an initial state to a graph
 
-abstract class DBPWrapper[A](val agents: Seq[AgentDefinition[A]], val init: Expression) extends DefDBP {
-  type PC = A
+abstract class DBPWrapper(val agents: Seq[AgentDefinition[String]], val init: Expression) extends DefDBP {
 
   lazy val transitions: Iterable[DBT] = makeTransitions(agents)
 

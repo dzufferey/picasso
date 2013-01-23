@@ -2,9 +2,8 @@ package picasso.frontend.dbpGraph
 
 import picasso.frontend.Runner
 
-object Main extends Runner {
+object Main extends Runner[DBPGraphs.DBCGraph] {
 
-  type P = DBPGraphs.DBCGraph
-  def parse = DBPGraphParser.apply
+  def parse(input: String) = DBPGraphParser.apply(input)
 
 }

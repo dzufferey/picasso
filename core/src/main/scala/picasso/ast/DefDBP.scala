@@ -5,16 +5,17 @@ import picasso.math._
 import picasso.math.hol.{Variable, Literal, Channel}
 import picasso.graph._
 
+trait DBC extends DBCT {
+  //on the state: an unique string ID
+  type State = DBCS[String]
+  type EL = Variable
+}
+
 //generic set of definition to help create DBP
 trait DefDBP {
 
-  type PC
-  
-  //on the state: an unique string ID
-  trait DBC extends DBCT {
-    type State = DBCS[PC]
-    type EL = Variable
-  }
+  type PC = String
+
    
   //type DBCN = Thread[DBC#State] = DBC#V
   type DBCC = DepthBoundedConf[DBC]
@@ -78,7 +79,7 @@ trait DefDBP {
   
   /** create a DBCC from edges */
   def makeConf(trvs: Traversable[(DBC#V, DBC#EL, DBC#V)]): DBCC = {
-    DepthBoundedConf[DBC](Labeled.listToMap(trvs))
+    DepthBoundedConf[DBC](Labeled.listToMap(trvs): Map[DBC#V, Map[DBC#EL, Set[DBC#V]]])
   }
   
   /** create a DBT from the individual component and do some sanity checks.

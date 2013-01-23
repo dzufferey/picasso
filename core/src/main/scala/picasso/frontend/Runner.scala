@@ -3,10 +3,9 @@ package picasso.frontend
 import picasso.utils._
 import picasso.model.dbp._
 
-abstract class Runner {
+abstract class Runner[P <: DBCT] {
 
-  type P <: DBCT
-  def parse: String => Option[(DepthBoundedProcess[P], DepthBoundedConf[P], Option[DepthBoundedConf[P]])]
+  def parse(input: String): Option[(DepthBoundedProcess[P], DepthBoundedConf[P], Option[DepthBoundedConf[P]])]
 
   def main(args: Array[String]) {
     Config(args.toList) //process the cmdline args

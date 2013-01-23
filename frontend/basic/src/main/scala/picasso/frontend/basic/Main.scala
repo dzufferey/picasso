@@ -1,60 +1,55 @@
 package picasso.frontend.basic
 
 import picasso.utils._
+import picasso.utils.report._
+import picasso.ast._
+import picasso.model.dbp._
 import picasso.frontend.basic.typer._
+import picasso.frontend._
 
-object Main {
+object Main extends Runner[DBC] {
 
-  //TODO adapt to the new report + runner infrastructure.
-  //the problem is the Analysis/DBPWrapper/DefDBP -> dig out the type if DBP
-
-  def main(args: Array[String]) {
-    Config(args.toList) //process the cmdline args
-    val report = Config.input match {
-      case fn :: _ => analyse(fn, IO.readTextFile(fn))
-      case Nil => analyse("stdin", IO.readStdin)
-    }
-    report.makeConsoleReport
-    val woDir = (new java.io.File(args(0))).getName()
-    val woSuffix = {
-      val lastDot = woDir.lastIndexOf('.')
-      if (lastDot > 0) woDir.substring(0, lastDot)
-      else woDir
-    }
-    report.makeHtmlReport(woSuffix + "-report.html")
+  protected def reportTyped(acts: Iterable[Actor]) {
+    Logger("basic", LogNotice, "Input Program:\n\n" + acts.mkString("","\n\n","") + "\n")
+    val lst = new List("Typed Actors:")
+    Report add lst
+    for ( a <- acts ) lst.add(new PreformattedText(a.id, a.toString))
   }
 
-  def analyse(fn: String, content: String) = {
-    val report = new Report(fn)
-    val pr = BasicParser(content)
+  protected def reportAgents(agents: Iterable[AgentDefinition[Actors.PC]]) {
+    Logger("basic", LogNotice, "As CFA:\n\n" + agents.mkString("","\n\n","") + "\n")
+    val lst = new List("Actor's CFAs:")
+    Report add lst
+    for ( a <- agents ) {
+      lst.add(new GenericItem(a.id + a.params.mkString("(",", ",")"),
+                              a.toString,
+                              Misc.graphvizToSvgDot(Misc.docToString(a.toGraphviz("agent", "digraph", "agt")))))
+    }
+  }
+
+  def parse(input: String): Option[(DepthBoundedProcess[DBC], DepthBoundedConf[DBC], Option[DepthBoundedConf[DBC]])] = {
+    val pr = BasicParser(input)
     if (pr.successful) {
       val (actors, init) = pr.get
-      report.setParsed((actors, init))
-      Logger("basic", LogDebug, "Parsed:\n" + actors.mkString("","\n\n",""))
       val typedActors = Typer(actors)
       if (typedActors.success) {
-        val tActors = typedActors.get
-        report.setTyped(tActors)
-        Logger("basic", LogNotice, "Input Program:\n\n" + tActors.mkString("","\n\n","") + "\n")
-        val agents = tActors map Actors.actor2Agent
-        report.setAgents(agents)
-        Logger("basic", LogNotice, "As CFA:\n\n" + agents.mkString("","\n\n","") + "\n")
+        val tActors = typedActors.get //Iterable[Actor]
+        reportTyped(tActors)
+        val agents = tActors map Actors.actor2Agent //Iterable[AgentDefinition[Actors.PC]]
+        reportAgents(agents)
         val initAst = Expressions.exp2Exp(init)
         //TODO type initAst
         val a = new Analysis(agents, initAst)
-        report.setTransitions(a.transitions)
-        report.setInitConf(a.initConf)
-        val c = a.computeCover
-        report.setCover(c)
+        Some((a.system, a.initConf, None))
       } else {
-        report.setError("cannot type:\n"+typedActors)
-        Logger.logAndThrow("basic", LogError, "cannot type "+fn+":\n"+typedActors)
+        Report.add( new PreformattedText("Typing Error", typedActors.toString))
+        None
       }
     } else {
-      report.setError("cannot parse:\n"+pr)
-      Logger.logAndThrow("basic", LogError, "cannot parse "+fn+":\n"+pr)
+      Report.add( new PreformattedText("Parsing Error", pr.toString))
+      None
     }
-    report
   }
+
 
 }

@@ -1,5 +1,6 @@
 package picasso.utils.report
 
+import picasso.utils._
 import java.io.{BufferedWriter, PrintWriter, OutputStreamWriter, FileOutputStream}
 
 class Report(title: String) extends List(title) {
@@ -47,6 +48,33 @@ class Report(title: String) extends List(title) {
     toHtml(fileOut)
     htmlFooter(fileOut)
     fileOut.close
+  }
+
+}
+
+object Report {
+
+  protected var current: Option[Report] = None
+
+  def reset { current = None }
+
+  def get: Report = {
+    if (current.isDefined) {
+      current.get
+    } else {
+      Logger.logAndThrow("report", LogError, "Report.get: empty")
+    }
+  }
+
+  def set(r: Report) {
+    if (current.isDefined) {
+      Logger("report", LogWarning, "Report.set: report is already defined, replacing")
+    }
+    current = Some(r)
+  }
+  
+  def add(element: Item) {
+    for (r <- current) r.add(element)
   }
 
 }

@@ -60,7 +60,7 @@ trait AuxDefinitions extends DefDBP {
   //////////////////////
 
   /** program counter (states of the automata) */
-  type PC = String
+  //type PC = String
 
   /** Intermediate Automaton: used to get rid of the 'Global' suffs */
   type IA = GT {

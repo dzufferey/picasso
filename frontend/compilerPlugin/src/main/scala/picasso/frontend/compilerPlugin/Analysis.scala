@@ -8,6 +8,7 @@ import picasso.frontend.compilerPlugin.utils._
 import picasso.frontend.compilerPlugin.backend._
 import picasso.frontend.compilerPlugin.domains._
 import picasso.graph._
+import picasso.ast.DBC
 
 class Analysis(val global: Global, val picasso: PicassoPlugin)
     extends AnalysisUniverse 
