@@ -310,6 +310,11 @@ trait PiCode {
       val classesDoc = values.map(c => c.toGraphvizDoc("cluster_" + c.id, "subgraph")).reduceRight(_ :/: _)
       "digraph " :: Misc.quoteIfFancy(name) :: " {" :: nest(4, Document.empty :/: classesDoc) :/: text("}")
     }
+    
+    def toGraphvizSeparate: Iterable[(Symbol, Document)] = {
+      import scala.text.Document._
+      for ( (k, v) <- this) yield (k, v.toGraphvizDoc("PClass", "digraph"))
+    }
 
   }
 

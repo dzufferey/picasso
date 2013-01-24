@@ -109,9 +109,10 @@ object PluginRunner {
       return()
     }
     
-    val result = run((r,s,c), _.picasso.testForError)
-    if (result.isDefined) println("error found")
-    else println("no error found")
+    run((r,s,c), _.picasso.computeCover)
+    //val result = run((r,s,c), _.picasso.testForError)
+    //if (result.isDefined) println("error found")
+    //else println("no error found")
   }
 
 }

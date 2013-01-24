@@ -34,14 +34,14 @@ object IO {
     fileOut.close
   }
 
-  def writeInDocFile(file: File, data: Document, width: Int): Unit = {
+  def writeDocInFile(file: File, data: Document, width: Int): Unit = {
     val fileOut = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file)))
     data.format(width, fileOut)
     fileOut.close
   }
   
-  def writeInDocFile(file: String, data: Document, width: Int = 80): Unit =
-    writeInDocFile(new File(file), data, width) 
+  def writeDocInFile(file: String, data: Document, width: Int = 80): Unit =
+    writeDocInFile(new File(file), data, width) 
 
   //TODO the append to file version
   //...

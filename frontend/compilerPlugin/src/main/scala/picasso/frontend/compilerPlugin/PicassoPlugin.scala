@@ -82,6 +82,7 @@ class PicassoPlugin(val global: Global) extends Plugin {
 
   val components = pluginPhases map (_._1)
 
+  def computeCover = analyzer.computeCover
   def testForTermination = analyzer.testForPossibleTerminationUsingFullCover
   def testForError = analyzer.testForError
 
