@@ -1,0 +1,21 @@
+//testing a scenario that can potentially cause divergence in the implementation of the widening.
+
+init
+
+transition "t1" 
+pre
+post
+  (c, c) -> (s, s)
+==>
+<==
+
+transition "t2" 
+pre
+  (c, c) -> (s, s)
+post
+  (c, c) -> (s, s)
+  (c2, c) -> (s, s)
+==>
+  s -> s
+  c -> c
+<==
