@@ -2,6 +2,7 @@ import sbt._
 import Keys._
 
 object PicassoBuild extends Build {
+    
     lazy val root = Project(id = "picasso",base = file(".")) aggregate(core, basic, compilerPlugin)
 
     lazy val core = Project(id = "picasso-core", base = file("core"))
