@@ -5,7 +5,7 @@ import picasso.math.hol.{Type, Wildcard => WildcardT}
 sealed abstract class Pattern extends scala.util.parsing.input.Positional with Typed {
   def toStringFull: String
 }
-abstract class SymPat extends Pattern with Sym
+sealed abstract class SymPat extends Pattern with Sym
 
 case class PatternLit(l: Literal) extends Pattern {
   setType(l.tpe)
@@ -47,7 +47,7 @@ object Patterns {
   def case2Case(c: Case): picasso.ast.Case = picasso.ast.Case(c.uid, c.args map pat2Pat)
   def wc2WC = picasso.ast.Wildcard
   def id2Binding(id: Ident): picasso.ast.Binding = picasso.ast.Ident(Expressions.id2ID(ID(id.lid)))
-  implicit def pat2Pat(p: Pattern): picasso.ast.Pattern = p match {
+  def pat2Pat(p: Pattern): picasso.ast.Pattern = p match {
     case Wildcard => wc2WC
     case p @ PatternLit(_) => lit2Lit(p)
     case p @ PatternTuple(_) => tuple2Tuple(p)

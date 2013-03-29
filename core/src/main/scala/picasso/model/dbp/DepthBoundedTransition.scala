@@ -19,9 +19,10 @@ extends Transition[DepthBoundedConf[P]]
 
   type Conf = DepthBoundedConf[P]
   type Morphism = Map[P#V, P#V]
+  type Nodes = Set[P#V]
 
 
-  protected def removeInhibitors(conf: Conf, g: Morphism): Option[(Conf, Set[P#V], Morphism)] = {
+  protected def removeInhibitors(conf: Conf, g: Morphism): Option[(Conf, Nodes, Morphism)] = {
     inh match {
       case Some((inhibitor, inhMap)) => {
         //get the mapping of the inhibitor starting form the inhMap
@@ -128,7 +129,7 @@ extends Transition[DepthBoundedConf[P]]
         assert( notInRange.size == added.size,
                 "transition " + id + ": postMorphism, node not in the range, expected " + added.size + " found " + notInRange.mkString(", "))
 
-        val witness = new TransitionWitness
+        val witness = new TransitionWitness[P]
         witness.transition = this
         witness.from = conf
         //witness.firstMorhism = g

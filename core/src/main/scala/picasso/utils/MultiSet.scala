@@ -23,7 +23,7 @@ abstract class MultiSet[A] extends Iterable[A] {
 
   def apply(key: A): Int = {
     try { multiset(key) }
-    catch { case _ => 0 }
+    catch { case _ : Throwable => 0 }
   }
 
   def contains(key: A) : Boolean = 
@@ -102,6 +102,9 @@ abstract class MultiSet[A] extends Iterable[A] {
         case (i, Some(e), n) => {
           that = (i, Some(e), n - 1)
           e
+        }
+        case (_, None, _) => {
+          sys.error("unreachable")
         }
       }
     }

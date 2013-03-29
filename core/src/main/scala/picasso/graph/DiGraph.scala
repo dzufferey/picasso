@@ -159,11 +159,11 @@ extends Traceable[P#V,P#EL] with GraphAlgorithms[PB, P, G] {
   
   def contains(v: V, el: EL, w: V): Boolean = this(v,el).contains(w)
     
-  def +(x: V, l: EL, y: V): Self = if (contains(x,l,y)) self else companion(Labeled.addEdge(adjacencyMap,x,l,y), label)
+  def +(x: V, l: EL, y: V): Self = if (contains(x,l,y)) self else companion[P](Labeled.addEdge(adjacencyMap,x,l,y), label)
   def +(x: (V, EL, V)): Self = this + (x._1, x._2, x._3)
-  def +(x: V) : Self = if (contains(x)) self else companion(adjacencyMap + Pair(x, Map.empty[EL,Set[V]]), label)
-  def -(x: V, l: EL, y: V) : Self = if (!contains(x,l,y)) self else companion(adjacencyMap + Pair(x, adjacencyMap(x) + Pair(l, adjacencyMap(x)(l) - y)), label)
-  def -(v: V) : Self = if (!contains(v)) self else companion(adjacencyMap.mapValues(_.mapValues( _ - v)) - v, label)
+  def +(x: V) : Self = if (contains(x)) self else companion[P](adjacencyMap + Pair(x, Map.empty[EL,Set[V]]), label)
+  def -(x: V, l: EL, y: V) : Self = if (!contains(x,l,y)) self else companion[P](adjacencyMap + Pair(x, adjacencyMap(x) + Pair(l, adjacencyMap(x)(l) - y)), label)
+  def -(v: V) : Self = if (!contains(v)) self else companion[P](adjacencyMap.mapValues(_.mapValues( _ - v)) - v, label)
     
   def --(that: Self) : Self = {
     val (newEdges0, newVertices) = 
@@ -174,7 +174,7 @@ extends Traceable[P#V,P#EL] with GraphAlgorithms[PB, P, G] {
         if (p_newEdges.isEmpty && that.contains(p._1)) acc
         else (acc._1 + (p._1 -> p_newEdges), newVertices)} 
     val newEdges = (newEdges0 /: newVertices){(acc, v) => if (acc isDefinedAt v) acc else acc + (v -> Map.empty[EL,Set[V]])}
-    companion(newEdges, label)
+    companion[P](newEdges, label)
   }
 
   def --(vs: Traversable[V]): Self = (this /: vs)(_ - _)
@@ -237,13 +237,13 @@ extends Traceable[P#V,P#EL] with GraphAlgorithms[PB, P, G] {
   def morph(morphNode: PartialFunction[V, V]): Self = {
     val morphNodeTotal = morphNode orElse ({case v => v}: PartialFunction[V,V])
     val morphEdge: EL => EL = (el => el)
-    morphFull(morphNodeTotal, morphEdge, label)
+    morphFull[P](morphNodeTotal, morphEdge, label)
   }
   
   def morphFull[Q <: PB](morphNode: V => Q#V, morphEdge: EL => Q#EL, labels: Q#V => Q#VL): G[Q] = {
     val nodes = vertices map morphNode
     val newEdges = edges.map{ case (a,b,c) => (morphNode(a), morphEdge(b), morphNode(c)) }
-    companion(Labeled.listToMap(nodes, newEdges), labels)
+    companion[Q](Labeled.listToMap(nodes, newEdges), labels)
     /*
     //TODO cannot use: groupBy[K](f: ((A, B)) => K): Map[K, Map[A, B]] 
     val groupedMap = adjacencyMap groupBy (ves => morphNode(ves._1))
@@ -442,7 +442,7 @@ extends Traceable[P#V,P#EL] with GraphAlgorithms[PB, P, G] {
           Set[P#V](stripped.toSeq:_*)
         }))
     val map4 = (map3 /: vertices)( (map, v) => if (! (map contains v)) map + (v -> Map.empty[EL,Set[V]]) else map)
-    companion(map4, label)
+    companion[P](map4, label)
   }
   
   def undirect: Self = this ++ this.reverse

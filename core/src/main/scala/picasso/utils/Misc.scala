@@ -52,7 +52,7 @@ object Misc {
     try {
       Some(fct(arg))
     } catch {
-      case _ => None
+      case _ : Throwable => None
     }
   }
 

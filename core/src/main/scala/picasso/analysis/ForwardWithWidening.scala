@@ -206,7 +206,7 @@ trait ForwardWithWidening extends CoveringSet {
         //if post generates something that covers the targetState then trace else recurse
         val covering = newOnes find { case (_,_,s) => isDone(s)}
         val trace: Option[TransfiniteTrace[S,T]] = covering flatMap { case (_,_,s) =>
-            initCover.view.map(initState => try Some(getTrace(initState, s)) catch { case _ => None }).find(_.isDefined).get
+            initCover.view.map(initState => try Some(getTrace(initState, s)) catch { case _ : Throwable => None }).find(_.isDefined).get
         }
         if (trace.isDefined) trace else process
       case None => None

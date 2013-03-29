@@ -75,7 +75,7 @@ object Parser extends StandardTokenParsers {
         Logger("princess", LogError, "parsing error: " + result.toString)
         None
       }
-    } catch { case err =>
+    } catch { case err: Throwable =>
       if (str == null) {
         Logger("princess", LogError, "cannot parse null.")
       } else {

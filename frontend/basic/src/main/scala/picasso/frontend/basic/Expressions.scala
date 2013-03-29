@@ -4,7 +4,7 @@ import picasso.math.hol.{Type, Wildcard => WildcardT}
 
 sealed abstract class Expression extends scala.util.parsing.input.Positional with Typed
 
-abstract class SymExpr extends Expression with Sym
+sealed abstract class SymExpr extends Expression with Sym
 
 case class Value(l: Literal) extends Expression {
   setType(l.tpe)
@@ -132,7 +132,7 @@ object Expressions {
     case _ => picasso.ast.Application(a.fct, a.args map exp2Exp)
   }
   def tuple2Tuple(t: Tuple): picasso.ast.Tuple = picasso.ast.Tuple(t.values map exp2Exp)
-  implicit def exp2Exp(e: Expression): picasso.ast.Expression = e match {
+  def exp2Exp(e: Expression): picasso.ast.Expression = e match {
     case Any => any2Any
     case id @ ID(_) => id2ID(id)
     case v @ Value(_) => value2Value(v)

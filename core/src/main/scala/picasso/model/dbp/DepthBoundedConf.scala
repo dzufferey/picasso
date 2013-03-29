@@ -59,7 +59,7 @@ extends GraphLike[DBCT,P,DepthBoundedConf](_edges, label) {
     def nodeProps2(v: V) = {
       val p1 = nodeProps(v)
       if (p1.find(_._1 == "label").isDefined) p1
-      else ("label", Misc.quote(if (labelOf(v)==()) v.toString else labelOf(v).toString)) :: p1
+      else ("label", Misc.quote(labelOf(v).toString)) :: p1
     }
     def nodeToDoc(v: V) = id(v).toString :: " [":: docOfProps(nodeProps2(v)) :: text("];")
     def edgeProps2(e: EL) = {
