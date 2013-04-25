@@ -22,6 +22,7 @@ object IO {
   def writeInFile(file: File, data: String): Unit = {
     val fileOut = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file)))
     fileOut.write(data)
+    fileOut.flush
     fileOut.close
   }
   

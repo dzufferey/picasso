@@ -158,9 +158,11 @@ class Config {
   var armcCmd = "armc"
   var princessCmd = "princess"
   var solverCmd = Array("z3", "-smt2", "-in")
+  var flata = false
+  var flataCmd = "flata-termination.sh"
   var makeTPreds = false
   var cyclesBound = -1
-  var dumpArmc = ""
+  var dumpIntProg = ""
   var eliminateVar = List[String]()
   var namedTPreds = List[Array[String]]()
 
@@ -168,9 +170,11 @@ class Config {
   newOption("--armc", Arg.String(str => armcCmd = str), "The command to call ARMC.")
   newOption("--princess", Arg.String(str => princessCmd = str), "The command to call princess.")
   newOption("--smtSolver", Arg.String(str => solverCmd = str.split(" ")), "The smt sovler (+ options) to use (default: \"z3 -smt2 -in\").")
+  newOption("--flata", Arg.Unit(() => flata = true), "Use flata instead of ARMC.")
+  newOption("--flataCmd", Arg.String(str => flataCmd = str), "The command to call flata for termination.")
   newOption("--makeTPreds", Arg.Unit(() => makeTPreds = true), "Generate (many) transition predicates for ARMC.")
   newOption("--cyclesBound", Arg.Int(i => cyclesBound = i), "bound for the number of cycles to consider when generating the transition predicates")
-  newOption("--dump", Arg.String(str => dumpArmc = str), "save the ARMC file in the given location rather than run ARMC.")
+  newOption("--dump", Arg.String(str => dumpIntProg = str), "save the counter abstraction to a the given file rather without analyzing it.")
   newOption("--eliminateVar", Arg.String(str => eliminateVar = str::eliminateVar), "Eliminate the varibles whose name starts with the given prefix.")
   newOption("--namedTPreds", Arg.String(str => namedTPreds = str.split(",") :: namedTPreds), "Generate transition predicates for ARMC by summing variables with given names (separated with ',').")
 

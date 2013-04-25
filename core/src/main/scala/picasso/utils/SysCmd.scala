@@ -63,7 +63,7 @@ object SysCmd {
     Logger("Utils", LogInfo, "Executing "+ cmds.mkString(""," ",""))
     try {
       acquire
-      withInput ! 
+      withInput.! 
     } finally {
       release
     }

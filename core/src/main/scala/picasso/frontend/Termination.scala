@@ -3,7 +3,10 @@ package picasso.frontend
 import picasso.utils._
 import picasso.utils.report._
 import picasso.utils.tools.armc._
+import picasso.utils.tools.flata._
+import picasso.utils.tools.nts._
 import picasso.model.dbp._
+import picasso.model.integer._
 import picasso.analysis._
 
 class Termination[P <: picasso.model.dbp.DBCT](
@@ -12,6 +15,23 @@ class Termination[P <: picasso.model.dbp.DBCT](
     parse: String => Option[(DepthBoundedProcess[P], DepthBoundedConf[P], Option[DepthBoundedConf[P]])]
   ) extends AnalysisCommon[P]("Termination", fileName, content, parse)
 {
+
+  protected def dump(file: String, prog: Program) {
+    Logger("Termination", LogInfo, "saving integer program in " + file)
+    if (Config.flata) {
+      IO.writeInFile(file, NTSPrinter(_, prog))
+    } else {
+      IO.writeInFile(file, prog.printForARMC(_))
+    }
+  }
+
+  protected def analyse(prog: Program) = {
+    if (Config.flata) {
+      Stats("proving termination with Flata", Flata.withOutput(prog))
+    } else {
+      Stats("proving termination with ARMC", ARMC.withOutput(prog))
+    }
+  }
 
   protected def analysis(_process: DepthBoundedProcess[P], init: DepthBoundedConf[P], target: Option[DepthBoundedConf[P]]): Unit = {
     assert(target.isEmpty, "Termination analysis does not expect a target state")
@@ -36,12 +56,11 @@ class Termination[P <: picasso.model.dbp.DBCT](
                   intProgram.transitions.size + " transitions.")
     report.add(new PreformattedText("Numerical Abstraction", intProgram.printForARMC))
 
-    if (Config.dumpArmc == "") {
-      val (code, out, err) = Stats("proving termination with ARMC", ARMC.withOutput(intProgram))
-      report.add(new PreformattedText("ARMC output", out))
+    if (Config.dumpIntProg == "") {
+      val (_, out, _) = analyse(intProgram)
+      report.add(new PreformattedText("Termination analysis", out))
     } else {
-      Logger("Termination", LogInfo, "saving ARMC program in " + Config.dumpArmc)
-      IO.writeInFile(Config.dumpArmc, intProgram.printForARMC(_))
+      dump(Config.dumpIntProg, intProgram)
     }
   }
 
