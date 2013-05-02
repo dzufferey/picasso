@@ -61,11 +61,12 @@ object Actors {
         //true
         val trueCase = freshLoc(caseTrue)
         val trueGuard = picasso.ast.Assume(cond)
-        ((init, trueGuard, trueCase)) :: mkCfa( trueCase, caseTrue, last)
+        val trueEdges = ((init, trueGuard, trueCase)) :: mkCfa( trueCase, caseTrue, last)
         //false
         val falseCase = freshLoc(caseFalse)
         val falseGuard = picasso.ast.Assume(condFalse)
-        ((init, falseGuard, falseCase)) :: mkCfa( falseCase, caseFalse, last)
+        val falseEdges = ((init, falseGuard, falseCase)) :: mkCfa( falseCase, caseFalse, last)
+        trueEdges ::: falseEdges
 
       case While(condition, body) =>
         val cond = Expressions.exp2ExpSimplify(condition)
