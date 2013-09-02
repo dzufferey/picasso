@@ -1,0 +1,10 @@
+
+To compile and run Picasso from the sources you will need sbt 0.12 (or a more recent version).
+The instructions to download and install sbt are found at https://github.com/harrah/xsbt/wiki
+
+After compiling Picasso with sbt, Picasso can be run using the runGraph.sh or runBasic.sh scripts.
+
+When proving termination of depth-bounded processes Picasso uses the additional tools:
+    ARMC http://www7.in.tum.de/~rybal/armc/,
+    Princess http://www.philipp.ruemmer.org/princess.shtml,
+    Z3 http://research.microsoft.com/en-us/um/redmond/projects/z3/
