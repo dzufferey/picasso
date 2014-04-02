@@ -4,11 +4,11 @@ version := "0.1"
 
 organization := "at.ac.ist"
 
-scalaVersion := "2.10.1"
+scalaVersion := "2.10.4"
 
 libraryDependencies ++=  Seq(
     "org.scalatest" % "scalatest_2.10" % "2.0.M5b" % "test",
-    "org.scala-lang" % "scala-compiler" % "2.10.1"
+    "org.scala-lang" % "scala-compiler" % "2.10.4"
 )
 
 mainClass in (Compile, packageBin) := Some("picasso.frontend.compilerPlugin.PluginRunner")
