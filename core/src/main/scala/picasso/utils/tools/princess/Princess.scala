@@ -8,7 +8,7 @@ object Princess {
   //TODO    [Debug] @ princess: princess says ? -> No countermodel exists, formula is valid
 
   protected def processOutput(out: String, err: String): Option[Formula] = {
-    val toLookFor = "Formula is valid, resulting most-general constraint:"
+    val toLookFor = "Under the most-general constraint:"
     val lines = out.lines.dropWhile(l => !l.startsWith (toLookFor))
     if (lines.hasNext) {
       lines.next
